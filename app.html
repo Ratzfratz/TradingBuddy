@@ -306,8 +306,10 @@ tr.hl-t td:first-child{color:var(--green);font-weight:700}
 .journal-filter-group{display:grid;grid-template-columns:58px minmax(0,1fr);align-items:start;gap:8px;margin-bottom:8px}
 .journal-filter-group:last-child{margin-bottom:0}
 .journal-filter-label{font-size:.58rem;font-weight:700;letter-spacing:.7px;color:var(--muted);text-transform:uppercase;padding-top:6px}
-.journal-asset-select{height:36px;line-height:normal;padding:0 34px 0 10px;font-size:.72rem;font-weight:600;background-color:var(--s2)}
+.journal-asset-select{height:36px;line-height:normal;padding:0 34px 0 10px;font-size:.72rem;font-weight:600;background-color:var(--s2);color-scheme:dark;transition:border-color .15s,background-color .15s,color .15s}
+.journal-asset-select.is-empty{color:var(--field-empty)}
 .journal-asset-select:not(.is-empty){border-color:rgba(91,138,245,.48);color:var(--blue);background-color:rgba(91,138,245,.08)}
+.journal-asset-select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,138,245,.12);outline:none}
 .filter-btn.active{border-color:var(--blue);background:rgba(91,138,245,.12);color:var(--blue)}
 #f-open.active{border-color:var(--blue);background:rgba(91,138,245,.12);color:var(--blue)}
 #f-win.active,#f-call.active{border-color:var(--blue);background:rgba(91,138,245,.12);color:var(--blue)}
@@ -374,8 +376,38 @@ tr.hl-t td:first-child{color:var(--green);font-weight:700}
 .modal-close{background:var(--s3);border:1px solid var(--bd);border-radius:6px;color:var(--muted);width:28px;height:28px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 textarea.inp{resize:vertical;min-height:56px;line-height:1.5}
-select.inp{cursor:pointer;-webkit-appearance:none;appearance:none;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:14px 14px}
-:root.light-theme select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6480' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
+select.inp{
+  cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
+  padding-right:34px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:14px 14px;
+  color-scheme:dark;
+}
+select.inp:focus{
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(91,138,245,.12);
+  outline:none;
+}
+select.inp option{
+  background:#13161e;
+  color:#eef1f8;
+  font-size:.88rem;
+}
+select.inp option:checked{
+  background:#222838;
+  color:#eef1f8;
+  font-weight:600;
+}
+:root.light-theme select.inp{
+  color-scheme:light;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6480' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+:root.light-theme select.inp option{background:#ffffff;color:#1a2035;}
+:root.light-theme select.inp option:checked{background:#e8ecf4;}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;align-items:start}
 
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -749,7 +781,7 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 /* Steuerübersicht: reduzierte Hauptansicht, Details bleiben aufklappbar */
 .tax-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .tax-title-row .sec-title{margin:0;flex:1}
-.tax-year-select{width:auto;min-width:86px;height:34px;padding:0 28px 0 10px;font-size:.7rem;font-weight:700;background-position:right 9px center}
+.tax-year-select{width:auto;min-width:86px;height:34px;padding:0 28px 0 10px;font-size:.7rem;font-weight:700;background-position:right 9px center;background-size:12px 12px;color-scheme:dark;border-radius:7px;background-color:var(--s2);border:1px solid var(--bd)}
 .tax-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:.63rem;color:var(--muted);line-height:1.4}
 .tax-settings-link{flex-shrink:0;border:0;background:none;color:var(--blue);font-family:var(--f);font-size:.65rem;font-weight:700;cursor:pointer;padding:4px 0}
 .tax-hero{background:linear-gradient(135deg,rgba(91,138,245,.10),rgba(34,211,160,.07));border:1px solid rgba(91,138,245,.25);border-radius:10px;padding:14px;margin-bottom:8px}
@@ -771,6 +803,8 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 .tax-details[open] summary::after{transform:rotate(-90deg)}
 .tax-details[open] summary{border-bottom:1px solid var(--bd)}
 .tax-details-body{padding:10px 11px}
+.perf-pill{padding:3px 9px;border:1px solid var(--bd);background:var(--s2);border-radius:20px;color:var(--muted);font-family:var(--f);font-size:.58rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.perf-pill.on{border-color:var(--blue);background:rgba(91,138,245,.12);color:var(--blue)}
 .tax-group-title{font-size:.54rem;font-weight:800;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;margin:2px 0 8px}
 .tax-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;font-size:.73rem;line-height:1.35;margin-bottom:7px}
 .tax-row:last-child{margin-bottom:0}
@@ -1122,26 +1156,65 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 <div class="page" id="page-statistik">
 <div id="view-stats">
 
+  <!-- Hero: Gesamt P&L + Kapitalrendite -->
   <div class="sec" style="margin-bottom:14px">
     <div class="sec-title">Gesamt P&amp;L</div>
-    <div style="font-size:1.8rem;font-weight:700;margin-bottom:4px;white-space:nowrap" id="st-total-pnl">—</div>
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+      <div style="font-size:1.8rem;font-weight:700;white-space:nowrap" id="st-total-pnl">—</div>
+      <div style="font-size:.82rem;font-weight:700;opacity:.85" id="st-cap-ret">—</div>
+    </div>
     <div style="font-size:.72rem;color:var(--muted)" id="st-total-invested">— eingesetzt</div>
   </div>
 
-  <div class="stats-row" style="margin-bottom:14px">
-    <div class="stat"><div class="stat-val c-blue" id="st-total">0</div><div class="stat-label">Trades</div></div>
-    <div class="stat"><div class="stat-val c-green" id="st-wins">0</div><div class="stat-label">Gewinne</div></div>
-    <div class="stat"><div class="stat-val c-red" id="st-losses">0</div><div class="stat-label">Verluste</div></div>
-  </div>
-  <div class="stats-row" style="margin-bottom:14px">
-    <div class="stat"><div class="stat-val" id="st-winrate">—</div><div class="stat-label">Win-Rate</div></div>
-    <div class="stat"><div class="stat-val c-green" id="st-avg-win">—</div><div class="stat-label">Ø Gewinn</div></div>
-    <div class="stat"><div class="stat-val c-red" id="st-avg-loss">—</div><div class="stat-label">Ø Verlust</div></div>
-  </div>
-  <div class="stats-row" style="margin-bottom:14px">
-    <div class="stat"><div class="stat-val" id="st-rr">—</div><div class="stat-label">Profit-Faktor</div></div>
-    <div class="stat"><div class="stat-val c-green" id="st-best">—</div><div class="stat-label">Bester Trade</div></div>
-    <div class="stat"><div class="stat-val c-red" id="st-worst">—</div><div class="stat-label">Schlechtester</div></div>
+  <!-- Unified Übersicht -->
+  <div class="sec" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="sec-title" style="margin:0">Übersicht</div>
+      <div style="display:flex;gap:4px">
+        <button class="perf-pill on" id="pp-all"   onclick="setPerfPeriod('all')">Gesamt</button>
+        <button class="perf-pill"    id="pp-year"  onclick="setPerfPeriod('year')">Jahr</button>
+        <button class="perf-pill"    id="pp-month" onclick="setPerfPeriod('month')">Monat</button>
+        <button class="perf-pill"    id="pp-week"  onclick="setPerfPeriod('week')">Woche</button>
+        <button class="perf-pill"    id="pp-day"   onclick="setPerfPeriod('day')">Tag</button>
+      </div>
+    </div>
+
+    <!-- Zeile 1: Basis -->
+    <div class="stats-row" style="margin-bottom:8px">
+      <div class="stat"><div class="stat-val c-blue" id="st-total">0</div><div class="stat-label">Trades</div></div>
+      <div class="stat"><div class="stat-val" id="st-winrate">—</div><div class="stat-label">Win-Rate</div></div>
+      <div class="stat"><div class="stat-val" id="st-rr">—</div><div class="stat-label">Profit-Faktor</div></div>
+    </div>
+
+    <!-- Zeile 2: Ertrag -->
+    <div class="stats-row" style="margin-bottom:8px">
+      <div class="stat"><div class="stat-val c-green" id="st-avg-win">—</div><div class="stat-label">Ø Gewinn</div></div>
+      <div class="stat"><div class="stat-val c-red" id="st-avg-loss">—</div><div class="stat-label">Ø Verlust</div></div>
+      <div class="stat"><div class="stat-val" id="st-avg-ret">—</div><div class="stat-label">Ø Rendite</div></div>
+    </div>
+
+    <!-- Zeile 3: Extremwerte & Dauer -->
+    <div class="stats-row" style="margin-bottom:12px">
+      <div class="stat"><div class="stat-val c-green" id="st-best">—</div><div class="stat-label">Bester Trade</div></div>
+      <div class="stat"><div class="stat-val c-red" id="st-worst">—</div><div class="stat-label">Schlechtester</div></div>
+      <div class="stat"><div class="stat-val c-muted" id="st-avg-hold">—</div><div class="stat-label">Ø Haltedauer</div></div>
+    </div>
+
+    <!-- Aufklappbar: Details -->
+    <details class="tax-details" style="margin:0">
+      <summary>Details</summary>
+      <div class="tax-details-body">
+        <div class="tax-row">
+          <span class="tax-row-label">Gewinne / Verluste</span>
+          <span class="tax-row-value"><span class="c-green" id="st-wins">—</span> / <span class="c-red" id="st-losses">—</span></span>
+        </div>
+        <div class="tax-row"><span class="tax-row-label">Beste Rendite</span><span class="tax-row-value c-green" id="st-best-ret">—</span></div>
+        <div class="tax-row"><span class="tax-row-label">Schlechteste Rendite</span><span class="tax-row-value c-red" id="st-worst-ret">—</span></div>
+        <div class="tax-row"><span class="tax-row-label">Max. Drawdown</span><span class="tax-row-value c-red" id="st-drawdown">—</span></div>
+        <div class="tax-row"><span class="tax-row-label">Ø Investition / Trade</span><span class="tax-row-value" id="st-avg-inv">—</span></div>
+        <div class="tax-row" id="st-strat-row" style="display:none"><span class="tax-row-label">Beste Strategie</span><span class="tax-row-value c-green" id="st-best-strat">—</span></div>
+      </div>
+    </details>
   </div>
 
   <div class="sec">
@@ -2574,6 +2647,32 @@ function renderList() {
         </div>`;
 }
 
+var _perfPeriod = 'all';
+
+function setPerfPeriod(p) {
+  _perfPeriod = p;
+  ['all','year','month','week','day'].forEach(function(k) {
+    var el = document.getElementById('pp-' + k);
+    if (el) el.className = 'perf-pill' + (k === p ? ' on' : '');
+  });
+  renderStats();
+}
+
+function _filterByPeriod(trades, period) {
+  if (period === 'all') return trades;
+  var now = new Date(); now.setHours(0,0,0,0);
+  return trades.filter(function(t) {
+    var raw = t.exitDate || t.entryDate;
+    if (!raw) return false;
+    var d = new Date(raw); d.setHours(0,0,0,0);
+    if (period === 'day')   return d.getTime() === now.getTime();
+    if (period === 'week')  { var w = new Date(now); w.setDate(w.getDate()-6); return d >= w; }
+    if (period === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (period === 'year')  return d.getFullYear() === now.getFullYear();
+    return true;
+  });
+}
+
 function renderStats() {
   loadTrades();
   if(typeof renderTaxOverview==='function')setTimeout(renderTaxOverview,50);
@@ -2587,46 +2686,128 @@ function renderStats() {
   }
 
   const list = (typeof filteredTrades === "function") ? filteredTrades() : trades;
-  const closed = list.filter(t => t.outcome === 'win' || t.outcome === 'loss');
-  const wins = closed.filter(t => t.outcome === 'win');
-  const losses = closed.filter(t => t.outcome === 'loss');
 
-  const winValues = wins.map(t => Number(t.pnl || 0));
-  const lossValues = losses.map(t => Number(t.pnl || 0));
-
-  const totalWin = winValues.reduce((a, b) => a + b, 0);
-  const totalLossSigned = lossValues.reduce((a, b) => a + b, 0);
-  const totalLossAbs = Math.abs(totalLossSigned);
-  const totalPnl = closed.reduce((sum, t) => sum + Number(t.pnl || 0), 0);
+  // ── Hero: immer Gesamt (alle Trades) ───────────────────────
+  const allClosed = list.filter(t => t.outcome === 'win' || t.outcome === 'loss');
+  const totalPnl = allClosed.reduce((sum, t) => sum + Number(t.pnl || 0), 0);
   const totalInvested = list.reduce((sum, t) => sum + Number(t.capital || 0), 0);
-
-  const avgWin = winValues.length ? totalWin / winValues.length : null;
-  const avgLoss = lossValues.length ? totalLossSigned / lossValues.length : null;
-  const winRate = closed.length ? wins.length / closed.length * 100 : null;
-  const profitFactor = totalLossAbs > 0 ? totalWin / totalLossAbs : null;
-  const pnlValues = closed.map(t => Number(t.pnl || 0));
+  const capRet = totalInvested > 0 ? totalPnl / totalInvested * 100 : null;
 
   const setText = (id, value) => {
     const element = $(id);
     if (element) element.innerHTML = value;
   };
 
-  setText('st-total', String(list.length));
-  setText('st-wins', String(wins.length));
-  setText('st-losses', String(losses.length));
-  setText('st-winrate', winRate === null ? '—' : fmt(winRate, 0) + '%');
-  setText('st-avg-win', avgWin === null ? '—' : fmtEur(avgWin));
-  setText('st-avg-loss', avgLoss === null ? '—' : fmtEur(avgLoss));
-  setText('st-best', pnlValues.length ? fmtEur(Math.max(...pnlValues)) : '—');
-  setText('st-worst', pnlValues.length ? fmtEur(Math.min(...pnlValues)) : '—');
-  setText('st-rr', profitFactor === null ? '—' : fmt(profitFactor, 2) + 'x');
-  setText('st-total-pnl', closed.length ? fmtEur(totalPnl) : '—');
-  setText('st-total-invested', fmt(totalInvested, 2) + ' € eingesetzt');
-
+  setText('st-total-pnl', allClosed.length ? fmtEur(totalPnl) : '—');
+  setText('st-total-invested', (totalInvested > 0 ? fmt(totalInvested, 2) + '\u202f€' : '—') + ' eingesetzt');
   const totalPnlElement = $('st-total-pnl');
-  if (totalPnlElement) {
-    totalPnlElement.style.color = totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
+  if (totalPnlElement) totalPnlElement.style.color = totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // ── Übersicht: gefiltert nach _perfPeriod ──────────────────
+  const closed = _filterByPeriod(allClosed, _perfPeriod);
+  const wins   = closed.filter(t => t.outcome === 'win');
+  const losses = closed.filter(t => t.outcome === 'loss');
+  const filtList = _filterByPeriod(list, _perfPeriod);
+
+  const winValues  = wins.map(t => Number(t.pnl || 0));
+  const lossValues = losses.map(t => Number(t.pnl || 0));
+  const totalWin   = winValues.reduce((a, b) => a + b, 0);
+  const totalLossSigned = lossValues.reduce((a, b) => a + b, 0);
+  const totalLossAbs    = Math.abs(totalLossSigned);
+  const pnlValues  = closed.map(t => Number(t.pnl || 0));
+  const filtInvested = filtList.reduce((sum, t) => sum + Number(t.capital || 0), 0);
+
+  const avgWin      = winValues.length  ? totalWin / winValues.length : null;
+  const avgLoss     = lossValues.length ? totalLossSigned / lossValues.length : null;
+  const winRate     = closed.length ? wins.length / closed.length * 100 : null;
+  const profitFactor = totalLossAbs > 0 ? totalWin / totalLossAbs : null;
+
+  // ── Performance-Kennzahlen ──────────────────────────────────
+  const fmtPct = n => (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + '\u202f%';
+
+  // Kapitalrendite für den gewählten Zeitraum
+  const filtPnl = closed.reduce((sum, t) => sum + Number(t.pnl || 0), 0);
+  const filtCapRet = filtInvested > 0 ? filtPnl / filtInvested * 100 : null;
+
+  // Ø Rendite %
+  const retValues = closed
+    .filter(t => t.ret !== null && t.ret !== undefined && !isNaN(Number(t.ret)))
+    .map(t => Number(t.ret));
+  const avgRet  = retValues.length ? retValues.reduce((a, b) => a + b, 0) / retValues.length : null;
+  const bestRet = retValues.length ? Math.max(...retValues) : null;
+  const worstRet= retValues.length ? Math.min(...retValues) : null;
+
+  // Ø Haltedauer
+  const holdDays = closed
+    .filter(t => t.entryDate && t.exitDate)
+    .map(t => Math.max(0, Math.round((new Date(t.exitDate) - new Date(t.entryDate)) / 86400000)));
+  const avgHold = holdDays.length
+    ? Math.round(holdDays.reduce((a, b) => a + b, 0) / holdDays.length)
+    : null;
+
+  // Max. Drawdown (chronologisch)
+  const sortedClosed = [...closed].sort((a, b) =>
+    (a.exitDate || a.entryDate || '').localeCompare(b.exitDate || b.entryDate || ''));
+  let peak = 0, runPnl = 0, maxDD = 0;
+  sortedClosed.forEach(t => {
+    runPnl += Number(t.pnl || 0);
+    if (runPnl > peak) peak = runPnl;
+    const dd = peak - runPnl;
+    if (dd > maxDD) maxDD = dd;
+  });
+
+  // Ø Investition pro Trade (gefiltert)
+  const investedTrades = filtList.filter(t => Number(t.capital || 0) > 0);
+  const avgInv = investedTrades.length
+    ? investedTrades.reduce((s, t) => s + Number(t.capital || 0), 0) / investedTrades.length
+    : null;
+
+  // Beste Strategie
+  const byStrat = {};
+  closed.forEach(t => {
+    const s = t.strategy || '';
+    if (!s) return;
+    if (!byStrat[s]) byStrat[s] = { pnl: 0, count: 0 };
+    byStrat[s].pnl += Number(t.pnl || 0);
+    byStrat[s].count++;
+  });
+  const stratTop = Object.entries(byStrat).sort((a, b) => b[1].pnl - a[1].pnl)[0];
+
+  // ── Werte setzen ────────────────────────────────────────────
+  setText('st-wins',   String(wins.length));
+  setText('st-losses', String(losses.length));
+  setText('st-total',  String(filtList.length));
+  setText('st-winrate',winRate === null ? '—' : fmt(winRate, 0) + '%');
+  setText('st-avg-win',avgWin === null  ? '—' : fmtEur(avgWin));
+  setText('st-avg-loss',avgLoss === null ? '—' : fmtEur(avgLoss));
+  setText('st-best',   pnlValues.length ? fmtEur(Math.max(...pnlValues)) : '—');
+  setText('st-worst',  pnlValues.length ? fmtEur(Math.min(...pnlValues)) : '—');
+  setText('st-rr',     profitFactor === null ? '—' : fmt(profitFactor, 2) + 'x');
+
+  // Hero: Gesamt-Kapitalrendite inline
+  const capRetEl = $('st-cap-ret');
+  if (capRetEl) {
+    const cr = totalInvested > 0 ? totalPnl / totalInvested * 100 : null;
+    capRetEl.innerHTML = cr !== null ? fmtPct(cr) : '';
+    capRetEl.style.color = cr === null ? '' : cr >= 0 ? 'var(--green)' : 'var(--red)';
   }
+
+  // Ø Rendite (gefiltert)
+  const avgRetEl = $('st-avg-ret');
+  if (avgRetEl) {
+    avgRetEl.innerHTML = avgRet !== null ? fmtPct(avgRet) : '—';
+    avgRetEl.style.color = avgRet === null ? '' : avgRet >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  setText('st-avg-hold', avgHold !== null ? avgHold + '\u202fT' : '—');
+  setText('st-best-ret', bestRet  !== null ? fmtPct(bestRet)  : '—');
+  setText('st-worst-ret',worstRet !== null ? fmtPct(worstRet) : '—');
+  setText('st-drawdown', maxDD > 0 ? '−' + fmtEur(maxDD).replace('+','') : closed.length ? '0\u202f€' : '—');
+  setText('st-avg-inv',  avgInv  !== null ? fmtEur(avgInv) : '—');
+  const stratRow = $('st-strat-row');
+  if (stratRow) stratRow.style.display = stratTop ? '' : 'none';
+  setText('st-best-strat', stratTop
+    ? `${stratTop[0]}\u2002(${fmtEur(stratTop[1].pnl)},\u202f${stratTop[1].count}\u202fTrades)` : '—');
 
   const byTicker = {};
   closed.forEach(trade => {
@@ -3171,7 +3352,7 @@ if('serviceWorker' in navigator){
     <div class="sec-title">Strategie &amp; Notizen</div>
     <div class="g1">
       <div class="field" id="field-strategy"><label>Strategie / Grund</label>
-        <select class="inp" id="f-strategy">
+        <select class="inp is-empty" id="f-strategy" onchange="this.classList.toggle('is-empty',!this.value)">
           <option value="">— Strategie wählen —</option>
           <option>Momentum</option>
           <option>Trendfolge</option>
@@ -4015,10 +4196,14 @@ function renderTaxOverview(){
     ? (1/(4+churchRate))*(1+churchRate+(soli?0.055:0))
     : 0.25*(1+(soli?0.055:0));
 
-  // § 23 EStG: Freigrenze, kein Freibetrag. Die App kennt nur erfasste Krypto-Verkäufe.
-  const cryptoGain=Math.max(0,cryptoShortPnl);
-  const cryptoLoss=Math.max(0,-cryptoShortPnl);
-  const cryptoTaxBase=cryptoGain>=1000?cryptoGain:0;
+  // § 23 EStG: Freigrenze (kein Freibetrag), kurzfristige Krypto-Verkäufe.
+  // cryptoShortPnl ist bereits der Saldo aller <1-Jahr-Verkäufe (Gewinne mit Verlusten verrechnet).
+  const cryptoNet=cryptoShortPnl;                       // Nettoergebnis §23 (kann negativ sein)
+  const cryptoGain=Math.max(0,cryptoNet);               // positiver Saldo
+  const cryptoLossCarry=Math.max(0,-cryptoNet);         // vortragsfähiger §23-Verlust
+  // Freigrenze 1.000 €: steuerfrei nur BIS 999,99 €. Ab 1.000,00 € ist der GESAMTE Gewinn steuerpflichtig.
+  const cryptoFreigrenze=1000;
+  const cryptoTaxBase=cryptoGain>=cryptoFreigrenze?cryptoGain:0;
   const cryptoEstimate=personalRate>0?cryptoTaxBase*personalRate:null;
   const totalTaxKnown=capitalTax+(cryptoEstimate||0);
   const cryptoOpenTax=cryptoTaxBase>0&&cryptoEstimate===null;
@@ -4092,8 +4277,9 @@ function renderTaxOverview(){
         <div class="tax-row"><span class="tax-row-label">Verkäufe nach mehr als einem Jahr</span><span class="tax-row-value ${taxClass(cryptoLongPnl)}">${taxMoney(cryptoLongPnl)}</span></div>
         <div class="tax-row"><span class="tax-row-label">Nach 1.000-€-Freigrenze steuerpflichtig</span><span class="tax-row-value">${taxMoney(cryptoTaxBase,false)}</span></div>
         <div class="tax-row total"><span class="tax-row-label">Geschätzte Krypto-Steuer</span><span class="tax-row-value ${cryptoTaxBase>0?'tax-negative':'tax-neutral'}">${cryptoTaxText}</span></div>
-        ${cryptoGain>0&&cryptoGain<1000?`<div class="tax-note info">Die 1.000-€-Freigrenze ist nach den erfassten Krypto-Geschäften nicht überschritten. Andere private Veräußerungsgeschäfte können das Ergebnis verändern.</div>`:''}
-        ${cryptoLoss>0?`<div class="tax-note info">Steuerbarer Krypto-Verlust: ${taxMoney(cryptoLoss,false)}. Er wird nicht mit Kapitalerträgen verrechnet.</div>`:''}
+        ${cryptoGain>0&&cryptoGain<cryptoFreigrenze?`<div class="tax-note info">Die 1.000-€-Freigrenze ist nicht überschritten – der Gewinn von ${taxMoney(cryptoGain,false)} bleibt steuerfrei. Achtung: weitere private Veräußerungsgeschäfte (z.\u202fB. Gold, Sammlerstücke) zählen zur selben Freigrenze.</div>`:''}
+        ${cryptoGain>=cryptoFreigrenze?`<div class="tax-note info">Freigrenze überschritten: Da der Gewinn 1.000\u202f€ erreicht, ist der <b>gesamte</b> Betrag steuerpflichtig (kein Freibetrag).</div>`:''}
+        ${cryptoLossCarry>0?`<div class="tax-note info">Vortragsfähiger §\u202f23-Verlust: ${taxMoney(cryptoLossCarry,false)}. Kurzfristige Krypto-Verluste sind nur mit anderen privaten Veräußerungsgeschäften (§\u202f23 EStG) verrechenbar – nicht mit Kapitalerträgen – und ins Folgejahr vortragsfähig.</div>`:''}
       </div>
     </details>`:''}
 
@@ -4203,7 +4389,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
 
     <div class="field" id="tax-state-setting" style="display:none;margin-top:10px">
       <label>Bundesland</label>
-      <select class="inp" id="s-state" onchange="syncTaxSettings()">
+      <select class="inp" id="s-state" onchange="syncTaxSettings()" style="color-scheme:dark">
         <option value="8">Baden-Württemberg</option>
         <option value="8">Bayern</option>
         <option value="9">Berlin</option>
