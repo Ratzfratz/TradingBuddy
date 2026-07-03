@@ -14454,8 +14454,33 @@ function _awInit(){
 
 async function _awBiSync(){
   loadTrades();
-  const localBefore=typeof trades!=='undefined'?trades.length:0;
-  if(localBefore>0){
+  const localCount=typeof trades!=='undefined'?trades.length:0;
+  const localTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
+  const localCloudTs=parseInt(localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
+  const cloudKnown=parseInt(localStorage.getItem('tb_cloud_checked_at_ts')||'0',10)>0 || localCloudTs>0;
+  let cloudDoc=null;
+  try{cloudDoc=await _awGetEntityDoc('trades');}catch(_){}
+  if(cloudDoc){
+    _awMarkCloudDocChecked(cloudDoc);
+    const meta=_awBackupMeta(cloudDoc);
+    const cloudMs=_awDocMs(cloudDoc);
+    if(meta.count>0&&localCount===0){
+      await _awPull(true);
+      _awUpdateSyncStatus();
+      return;
+    }
+    if(meta.count>0&&!cloudKnown&&localCount>0){
+      _awStatus('Cloud hat '+meta.count+' Trades - zum Laden "Herunterladen" antippen.','muted');
+      _awUpdateSyncStatus();
+      return;
+    }
+    if(meta.count>0&&cloudMs>localCloudTs+1000&&cloudMs>localTs+1000){
+      await _awPull(true);
+      _awUpdateSyncStatus();
+      return;
+    }
+  }
+  if(localCount>0){
     await _awPush();
     _awUpdateSyncStatus();
     return;
@@ -14463,10 +14488,8 @@ async function _awBiSync(){
   await _awPull();
   const knownCloudCount=parseInt(localStorage.getItem('tb_cloud_trade_count')||'0',10);
   const cloudChecked=parseInt(localStorage.getItem('tb_cloud_checked_at_ts')||'0',10)>0;
-  if(localBefore===0&&cloudChecked&&knownCloudCount>0&&(typeof trades==='undefined'||trades.length===0)){_awUpdateSyncStatus();return;}
+  if(localCount===0&&cloudChecked&&knownCloudCount>0&&(typeof trades==='undefined'||trades.length===0)){_awUpdateSyncStatus();return;}
   // Nur pushen wenn lokal wirklich neuere Daten vorhanden (nicht auf neuem Gerät mit 0 Trades)
-  const localCount=typeof trades!=='undefined'?trades.length:0;
-  const localTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
   const settingsTs=parseInt(localStorage.getItem('tb_settings_saved_at')||'0',10);
   const cloudTs=parseInt(localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
   if((localCount>0&&localTs>cloudTs+15000)||settingsTs>cloudTs+15000) await _awPush();
