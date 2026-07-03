@@ -15376,7 +15376,7 @@ async function _awConfirmYes(){
   _awConfirmNo();
   _awSyncBusy=false;
   if(_awConfirmMode==='push'){
-    const ok=await _awPush();
+    const ok=await _awPush(true);
     _awStatus(ok?'Sync abgeschlossen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
   }else{
     await _awPull(true);
@@ -15403,7 +15403,7 @@ function awSetAutoSync(on){
 
 let _awLastPushError=null;
 async function awPushBackup(){
-  const ok=await _awPush();
+  const ok=await _awPush(true);
   _awStatus(ok?'Sync abgeschlossen \u2713':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
   _awUpdateSyncStatus();
 }
@@ -15425,7 +15425,7 @@ function _awSchedulePush(){
   },2500);
 }
 
-async function _awPush(){
+async function _awPush(forceTrades=false){
   if(!_awUser||!_awDocId||!_awStorage||_awSyncBusy)return false;
   _awSyncBusy=true;
   try{
@@ -15438,7 +15438,9 @@ async function _awPush(){
     const localSettingsTs=_awLocalMs('tb_settings_saved_at');
     const cloudTradeTs=_awCloudTradeMs(tradeDoc);
     const cloudSettingsTs=_awCloudSettingsMs(settingsDoc);
-    const shouldUploadTrades=(trades.length>0||!!tradeDoc)&&(!tradeDoc||localTradeTs>cloudTradeTs+1000);
+    const shouldUploadTrades=(trades.length>0||!!tradeDoc)&&(
+      forceTrades || !tradeDoc || localTradeTs>cloudTradeTs+1000
+    );
     const shouldUploadSettings=!settingsDoc||localSettingsTs>cloudSettingsTs+1000;
 
     if(!shouldUploadTrades&&!shouldUploadSettings){
