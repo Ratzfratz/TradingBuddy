@@ -21,8 +21,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trading Buddy">
-<link rel="icon" type="image/png" href="app-symbol.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16/dist/iife/sdk.js"></script>
 <style>
@@ -16191,7 +16194,9 @@ function awTogglePw(){
   }
   async function onvistaSnapshotForInstrumentId(id){
     const url='https://api.onvista.de/api/v1/instruments/DERIVATIVE/'+encodeURIComponent(id)+'/snapshot';
-    try{ return await tbHttpGetJson(url); }catch(e){ return null; }
+    try{ return await tbHttpGetJson(url); }catch(e){}
+    const directUrl='https://api.onvista.de/api/v1/derivatives/'+encodeURIComponent(id)+'/snapshot';
+    try{ return await tbHttpGetJson(directUrl); }catch(e){ return null; }
   }
   async function onvistaSnapshotForInstrument(type, id){
     const url='https://api.onvista.de/api/v1/instruments/'+encodeURIComponent(type)+'/'+encodeURIComponent(id)+'/snapshot';
@@ -16200,24 +16205,33 @@ function awTogglePw(){
   function firstInstrumentSearchHit(arr, identifier){
     if(!Array.isArray(arr)) return null;
     const up=identifier.toUpperCase();
+    let fallback=null;
     for(const item of arr){
       if(!item) continue;
       const isin=(item.isin||'').toUpperCase();
       const wkn=(item.wkn||'').toUpperCase();
+      const id=String(item.id||item.entityValue||item.value||item.idInstrument||'').toUpperCase();
       if(isin===up || wkn===up) return item;
+      if(id===up) return item;
+      if(!fallback && isDerivativeInstrument(item)) fallback=item;
     }
-    return null;
+    return fallback || null;
   }
   async function searchOnvistaInstrument(identifier){
-    const url='https://api.onvista.de/api/v1/instruments/search?searchValue='+encodeURIComponent(identifier);
-    const json=await tbHttpGetJson(url);
-    for(const key of ['instruments','results','list','data']){
-      const found=firstInstrumentSearchHit(json[key], identifier);
-      if(found) return found;
-    }
-    for(const key of ['DERIVATIVE','derivatives','STOCK','stocks','FUND','funds','ETF','etfs']){
-      const found=firstInstrumentSearchHit(json[key], identifier);
-      if(found) return found;
+    const urls=[
+      'https://api.onvista.de/api/v1/instruments/query?searchValue='+encodeURIComponent(identifier)+'&limit=10',
+      'https://api.onvista.de/api/v1/instruments/search?searchValue='+encodeURIComponent(identifier)+'&limit=10'
+    ];
+    for(const url of urls){
+      const json=await tbHttpGetJson(url);
+      for(const key of ['instruments','results','list','data']){
+        const found=firstInstrumentSearchHit(json[key], identifier);
+        if(found) return found;
+      }
+      for(const key of ['DERIVATIVE','derivatives','STOCK','stocks','FUND','funds','ETF','etfs']){
+        const found=firstInstrumentSearchHit(json[key], identifier);
+        if(found) return found;
+      }
     }
     return null;
   }
@@ -16227,11 +16241,15 @@ function awTogglePw(){
   function isDerivativeInstrument(instrument){ return instrumentTypeText(instrument).includes('DERIV'); }
   async function instrumentSnapshotForSearchHit(instrument){
     const type=(firstPlainString(instrument,['entityType','type','instrumentType'])||'').toUpperCase();
-    const id=firstPlainString(instrument,['id','value','entityValue','idInstrument']);
+    const id=firstPlainString(instrument,['entityValue','id','value','idInstrument']);
     if(!type||!id) return null;
     return await onvistaSnapshotForInstrument(type,id);
   }
   function inferInstrumentAssetType(name, instrument, snapshot){
+    const entityType=String((instrument&&instrument.entityType)||(instrument&&instrument.type)||(instrument&&instrument.instrumentType)||'').toUpperCase();
+    if(entityType==='STOCK') return 'stock';
+    if(entityType==='ETF'||entityType==='FUND') return 'etf';
+    if(entityType==='CRYPTO') return 'crypto';
     const text=[name, instrumentTypeText(instrument), snapshot?JSON.stringify(snapshot):''].join(' ').toUpperCase();
     if(text.includes('ETF')||text.includes('EXCHANGE TRADED FUND')||text.includes('UCITS')) return 'etf';
     if(text.includes('CRYPTO')||text.includes('BITCOIN')||text.includes('ETHEREUM')) return 'crypto';
@@ -16358,6 +16376,10 @@ function awTogglePw(){
     return details;
   }
   async function fetchOnvistaDerivativeDetails(identifier){
+    if(/^\d{6,}$/.test(identifier)){
+      const byId=await onvistaSnapshotForInstrumentId(identifier);
+      if(byId) return await derivativeDetailsFromSnapshot(byId, identifier);
+    }
     const direct=await onvistaSnapshotForIdentifier(identifier);
     if(direct) return await derivativeDetailsFromSnapshot(direct, identifier);
 
@@ -16365,7 +16387,7 @@ function awTogglePw(){
     if(!instrument) return null;
     if(!isDerivativeInstrument(instrument)) return await instrumentDetailsFromSearchHit(instrument, identifier);
 
-    const isin=instrument.isin, wkn=instrument.wkn, id=instrument.id;
+    const isin=instrument.isin, wkn=instrument.wkn, id=instrument.entityValue||instrument.id||instrument.value||instrument.idInstrument;
     let snapshot=null;
     if(isin) snapshot=await onvistaSnapshotForIdentifier(isin);
     if(!snapshot && wkn) snapshot=await onvistaSnapshotForIdentifier(wkn);

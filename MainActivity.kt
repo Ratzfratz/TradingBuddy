@@ -32,7 +32,7 @@ import androidx.security.crypto.MasterKeys
 class MainActivity : AppCompatActivity() {
 
     private val localAppOrigin = "https://localhost"
-    private val localAppUrl = "$localAppOrigin/app.html?v=pixel-restore-20260702-1"
+    private val localAppUrl = "$localAppOrigin/app.html?v=small-journal-polish-20260702-3"
     private lateinit var webView: WebView
     private var statusInsetCss = 0
     private var navigationInsetCss = 0
