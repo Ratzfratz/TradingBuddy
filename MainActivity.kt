@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -30,6 +31,8 @@ import androidx.security.crypto.MasterKeys
 
 class MainActivity : AppCompatActivity() {
 
+    private val localAppOrigin = "https://localhost"
+    private val localAppUrl = "$localAppOrigin/app.html?v=pixel-restore-20260702-1"
     private lateinit var webView: WebView
     private var statusInsetCss = 0
     private var navigationInsetCss = 0
@@ -86,8 +89,14 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             databaseEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
+            allowFileAccessFromFileURLs = true
             allowUniversalAccessFromFileURLs = true
+            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
         }
+        webView.clearCache(true)
 
         // Cookies von cloud.appwrite.io erlauben (nötig für Appwrite-Auth von file://)
         android.webkit.CookieManager.getInstance().apply {
@@ -278,6 +287,43 @@ class MainActivity : AppCompatActivity() {
                 val directUrl = "$safeEndpoint/storage/buckets/$encodedBucket/files/$encodedFile/download?project=$encodedProject"
                 return downloadAppwriteFile(directUrl, jwt, project)
             }
+
+            @JavascriptInterface
+            fun gzipBase64(base64Json: String): String {
+                return try {
+                    val input = android.util.Base64.decode(base64Json, android.util.Base64.NO_WRAP)
+                    val out = java.io.ByteArrayOutputStream()
+                    java.util.zip.GZIPOutputStream(out).use { gzip ->
+                        gzip.write(input)
+                    }
+                    JSONObject()
+                        .put("ok", true)
+                        .put("data", android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP))
+                        .toString()
+                } catch (e: Exception) {
+                    JSONObject()
+                        .put("ok", false)
+                        .put("error", e.message ?: e.javaClass.simpleName ?: "Gzip fehlgeschlagen")
+                        .toString()
+                }
+            }
+
+            @JavascriptInterface
+            fun gunzipBase64(base64Gzip: String): String {
+                return try {
+                    val input = android.util.Base64.decode(base64Gzip, android.util.Base64.NO_WRAP)
+                    val text = java.util.zip.GZIPInputStream(input.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    JSONObject()
+                        .put("ok", true)
+                        .put("data", android.util.Base64.encodeToString(text.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP))
+                        .toString()
+                } catch (e: Exception) {
+                    JSONObject()
+                        .put("ok", false)
+                        .put("error", e.message ?: e.javaClass.simpleName ?: "Gunzip fehlgeschlagen")
+                        .toString()
+                }
+            }
         }, "TBNative")
 
         ViewCompat.setOnApplyWindowInsetsListener(webView) { _, insets ->
@@ -305,8 +351,40 @@ class MainActivity : AppCompatActivity() {
                 pageLoaded = true
                 applyInsetsToWebPage()
             }
+
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                val url = request.url
+                if (url.scheme != "https" || url.host != "localhost") return null
+                val assetPath = when (val path = url.path.orEmpty().trimStart('/')) {
+                    "", "/" -> "app.html"
+                    else -> path
+                }
+                return try {
+                    val mime = when {
+                        assetPath.endsWith(".html", true) -> "text/html"
+                        assetPath.endsWith(".css", true) -> "text/css"
+                        assetPath.endsWith(".js", true) -> "application/javascript"
+                        assetPath.endsWith(".json", true) -> "application/json"
+                        assetPath.endsWith(".png", true) -> "image/png"
+                        assetPath.endsWith(".jpg", true) || assetPath.endsWith(".jpeg", true) -> "image/jpeg"
+                        assetPath.endsWith(".svg", true) -> "image/svg+xml"
+                        assetPath.endsWith(".webp", true) -> "image/webp"
+                        else -> "application/octet-stream"
+                    }
+                    val headers = mapOf(
+                        "Cache-Control" to "no-store, no-cache, must-revalidate, max-age=0",
+                        "Pragma" to "no-cache",
+                        "Expires" to "0"
+                    )
+                    WebResourceResponse(mime, "UTF-8", 200, "OK", headers, assets.open(assetPath))
+                } catch (_: Exception) {
+                    null
+                }
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
+                if (url.startsWith(localAppOrigin)) return false
                 if (url.startsWith("file://")) return false
                 return try { startActivity(Intent(Intent.ACTION_VIEW, request.url)); true }
                 catch (_: Exception) { false }
@@ -326,7 +404,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        webView.loadUrl("file:///android_asset/app.html")
+        webView.loadUrl(localAppUrl)
         ViewCompat.requestApplyInsets(webView)
     }
 
@@ -430,7 +508,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun instrumentSnapshotForSearchHit(instrument: JSONObject): JSONObject? {
-        val type = firstPlainString(instrument, listOf("type", "entityType", "instrumentType"))
+        val type = firstPlainString(instrument, listOf("entityType", "type", "instrumentType"))
             ?.uppercase() ?: return null
         val id = firstPlainString(instrument, listOf("id", "value", "entityValue", "idInstrument"))
             ?: return null
@@ -470,6 +548,7 @@ class MainActivity : AppCompatActivity() {
         instrument.optString("wkn").takeIf { it.isNotBlank() }?.let { details.put("wkn", it) }
         symbol?.takeIf { it.isNotBlank() }?.let { details.put("underlyingSymbol", it) }
         snapshot?.let { preferredQuotePrice(it) }?.let { details.put("productPrice", it) }
+        snapshot?.let { findDividendYieldPercent(it) }?.let { details.put("dividendYield", it) }
         return details
     }
 
@@ -543,6 +622,8 @@ class MainActivity : AppCompatActivity() {
         (explicitInterestRate(snapshot)?.let { percentValue(it) }
             ?: fetchReferenceInterestRate(currency, expiry))
             ?.let { details.put("interestRate", it) }
+        (findDividendYieldPercent(snapshot))
+            ?.let { details.put("dividendYield", it) }
         if (currency.isNotBlank()) details.put("interestCurrency", currency)
         (parseRatioFromProductName(name)
             ?: parseRatioFromDescription(detailObj)
@@ -555,9 +636,17 @@ class MainActivity : AppCompatActivity() {
         val underlyingSymbol = underlying?.let {
             firstPlainString(it, listOf("symbol", "homeSymbol", "ticker"))
         } ?: recursiveFindPlainString(snapshot, listOf("underlyingSymbol", "underlyingTicker"))
+        val underlyingIsin = underlying?.let {
+            firstPlainString(it, listOf("isin"))
+        } ?: recursiveFindPlainString(snapshot, listOf("isinUnderlying", "underlyingIsin"))
+        val underlyingWkn = underlying?.let {
+            firstPlainString(it, listOf("wkn"))
+        } ?: recursiveFindPlainString(snapshot, listOf("wknUnderlying", "underlyingWkn"))
 
         underlyingName?.let { details.put("underlyingName", it) }
         underlyingSymbol?.let { details.put("underlyingSymbol", it) }
+        underlyingIsin?.let { details.put("underlyingIsin", it) }
+        underlyingWkn?.let { details.put("underlyingWkn", it) }
 
         val embeddedUnderlyingPrice = figureObj?.let {
             firstNumber(it, listOf("underlyingPrice", "priceUnderlying", "spot", "underlyingLast"))
@@ -565,6 +654,10 @@ class MainActivity : AppCompatActivity() {
         val underlyingPrice = embeddedUnderlyingPrice
             ?: underlying?.let { fetchUnderlyingPrice(it) }
         underlyingPrice?.let { details.put("underlyingPrice", it) }
+        val underlyingDividendYield = underlying?.let { fetchUnderlyingDividendYield(it) }
+        if (underlyingDividendYield != null && !details.has("dividendYield")) {
+            details.put("dividendYield", underlyingDividendYield)
+        }
 
         return details
     }
@@ -664,7 +757,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fetchUnderlyingPrice(underlying: JSONObject): Double? {
-        val type = firstPlainString(underlying, listOf("type", "entityType", "instrumentType"))
+        val type = firstPlainString(underlying, listOf("entityType", "type", "instrumentType"))
             ?.uppercase() ?: return null
         val value = firstPlainString(underlying, listOf("value", "entityValue", "id", "idInstrument"))
             ?: return null
@@ -673,6 +766,18 @@ class MainActivity : AppCompatActivity() {
         val url = "https://api.onvista.de/api/v1/instruments/$encodedType/$encodedValue/snapshot"
         val snapshot = runCatching { JSONObject(httpGet(url)) }.getOrNull() ?: return null
         return preferredQuotePrice(snapshot)
+    }
+
+    private fun fetchUnderlyingDividendYield(underlying: JSONObject): Double? {
+        val type = firstPlainString(underlying, listOf("entityType", "type", "instrumentType"))
+            ?.uppercase() ?: return null
+        val value = firstPlainString(underlying, listOf("value", "entityValue", "id", "idInstrument"))
+            ?: return null
+        val encodedType = java.net.URLEncoder.encode(type, "UTF-8")
+        val encodedValue = java.net.URLEncoder.encode(value, "UTF-8")
+        val url = "https://api.onvista.de/api/v1/instruments/$encodedType/$encodedValue/snapshot"
+        val snapshot = runCatching { JSONObject(httpGet(url)) }.getOrNull() ?: return null
+        return findDividendYieldPercent(snapshot)
     }
 
     private fun firstPlainString(obj: JSONObject, keys: List<String>): String? {
@@ -686,6 +791,12 @@ class MainActivity : AppCompatActivity() {
     private fun findUnderlyingObject(value: Any?): JSONObject? {
         when (value) {
             is JSONObject -> {
+                value.optJSONObject("finderUnderlying")?.let { return it }
+                value.optJSONObject("derivativesUnderlyingList")
+                    ?.optJSONArray("list")
+                    ?.optJSONObject(0)
+                    ?.optJSONObject("instrument")
+                    ?.let { return it }
                 val keys = value.keys()
                 while (keys.hasNext()) {
                     val key = keys.next()
@@ -696,7 +807,8 @@ class MainActivity : AppCompatActivity() {
                         normalized == "underlyingentity" ||
                         normalized == "underlyinginstrument" ||
                         normalized == "baseinstrument" ||
-                        normalized == "basiswert"
+                        normalized == "basiswert" ||
+                        normalized == "finderunderlying"
                     )) {
                         return item
                     }
@@ -770,6 +882,52 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             is JSONArray -> for (i in 0 until value.length()) recursiveFindNumber(value.opt(i), keys, groupedSingleDot)?.let { return it }
+        }
+        return null
+    }
+
+    private fun findDividendYieldPercent(value: Any?): Double? {
+        fun normalize(raw: Double?): Double? {
+            val pct = raw?.let { percentValue(it) } ?: return null
+            return pct.takeIf { it >= 0.0 && it <= 20.0 }
+        }
+        when (value) {
+            is JSONObject -> {
+                value.optJSONObject("stocksCnFundamentalList")
+                    ?.optJSONArray("list")
+                    ?.let { list ->
+                        val currentYear = java.time.LocalDate.now().year
+                        var best: Pair<Int, Double>? = null
+                        for (i in 0 until list.length()) {
+                            val item = list.optJSONObject(i) ?: continue
+                            val year = item.optInt("idYear", 0).takeIf { it > 0 }
+                                ?: Regex("""\d{4}""").find(item.optString("label"))?.value?.toIntOrNull()
+                                ?: continue
+                            if (year > currentYear) continue
+                            val yield = normalize(parseFlexibleNumber(item.opt("cnDivYield"))) ?: continue
+                            if (best == null || year > best!!.first) best = year to yield
+                        }
+                        best?.second?.let { return it }
+                    }
+                val iterator = value.keys()
+                while (iterator.hasNext()) {
+                    val key = iterator.next()
+                    val item = value.opt(key)
+                    val k = key.lowercase()
+                    val isYieldKey = (k.contains("dividend") && (k.contains("yield") || k.contains("return") || k.contains("pct") || k.contains("percent"))) ||
+                        k.contains("dividendenrendite") ||
+                        k.contains("dividendyield") ||
+                        k.contains("divyield")
+                    if (isYieldKey) {
+                        normalize(parseFlexibleNumber(item))?.let { return it }
+                        if (item is JSONObject) normalize(parseFlexibleNumber(item.opt("value")))?.let { return it }
+                    }
+                    findDividendYieldPercent(item)?.let { return it }
+                }
+            }
+            is JSONArray -> for (i in 0 until value.length()) {
+                findDividendYieldPercent(value.opt(i))?.let { return it }
+            }
         }
         return null
     }
@@ -1019,9 +1177,49 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyInsetsToWebPage() {
         if (!pageLoaded) return
+        val displayMetrics = resources.displayMetrics
+        val density = displayMetrics.density
+        val config = resources.configuration
+        val widthDp = if (config.screenWidthDp > 0) {
+            config.screenWidthDp.toFloat()
+        } else {
+            (webView.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels) / density
+        }
+        val heightDp = if (config.screenHeightDp > 0) {
+            config.screenHeightDp.toFloat()
+        } else {
+            (webView.height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels) / density
+        }
+        val minDp = minOf(widthDp, heightDp)
+        val minPhysicalPx = minOf(displayMetrics.widthPixels, displayMetrics.heightPixels)
+        val tinyPhysicalScreen = minPhysicalPx <= 800
+        val smallViewport = minDp < 390f && tinyPhysicalScreen
+        val compactSmall = minDp <= 339f && tinyPhysicalScreen
+        val comfortPhone = false
+        val viewportContent = if (smallViewport) {
+            "width=460, viewport-fit=cover"
+        } else {
+            "width=device-width, initial-scale=1.0, viewport-fit=cover"
+        }
         val script = """
             document.documentElement.style.setProperty('--status-inset','${statusInsetCss}px');
             document.documentElement.style.setProperty('--nav-inset','${navigationInsetCss}px');
+            document.body.classList.toggle('tb-compact-small',$compactSmall);
+            document.body.classList.toggle('tb-small-viewport',$smallViewport);
+            document.body.classList.toggle('tb-comfort-phone',$comfortPhone);
+            document.documentElement.setAttribute('data-android-dp','${widthDp.toInt()}x${heightDp.toInt()}');
+            document.documentElement.setAttribute('data-android-px','${displayMetrics.widthPixels}x${displayMetrics.heightPixels}');
+            document.documentElement.setAttribute('data-compact-small','$compactSmall');
+            document.documentElement.setAttribute('data-small-viewport','$smallViewport');
+            document.documentElement.setAttribute('data-comfort-phone','$comfortPhone');
+            if($smallViewport) document.documentElement.setAttribute('data-small-layout-viewport','460');
+            else document.documentElement.removeAttribute('data-small-layout-viewport');
+            (function(){
+              var viewport=document.querySelector('meta[name="viewport"]');
+              if(viewport) viewport.setAttribute('content',${JSONObject.quote(viewportContent)});
+              var style=document.getElementById('tb-native-compact-style');
+              if(style) style.parentNode.removeChild(style);
+            })();
         """.trimIndent()
         webView.evaluateJavascript(script, null)
     }
