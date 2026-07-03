@@ -8324,9 +8324,8 @@ function tradeDedupeTime(value){
 function tradeDedupeText(value){
   return String(value||'').trim().toUpperCase().replace(/\s+/g,' ');
 }
-function tradeDedupeSignature(trade){
+function tradeDedupeCoreSignature(trade){
   if(!trade)return '';
-  if(trade.importKey)return 'import|'+tradeDedupeText(trade.importKey);
   const keyId=tradeDedupeText(trade.wkn||trade.isin||trade.productName||trade.ticker);
   return [
     tradeDedupeText(trade.assetType||inferAssetType(trade)),
@@ -8344,13 +8343,27 @@ function tradeDedupeSignature(trade){
     tradeDedupeText(trade.outcome)
   ].join('|');
 }
+function tradeDedupeSignature(trade){
+  if(!trade)return '';
+  if(trade.importKey)return 'import|'+tradeDedupeText(trade.importKey);
+  return tradeDedupeCoreSignature(trade);
+}
+function tradeDedupeSignatures(trade){
+  if(!trade)return [];
+  const keys=[];
+  const importKey=tradeDedupeText(trade.importKey);
+  const coreKey=tradeDedupeCoreSignature(trade);
+  if(importKey)keys.push('import|'+importKey);
+  if(coreKey)keys.push('core|'+coreKey);
+  return keys;
+}
 function dedupeTradesList(list){
   const seen=new Set();
   const out=[];
   (Array.isArray(list)?list:[]).forEach(function(trade){
-    const key=tradeDedupeSignature(trade);
-    if(key&&seen.has(key))return;
-    if(key)seen.add(key);
+    const keys=tradeDedupeSignatures(trade);
+    if(keys.some(key=>seen.has(key)))return;
+    keys.forEach(key=>seen.add(key));
     out.push(trade);
   });
   return out;
@@ -9010,13 +9023,14 @@ function confirmZeroImport(){
   invalidateTradesCache();
   loadTrades();
   // Duplikate erkennen: stabile Signatur statt flüchtiger Import-ID.
-  const existingKeys=new Set(trades.map(tradeDedupeSignature));
+  const existingKeys=new Set();
+  trades.forEach(trade=>tradeDedupeSignatures(trade).forEach(key=>existingKeys.add(key)));
   const newTrades=[];
   pending.forEach(t=>{
     const normalized=normalizeTrade(t,trades.length+newTrades.length);
-    const key=tradeDedupeSignature(normalized);
-    if(key&&existingKeys.has(key))return;
-    if(key)existingKeys.add(key);
+    const keys=tradeDedupeSignatures(normalized);
+    if(keys.some(key=>existingKeys.has(key)))return;
+    keys.forEach(key=>existingKeys.add(key));
     newTrades.push(normalized);
   });
   const dupeCount=pending.length-newTrades.length;
