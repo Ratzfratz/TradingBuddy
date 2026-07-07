@@ -11126,11 +11126,7 @@ async function renderAttachmentViewerImage() {
       const msg=e&&e.message?e.message:'nicht geladen';
       if(counter)counter.textContent=`${attachmentViewerIndex + 1} / ${attachmentViewerItems.length} · ${msg}`;
       if(e&&e.missingFileId){
-        removeMissingTradeAttachment(attachmentViewerTradeId,e.missingFileId,attachmentViewerIndex);
-        attachmentViewerItems=attachmentViewerItems.filter((att,i)=>{
-          if(e.missingFileId)return String(att&&att.fileId||'')!==e.missingFileId;
-          return i!==attachmentViewerIndex;
-        });
+        console.warn('Screenshot-Zuordnung bleibt erhalten, obwohl die Datei nicht geladen werden konnte:',e.missingFileId);
       }
       if(typeof _awStatus==='function')_awStatus(e&&e.message?e.message:'Screenshot konnte nicht geladen werden.','error');
       return;
@@ -16178,6 +16174,8 @@ function _awUpdateSyncStatus(){
 
 let _awConfirmMode='pull';
 let _awConflictDocs=null;
+let _awLastConflictPromptKey='';
+let _awLastConflictPromptAt=0;
 
 function _awFillConfirm(mode, doc){
   _awConfirmMode=mode==='push'?'push':'pull';
@@ -16211,12 +16209,17 @@ function _awFillConfirm(mode, doc){
 
 function _awShowConflictChoice(tradeDoc=null,settingsDoc=null,source='auto'){
   if(document.getElementById('aw-pull-confirm-ov')&&document.getElementById('aw-pull-confirm-ov').style.display==='flex')return;
-  _awConfirmMode='conflict';
-  _awConflictDocs={tradeDoc,settingsDoc,source};
   loadTrades();
   const localTs=_awNewestLocalMs();
   const cloudTs=_awNewestCloudMs(tradeDoc,settingsDoc);
   const cloudCount=tradeDoc?_awBackupMeta(tradeDoc).count:(localStorage.getItem('tb_cloud_trade_count')||'0');
+  const promptKey=[localTs,cloudTs,cloudCount,source==='manual'?'manual':'auto'].join('|');
+  const now=Date.now();
+  if(promptKey===_awLastConflictPromptKey&&now-_awLastConflictPromptAt<15000)return;
+  _awLastConflictPromptKey=promptKey;
+  _awLastConflictPromptAt=now;
+  _awConfirmMode='conflict';
+  _awConflictDocs={tradeDoc,settingsDoc,source};
   const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text;};
   set('aw-confirm-title','Sync-Konflikt');
   set('aw-confirm-text','Lokal und Cloud wurden geändert. Wähle, welcher Stand gelten soll.');
@@ -16268,6 +16271,7 @@ async function _awConfirmYes(){
 async function _awResolveConflict(choice){
   _awConfirmNo();
   _awSyncBusy=false;
+  _awLastConflictPromptAt=Date.now();
   try{
     if(choice==='cloud'){
       await _awPull(true);
@@ -16429,8 +16433,10 @@ async function _awPush(forceTrades=false){
           try{
             const uploaded=await _awUploadScreenshotAttachment(att,imgCache);
             if(uploaded)remoteAtts.push(uploaded);
+            else throw new Error('Screenshot konnte nicht vorbereitet werden.');
           }catch(e){
-            console.warn('Screenshot-Upload übersprungen:',e);
+            console.warn('Screenshot-Upload fehlgeschlagen:',e);
+            throw new Error('Screenshot konnte nicht in die Cloud geladen werden. Trade-Sync wurde abgebrochen.');
           }
         }
         tradesForUpload.push(Object.assign({}, trade, {attachments:remoteAtts}));
