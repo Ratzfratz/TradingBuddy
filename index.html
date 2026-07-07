@@ -8925,6 +8925,23 @@ function startZeroImportWknCheck(importedTrades){
   runNextZeroImportWknCheck();
 }
 
+function startOpenKoStatusCheck(){
+  if(window._openKoStatusCheckStarted)return;
+  if(_zeroImportEnrichCurrent||(_zeroImportEnrichQueue&&_zeroImportEnrichQueue.length)){
+    setTimeout(startOpenKoStatusCheck,1500);
+    return;
+  }
+  if(!window.TBNative||typeof window.TBNative.fetchDerivativeDetails!=='function')return;
+  loadTrades();
+  const openKos=trades.filter(function(trade){
+    const identifier=String((trade&&(trade.wkn||trade.isin))||'').trim();
+    return normalizedAssetType(trade)==='ko'&&trade.outcome==='open'&&identifier.length>=6;
+  });
+  if(!openKos.length)return;
+  window._openKoStatusCheckStarted=true;
+  startZeroImportWknCheck(openKos);
+}
+
 function runNextZeroImportWknCheck(){
   zeroClearImportCheckTimer();
   if(!_zeroImportEnrichQueue.length){
@@ -11888,6 +11905,11 @@ if(window.ResizeObserver){
 persistLoad();
 rmLoad(); // Synchron aus Cache für schnellen Start
 rmLoadRemote(); // Async vom Gist im Hintergrund
+window.addEventListener('load',function(){
+  setTimeout(function(){
+    try{startOpenKoStatusCheck();}catch(e){console.warn('KO-Statusprüfung fehlgeschlagen',e);}
+  },1200);
+});
 </script>
 <script>
 if('serviceWorker' in navigator){
