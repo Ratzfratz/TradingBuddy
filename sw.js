@@ -1,4 +1,4 @@
-const CACHE = 'warrantcalc-v100';
+const CACHE = 'warrantcalc-v101';
 const SCOPE_URL = new URL(self.registration.scope);
 const scopePath = SCOPE_URL.pathname.replace(/\/$/, '');
 const appPath = path => `${scopePath}${path}`;
@@ -6,6 +6,7 @@ const appUrl = path => new URL(appPath(path), self.location.origin).toString();
 
 const ASSETS = [
   appUrl('/index.html'),
+  appUrl('/appwrite-sdk.js'),
   appUrl('/manifest.json'),
   appUrl('/favicon.ico'),
   appUrl('/icons/icon-16.png'),
