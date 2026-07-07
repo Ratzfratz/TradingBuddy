@@ -9073,12 +9073,8 @@ function parseZeroCsv(text){
   let zeroExecutions=0;
   let zeroBuyExecutions=0;
   let zeroSellExecutions=0;
-  const importKeyCounts={};
   const zeroImportKey=function(parts){
-    const base=parts.join('|');
-    const next=(importKeyCounts[base]||0)+1;
-    importKeyCounts[base]=next;
-    return next===1?base:(base+'#'+next);
+    return parts.join('|');
   };
   const cell=(row,name)=>COL[name]===undefined?'':zeroCleanText(row[COL[name]]);
   for(let li=1;li<rows.length;li++){
@@ -9195,8 +9191,12 @@ function parseZeroCsv(text){
     }
   }));
 
+  const dedupedOut=dedupeTradesList(out).map((trade,index)=>normalizeTrade(trade,index));
+  skipped+=out.length-dedupedOut.length;
+  openCount=dedupedOut.filter(trade=>trade.outcome==='open').length;
+
   return {
-    trades:out,
+    trades:dedupedOut,
     open:openCount,
     skipped,
     zeroExecutions,
