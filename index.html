@@ -8712,6 +8712,97 @@ function persistLoadedTradeAttachment(tradeId,index,attachment){
   localStorage.setItem(STORE_KEY,JSON.stringify(trades));
 }
 
+function removeMissingTradeAttachment(tradeId,fileId,index){
+  let changed=false;
+  if(attachmentViewerFormMode){
+    const before=formAttachments.length;
+    formAttachments=formAttachments.filter((att,i)=>{
+      if(fileId)return String(att&&att.fileId||'')!==fileId;
+      return i!==index;
+    });
+    changed=formAttachments.length!==before;
+    if(changed)renderFormAttachment();
+  }
+  if(tradeId){
+    loadTrades();
+    const trade=trades.find(item=>item.id===tradeId);
+    if(trade&&Array.isArray(trade.attachments)){
+      const before=trade.attachments.length;
+      trade.attachments=trade.attachments.filter((att,i)=>{
+        if(fileId)return String(att&&att.fileId||'')!==fileId;
+        return i!==index;
+      });
+      changed=changed||trade.attachments.length!==before;
+      if(trade.attachments.length!==before){
+        _tradesCacheValid=true;
+        localStorage.setItem(STORE_KEY,JSON.stringify(trades));
+      }
+    }
+  }
+  if(changed){
+    localStorage.setItem('tb_local_saved_at',String(Date.now()));
+    if(typeof renderList==='function')renderList(true);
+    if(typeof _awSchedulePush==='function')_awSchedulePush();
+  }
+}
+
+function isMissingCloudFileError(error){
+  if(!error)return false;
+  return !!error.missingFileId ||
+    Number(error.code)===404 ||
+    /\b404\b|not.?found|not found|nicht gefunden|datei nicht gefunden/i.test(String(error.message||error));
+}
+
+async function _awCloudFileExists(fileId){
+  if(!fileId)return false;
+  if(!_awStorage&&typeof _awInit==='function')_awInit();
+  if(!_awStorage)return false;
+  try{
+    await _awStorage.getFile(AW_BUCKET,fileId);
+    return true;
+  }catch(e){
+    if(isMissingCloudFileError(e))return false;
+    throw e;
+  }
+}
+
+async function pruneMissingCloudAttachmentsFromTrades(list){
+  if(!_awStorage&&typeof _awInit==='function')_awInit();
+  if(!_awStorage)return{trades:Array.isArray(list)?list:[],changed:false};
+  const existsCache=new Map();
+  let changed=false;
+  const next=(Array.isArray(list)?list:[]).map(trade=>{
+    const attachments=normalizeTradeAttachments(trade);
+    const kept=[];
+    for(const att of attachments){
+      kept.push(att);
+    }
+    return Object.assign({}, trade, {attachments:kept});
+  });
+  for(const trade of next){
+    const kept=[];
+    for(const att of normalizeTradeAttachments(trade)){
+      if(att.dataUrl){
+        kept.push(att);
+        continue;
+      }
+      if(!att.fileId){
+        changed=true;
+        continue;
+      }
+      let exists=existsCache.get(att.fileId);
+      if(exists===undefined){
+        exists=await _awCloudFileExists(att.fileId);
+        existsCache.set(att.fileId,exists);
+      }
+      if(exists)kept.push(att);
+      else changed=true;
+    }
+    trade.attachments=kept;
+  }
+  return{trades:next,changed};
+}
+
 function buildTradeSignatureMap(list){
   const map=new Map();
   (Array.isArray(list)?list:[]).forEach(trade=>{
@@ -10927,6 +11018,13 @@ async function renderAttachmentViewerImage() {
     }catch(e){
       const msg=e&&e.message?e.message:'nicht geladen';
       if(counter)counter.textContent=`${attachmentViewerIndex + 1} / ${attachmentViewerItems.length} · ${msg}`;
+      if(e&&e.missingFileId){
+        removeMissingTradeAttachment(attachmentViewerTradeId,e.missingFileId,attachmentViewerIndex);
+        attachmentViewerItems=attachmentViewerItems.filter((att,i)=>{
+          if(e.missingFileId)return String(att&&att.fileId||'')!==e.missingFileId;
+          return i!==attachmentViewerIndex;
+        });
+      }
       if(typeof _awStatus==='function')_awStatus(e&&e.message?e.message:'Screenshot konnte nicht geladen werden.','error');
       return;
     }
@@ -15750,9 +15848,18 @@ async function _awDownloadImg(fileId){
     }
   }
   if(!bytes){
+    let missing=false;
     try{await _awStorage.getFile(AW_BUCKET,fileId);lastError=lastError||'Download blockiert';}
-    catch(e){lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);}
-    throw new Error('Screenshot-Datei nicht geladen: '+fileId+' · '+(lastError||'unbekannter Fehler'));
+    catch(e){
+      missing=e&&Number(e.code)===404;
+      lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);
+    }
+    const err=new Error('Screenshot-Datei nicht geladen: '+fileId+' · '+(lastError||'unbekannter Fehler'));
+    if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
+      err.missingFileId=fileId;
+      err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
+    }
+    throw err;
   }
   let dec;
   try{dec=await _awDecryptBytes(bytes);}
@@ -16088,7 +16195,15 @@ async function _awPush(forceTrades=false){
     const toUpload=[];
 
     if(shouldUploadTrades){
-      const uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
+      let uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
+      const pruned=await pruneMissingCloudAttachmentsFromTrades(uploadSource);
+      uploadSource=pruned.trades.map((trade,index)=>normalizeTrade(trade,index));
+      if(pruned.changed){
+        trades=uploadSource;
+        _tradesCacheValid=true;
+        localStorage.setItem(STORE_KEY,JSON.stringify(trades));
+        localStorage.setItem('tb_local_saved_at',String(Date.now()));
+      }
       for(const trade of uploadSource){
         const remoteAtts=[];
         for(const att of normalizeTradeAttachments(trade)){
@@ -16298,16 +16413,24 @@ async function _awPull(force=false){
       // Trades zusammenführen, fehlende Screenshots nachladen
       const merged=[];
       let rescuedLocalAttachments=false;
+      let removedMissingAttachments=false;
       for(const t of remoteTrades){
         const atts=[];
         for(const att of(t.attachments||[])){
+          if(!att||!att.fileId)continue;
           let dataUrl=localImgByFid[att.fileId];
           if(!dataUrl){
             try{
               _awSyncLabel('','pending','Screenshots laden \u2026');
               dataUrl=await _awDownloadImg(att.fileId);
               localImgByFid[att.fileId]=dataUrl;
-            }catch(e){console.warn('Screenshot:',att.fileId,e);}
+            }catch(e){
+              console.warn('Screenshot:',att.fileId,e);
+              if(isMissingCloudFileError(e)){
+                removedMissingAttachments=true;
+                continue;
+              }
+            }
           }
           atts.push(dataUrl?Object.assign({}, att, {dataUrl:dataUrl}):att);
         }
@@ -16319,9 +16442,11 @@ async function _awPull(force=false){
         if(localMatch&&normalizeTradeAttachments(localMatch).some(att=>att.dataUrl)&&attachments.length>atts.length)rescuedLocalAttachments=true;
         merged.push(Object.assign({}, remoteWithAttachments, {attachments}));
       }
+      const prunedMerged=await pruneMissingCloudAttachmentsFromTrades(merged);
+      if(prunedMerged.changed)removedMissingAttachments=true;
 
       _awApplying=true;
-      trades=dedupeTradesList(merged).map((r,i)=>normalizeTrade(r,i));
+      trades=dedupeTradesList(prunedMerged.trades).map((r,i)=>normalizeTrade(r,i));
       localStorage.setItem(STORE_KEY,JSON.stringify(trades));
       _tradesCacheValid=true;
       _awApplySettings(remoteSettings);
@@ -16336,7 +16461,7 @@ async function _awPull(force=false){
       if(typeof invalidateTradesCache==='function')invalidateTradesCache();
       if(typeof renderList==='function')renderList(true);
       if(typeof updateJournalFilterUi==='function')updateJournalFilterUi();
-      if(rescuedLocalAttachments){
+      if(rescuedLocalAttachments||removedMissingAttachments){
         localStorage.setItem('tb_local_saved_at',String(Date.now()));
         _awPushRequested=true;
         setTimeout(()=>_awSchedulePush(),0);
