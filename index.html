@@ -15672,6 +15672,7 @@ async function _awGetJwt(){
   if(_awJwt&&Date.now()<_awJwtExpiry)return _awJwt;
   const r=await _awAccount.createJWT();
   _awJwt=r.jwt;_awJwtExpiry=Date.now()+14*60*1000;
+  try{if(_awClient&&typeof _awClient.setJWT==='function')_awClient.setJWT(_awJwt);}catch(_){}
   return _awJwt;
 }
 
@@ -15916,12 +15917,23 @@ async function _awValidateCloudBackupDoc(doc){
 async function _awDownloadImg(fileId){
   if(!_awStorage&&typeof _awInit==='function')_awInit();
   if(!_awStorage)throw new Error('Cloud-Speicher nicht bereit.');
+  try{await _awGetJwt();}catch(_){}
+  let bytes=null;
+  let lastError='';
+  if(_awClient&&typeof _awClient.call==='function'){
+    try{
+      const uri=new URL(`${AW_ENDPOINT}/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files/${encodeURIComponent(fileId)}/download`);
+      const buf=await _awClient.call('get',uri,{}, {}, 'arrayBuffer');
+      bytes=new Uint8Array(buf);
+    }catch(e){
+      lastError=e&&e.code?('HTTP '+e.code):(e&&e.message?e.message:String(e));
+    }
+  }
   const urls=[];
   if(typeof _awStorage.getFileDownload==='function')urls.push(String(_awStorage.getFileDownload(AW_BUCKET,fileId)));
   if(typeof _awStorage.getFileView==='function')urls.push(String(_awStorage.getFileView(AW_BUCKET,fileId)));
-  let bytes=null;
-  let lastError='';
   for(const url of Array.from(new Set(urls))){
+    if(bytes)break;
     try{
       const resp=await fetch(url,{cache:'no-store',credentials:'include',headers:await _awFetchHeaders()});
       if(!resp.ok){
@@ -16406,14 +16418,6 @@ async function _awPush(forceTrades=false){
 
     if(shouldUploadTrades){
       let uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
-      const pruned=await pruneMissingCloudAttachmentsFromTrades(uploadSource);
-      uploadSource=pruned.trades.map((trade,index)=>normalizeTrade(trade,index));
-      if(pruned.changed){
-        trades=uploadSource;
-        _tradesCacheValid=true;
-        localStorage.setItem(STORE_KEY,JSON.stringify(trades));
-        localStorage.setItem('tb_local_saved_at',String(Date.now()));
-      }
       for(const trade of uploadSource){
         const remoteAtts=[];
         for(const att of normalizeTradeAttachments(trade)){
@@ -16609,13 +16613,16 @@ async function _awPull(force=false){
       // Trades zusammenführen, fehlende Screenshots nachladen
       const merged=[];
       let rescuedLocalAttachments=false;
-      let removedMissingAttachments=false;
+      let failedScreenshotDownloads=0;
       for(const t of remoteTrades){
         const atts=[];
         for(const att of(t.attachments||[])){
           const normalizedAtt=normalizeTradeAttachment(att);
           if(!normalizedAtt)continue;
-          if(!normalizedAtt.fileId)continue;
+          if(!normalizedAtt.fileId){
+            if(normalizedAtt.dataUrl)atts.push(normalizedAtt);
+            continue;
+          }
           let dataUrl=localImgByFid[normalizedAtt.fileId];
           if(!dataUrl){
             try{
@@ -16624,10 +16631,7 @@ async function _awPull(force=false){
               localImgByFid[normalizedAtt.fileId]=dataUrl;
             }catch(e){
               console.warn('Screenshot:',normalizedAtt.fileId,e);
-              if(isUnreadableCloudFileError(e)){
-                removedMissingAttachments=true;
-                continue;
-              }
+              failedScreenshotDownloads++;
             }
           }
           atts.push(dataUrl?Object.assign({}, normalizedAtt, {dataUrl:dataUrl}):normalizedAtt);
@@ -16640,11 +16644,9 @@ async function _awPull(force=false){
         if(localMatch&&normalizeTradeAttachments(localMatch).some(att=>att.dataUrl)&&attachments.length>atts.length)rescuedLocalAttachments=true;
         merged.push(Object.assign({}, remoteWithAttachments, {attachments}));
       }
-      const prunedMerged=await pruneMissingCloudAttachmentsFromTrades(merged);
-      if(prunedMerged.changed)removedMissingAttachments=true;
 
       _awApplying=true;
-      trades=dedupeTradesList(prunedMerged.trades).map((r,i)=>normalizeTrade(r,i));
+      trades=dedupeTradesList(merged).map((r,i)=>normalizeTrade(r,i));
       localStorage.setItem(STORE_KEY,JSON.stringify(trades));
       _tradesCacheValid=true;
       _awApplySettings(remoteSettings);
@@ -16655,11 +16657,11 @@ async function _awPull(force=false){
       _awPushRequested=false;
 
       _awSyncLabel(doc.synced_at);
-      _awStatus(trades.length+' Trades geladen \u2713','ok');
+      _awStatus(failedScreenshotDownloads?`${trades.length} Trades geladen, ${failedScreenshotDownloads} Screenshot(s) nicht lesbar`:trades.length+' Trades geladen \u2713',failedScreenshotDownloads?'warn':'ok');
       if(typeof invalidateTradesCache==='function')invalidateTradesCache();
       if(typeof renderList==='function')renderList(true);
       if(typeof updateJournalFilterUi==='function')updateJournalFilterUi();
-      if(rescuedLocalAttachments||removedMissingAttachments){
+      if(rescuedLocalAttachments){
         localStorage.setItem('tb_local_saved_at',String(Date.now()));
         _awPushRequested=true;
         setTimeout(()=>_awSchedulePush(),0);
