@@ -8532,6 +8532,42 @@ function tradeDedupeStoredImportSignature(trade){
     tradeDedupeNumber(trade.sellFees)
   ].join('|');
 }
+function tradeDedupeExactCopySignature(trade){
+  if(!trade)return '';
+  const keyId=tradeDedupeInstrumentKey(trade);
+  if(!keyId)return '';
+  return [
+    tradeDedupeText(trade.assetType||inferAssetType(trade)),
+    tradeDedupeText(trade.type),
+    keyId,
+    tradeDedupeText(trade.ticker),
+    tradeDedupeText(trade.underlyingSymbol),
+    tradeDedupeText(trade.underlyingName),
+    tradeDedupeText(trade.productName),
+    tradeDedupeDate(trade.entryDate),
+    tradeDedupeTime(trade.entryTime),
+    tradeDedupeNumber(trade.entry),
+    tradeDedupeNumber(trade.count),
+    tradeDedupeNumber(trade.buyFees),
+    tradeDedupeNumber(trade.capital),
+    tradeDedupeNumber(trade.strike),
+    tradeDedupeText(trade.strikeCurrency),
+    tradeDedupeNumber(trade.spotEntry),
+    tradeDedupeDate(trade.expiry),
+    tradeDedupeText(trade.outcome),
+    tradeDedupeNumber(trade.exit),
+    tradeDedupeDate(trade.exitDate),
+    tradeDedupeTime(trade.exitTime),
+    tradeDedupeNumber(trade.sellFees),
+    tradeDedupeNumber(trade.pnl),
+    tradeDedupeNumber(trade.ret),
+    tradeDedupeText(trade.strategy),
+    tradeDedupeNumber(trade.planStop),
+    tradeDedupeNumber(trade.planTarget),
+    tradeDedupeText(trade.planThesis),
+    tradeDedupeText(trade.notes)
+  ].join('|');
+}
 function tradeDedupeSignature(trade){
   if(!trade)return '';
   if(trade.importKey)return 'import|'+tradeDedupeImportKey(trade.importKey);
@@ -8544,10 +8580,12 @@ function tradeDedupeSignatures(trade){
   const coreKey=tradeDedupeCoreSignature(trade);
   const dateTimeKey=tradeDedupeDateTimeSignature(trade);
   const storedImportKey=tradeDedupeStoredImportSignature(trade);
+  const exactCopyKey=tradeDedupeExactCopySignature(trade);
   if(importKey)keys.push('import|'+importKey);
   if(dateTimeKey)keys.push('datetime|'+dateTimeKey);
   if(coreKey)keys.push('core|'+coreKey);
   if(storedImportKey)keys.push('stored-import|'+storedImportKey);
+  if(exactCopyKey)keys.push('exact-copy|'+exactCopyKey);
   return keys;
 }
 function dedupeTradesList(list){
