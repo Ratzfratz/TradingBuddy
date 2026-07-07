@@ -8753,6 +8753,14 @@ function isMissingCloudFileError(error){
     /\b404\b|not.?found|not found|nicht gefunden|datei nicht gefunden/i.test(String(error.message||error));
 }
 
+function isUnreadableCloudFileError(error){
+  if(!error)return false;
+  return isMissingCloudFileError(error) ||
+    Number(error.code)===401 ||
+    Number(error.code)===403 ||
+    /permission|permissions|read|unauthorized|forbidden|keine berechtigung/i.test(String(error.message||error));
+}
+
 async function _awCloudFileExists(fileId){
   if(!fileId)return false;
   if(!_awStorage&&typeof _awInit==='function')_awInit();
@@ -8761,9 +8769,32 @@ async function _awCloudFileExists(fileId){
     await _awStorage.getFile(AW_BUCKET,fileId);
     return true;
   }catch(e){
-    if(isMissingCloudFileError(e))return false;
+    if(isUnreadableCloudFileError(e))return false;
     throw e;
   }
+}
+
+async function _awUploadScreenshotAttachment(att,imgCache){
+  if(!att||!att.dataUrl)return null;
+  const sha256=await _awSha256(att.dataUrl);
+  let fileId=imgCache[sha256]||_awFidImg(sha256);
+  const mime=(att.dataUrl.match(/^data:([^;]+)/)||[])[1]||'image/webp';
+  const parts=String(att.dataUrl).match(/^data:([^;,]+);base64,(.+)$/);
+  if(!parts)return null;
+  const bin=atob(parts[2]);
+  const bytes=new Uint8Array(bin.length);
+  for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
+  const encBytes=await _awEncryptBytes(bytes);
+  const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
+  try{
+    await _awUploadFile(fileId,file);
+  }catch(e){
+    if(!isUnreadableCloudFileError(e)&&Number(e&&e.code)!==409&&!/already exists|permission|read/i.test(String(e&&e.message||e)))throw e;
+    fileId=_awRandomFileId('Shot');
+    await _awUploadFile(fileId,file);
+  }
+  imgCache[sha256]=fileId;
+  return {fileId,name:att.name||'screenshot.webp',mime};
 }
 
 async function pruneMissingCloudAttachmentsFromTrades(list){
@@ -15855,9 +15886,9 @@ async function _awDownloadImg(fileId){
       lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);
     }
     const err=new Error('Screenshot-Datei nicht geladen: '+fileId+' · '+(lastError||'unbekannter Fehler'));
-    if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
+    if(missing||/\b404\b|not.?found|not found|nicht gefunden|permission|permissions|read|unauthorized|forbidden/i.test(lastError)){
       err.missingFileId=fileId;
-      err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
+      err.message='Screenshot-Datei ist nicht lesbar: '+fileId;
     }
     throw err;
   }
@@ -16192,7 +16223,6 @@ async function _awPush(forceTrades=false){
     }
     const imgCache=_awGetImgCache();
     const tradesForUpload=[];
-    const toUpload=[];
 
     if(shouldUploadTrades){
       let uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
@@ -16211,30 +16241,16 @@ async function _awPush(forceTrades=false){
             if(att.fileId)remoteAtts.push({fileId:att.fileId,name:att.name||'screenshot.webp',mime:att.mime||'image/webp'});
             continue;
           }
-          const sha256=await _awSha256(att.dataUrl);
-          const fileId=_awFidImg(sha256);
-          if(imgCache[sha256]!==fileId){
-            toUpload.push({sha256,dataUrl:att.dataUrl,name:att.name||'screenshot.webp',fileId});
-            imgCache[sha256]=fileId;
+          _awSyncLabel('','pending','Screenshots ...');
+          try{
+            const uploaded=await _awUploadScreenshotAttachment(att,imgCache);
+            if(uploaded)remoteAtts.push(uploaded);
+          }catch(e){
+            console.warn('Screenshot-Upload übersprungen:',e);
           }
-          const mime=(att.dataUrl.match(/^data:([^;]+)/)||[])[1]||'image/webp';
-          remoteAtts.push({fileId,name:att.name||'screenshot.webp',mime});
         }
         tradesForUpload.push(Object.assign({}, trade, {attachments:remoteAtts}));
       }
-    }
-
-    // Screenshots hochladen (nur neue)
-    for(let i=0;i<toUpload.length;i++){
-      _awSyncLabel('','pending',`Screenshots ${i+1}/${toUpload.length}`);
-      const img=toUpload[i];
-      const parts=String(img.dataUrl).match(/^data:([^;,]+);base64,(.+)$/);
-      if(!parts)continue;
-      const bin=atob(parts[2]);const bytes=new Uint8Array(bin.length);
-      for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
-      const encBytes=await _awEncryptBytes(bytes);
-      try{await _awUploadFile(img.fileId,new File([encBytes],_awCloudFileName('screenshot',img.name),{type:'application/octet-stream'}));}
-      catch(e){console.warn('Screenshot-Upload übersprungen:',e);}
     }
 
     // Trades und Einstellungen getrennt in lesbaren Database-Dokumenten speichern.
@@ -16426,7 +16442,7 @@ async function _awPull(force=false){
               localImgByFid[att.fileId]=dataUrl;
             }catch(e){
               console.warn('Screenshot:',att.fileId,e);
-              if(isMissingCloudFileError(e)){
+              if(isUnreadableCloudFileError(e)){
                 removedMissingAttachments=true;
                 continue;
               }
