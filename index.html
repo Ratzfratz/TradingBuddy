@@ -8926,7 +8926,7 @@ function startZeroImportWknCheck(importedTrades){
 }
 
 function startOpenKoStatusCheck(){
-  if(window._openKoStatusCheckStarted)return;
+  if(window._openKoStatusCheckRunning)return;
   if(_zeroImportEnrichCurrent||(_zeroImportEnrichQueue&&_zeroImportEnrichQueue.length)){
     setTimeout(startOpenKoStatusCheck,1500);
     return;
@@ -8938,7 +8938,7 @@ function startOpenKoStatusCheck(){
     return normalizedAssetType(trade)==='ko'&&trade.outcome==='open'&&identifier.length>=6;
   });
   if(!openKos.length)return;
-  window._openKoStatusCheckStarted=true;
+  window._openKoStatusCheckRunning=true;
   startZeroImportWknCheck(openKos);
 }
 
@@ -8946,6 +8946,7 @@ function runNextZeroImportWknCheck(){
   zeroClearImportCheckTimer();
   if(!_zeroImportEnrichQueue.length){
     _zeroImportEnrichCurrent='';
+    window._openKoStatusCheckRunning=false;
     _derivativeFetchTarget='calc';
     _zeroImportEnrichTotal=0;
     if(_zeroImportEnrichDirty){
@@ -16108,6 +16109,7 @@ async function _awPull(force=false){
       if(typeof invalidateTradesCache==='function')invalidateTradesCache();
       if(typeof renderList==='function')renderList(true);
       if(typeof updateJournalFilterUi==='function')updateJournalFilterUi();
+      if(typeof startOpenKoStatusCheck==='function')setTimeout(startOpenKoStatusCheck,800);
     }else{
       _awSyncBusy=false;
       await _awPush();
