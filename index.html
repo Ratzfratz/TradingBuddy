@@ -15269,12 +15269,10 @@ async function _awBiSync(){
   }else if(settingsDoc){
     if(await _awHandleSyncDecision(null,settingsDoc,'start'))return;
   }
-  if(localCount>0){
-    const ok=await _awPush();
-    if(ok){
-      _awUpdateSyncStatus();
-      return;
-    }
+  if(!cloudDoc&&!settingsDoc&&localCount>0){
+    await _awPush();
+    _awUpdateSyncStatus();
+    return;
   }
   _awUpdateSyncStatus();
   return;
@@ -16295,16 +16293,35 @@ function awSetAutoSync(on){
 let _awLastPushError=null;
 async function _awKickAutoSync(){
   if(!_awUser||!_awDocId||!_awEncKey){_awUpdateSyncStatus();return;}
-  if(_awSyncBusy){_awSchedulePush();return;}
+  if(_awSyncBusy){_awUpdateSyncStatus();return;}
   _awStatus('Auto-Sync wird geprüft ...','muted');
   try{
+    let tradeDoc=null;
+    try{tradeDoc=await _awGetEntityDoc('trades');}catch(_){}
+    let settingsDoc=null;
+    try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
+    if(tradeDoc){
+      const validation=await _awValidateCloudBackupDoc(tradeDoc);
+      if(validation.valid){
+        const handled=await _awHandleSyncDecision(validation.doc||tradeDoc,settingsDoc,'manual');
+        if(!handled)_awStatus('Auto-Sync geprüft ✓','ok');
+        return;
+      }
+      _awStatus(validation.message||'Cloud-Backup konnte nicht geprüft werden.','error');
+      return;
+    }
+    if(settingsDoc){
+      const handled=await _awHandleSyncDecision(null,settingsDoc,'manual');
+      if(!handled)_awStatus('Auto-Sync geprüft ✓','ok');
+      return;
+    }
     loadTrades();
     if(typeof trades!=='undefined'&&trades.length>0){
       const ok=await _awPush();
-      if(ok)_awStatus('Auto-Sync geprüft ✓','ok');
-      else if(_awLastPushError)_awStatus('Fehler: '+_awLastPushError,'error');
+      _awStatus(ok?'Lokaler Stand hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
+    }else{
+      _awStatus('Kein Cloud-Backup gefunden.','muted');
     }
-    await _awCheckCloudChanges();
   }catch(e){
     _awStatus('Auto-Sync fehlgeschlagen.','error');
     console.warn('Auto-Sync:',e);

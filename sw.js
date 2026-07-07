@@ -1,4 +1,4 @@
-const CACHE = 'warrantcalc-v94';
+const CACHE = 'warrantcalc-v95';
 const SCOPE_URL = new URL(self.registration.scope);
 const scopePath = SCOPE_URL.pathname.replace(/\/$/, '');
 const appPath = path => `${scopePath}${path}`;
