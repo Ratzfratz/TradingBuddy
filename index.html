@@ -8711,7 +8711,9 @@ function zeroClassify(name){
   return 'stock';
 }
 function zeroDirection(name){
-  return /\bPUT\b/.test((name||'').toUpperCase())?'put':'call';
+  const text=(name||'').toUpperCase();
+  if(/\b(PUT|SHORT|BEAR|DOWN)\b/.test(text))return 'put';
+  return 'call';
 }
 function zeroExtractExpiry(name){
   const full=String(name||'').match(/\b(0?[1-9]|[12]\d|3[01])\.(0?[1-9]|1[0-2])\.(\d{2}|\d{4})\b/);
@@ -8994,7 +8996,7 @@ function handleZeroImportWknDetails(details,error,responseIdentifier){
   const underlyingPrice=derivativeNumber(details.underlyingPrice||details.spot||details.underlyingLast,'strike');
   const statusText=String(details.statusText||'').toUpperCase();
   const knockedOut=details.knockedOut===true||
-    /\b(KNOCK(?:ED)?(?:\s|-)?OUT|AUSGEKNOCKT|AUSGESTOPPT|BARRIER(?:\s|-)?EVENT|TERMINATED|EXPIRED|DELISTED|FÄLLIG|FAELLIG|WERTLOS|INACTIVE|INAKTIV)\b/.test(statusText)||
+    /\b(KNOCK(?:ED)?(?:\s|-)?OUT|KNOCKED|KNOCKEDOUT|AUSGEKNOCKT|AUSGESTOPPT|BARRIER(?:\s|-)?EVENT|TERMINATED|EXPIRED|DELISTED|FÄLLIG|FAELLIG|WERTLOS|INACTIVE|INAKTIV)\b/.test(statusText)||
     (productType==='ko'&&productPrice!==null&&productPrice<=0);
   const productName=String(details.name||'').trim();
   const underlying=String(details.underlyingSymbol||details.underlyingName||'').trim();
@@ -16695,7 +16697,7 @@ function awTogglePw(){
   }
   function isKnockedOutStatus(statusText){
     const text=(statusText||'').toUpperCase();
-    return /\b(KNOCK(?:ED)?(?:\s|-)?OUT|AUSGEKNOCKT|AUSGESTOPPT|BARRIER(?:\s|-)?EVENT|TERMINATED|EXPIRED|DELISTED|FÄLLIG|FAELLIG|WERTLOS|INACTIVE|INAKTIV)\b/.test(text);
+    return /\b(KNOCK(?:ED)?(?:\s|-)?OUT|KNOCKED|KNOCKEDOUT|AUSGEKNOCKT|AUSGESTOPPT|BARRIER(?:\s|-)?EVENT|TERMINATED|EXPIRED|DELISTED|FÄLLIG|FAELLIG|WERTLOS|INACTIVE|INAKTIV)\b/.test(text);
   }
   async function fetchUnderlyingPrice(underlying){
     const type=(firstPlainString(underlying,['entityType','type','instrumentType'])||'').toUpperCase();
