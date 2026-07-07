@@ -8991,9 +8991,10 @@ function handleZeroImportWknDetails(details,error,responseIdentifier){
   const koBarrier=derivativeNumber(details.koBarrier||details.barrier||details.knockOut,'strike');
   const expiry=String(details.expiry||'').trim();
   const productPrice=derivativeNumber(details.productPrice||details.price||details.last);
+  const underlyingPrice=derivativeNumber(details.underlyingPrice||details.spot||details.underlyingLast,'strike');
   const statusText=String(details.statusText||'').toUpperCase();
   const knockedOut=details.knockedOut===true||
-    /\b(KNOCK|AUSGEKNOCKT|KNOCKED|TERMINATED|EXPIRED|DELISTED|FÄLLIG|FAELLIG)\b/.test(statusText)||
+    /\b(KNOCK(?:ED)?(?:\s|-)?OUT|AUSGEKNOCKT|AUSGESTOPPT|BARRIER(?:\s|-)?EVENT|TERMINATED|EXPIRED|DELISTED|FÄLLIG|FAELLIG|WERTLOS|INACTIVE|INAKTIV)\b/.test(statusText)||
     (productType==='ko'&&productPrice!==null&&productPrice<=0);
   const productName=String(details.name||'').trim();
   const underlying=String(details.underlyingSymbol||details.underlyingName||'').trim();
@@ -9030,7 +9031,11 @@ function handleZeroImportWknDetails(details,error,responseIdentifier){
     ['assetType','type','productName','ticker','strike','expiry','strikeCurrency'].forEach(function(field){
       zeroRecordImportDiff(trade,field,before[field],next[field]);
     });
-    const shouldCloseKo=knockedOut||(next.assetType==='ko'&&productPrice!==null&&productPrice<=0);
+    const koDirection=direction==='put'||direction==='call'?direction:next.type;
+    const barrierTouched=next.assetType==='ko'&&underlyingPrice!==null&&next.strike!==null&&(
+      koDirection==='put' ? underlyingPrice>=Number(next.strike) : underlyingPrice<=Number(next.strike)
+    );
+    const shouldCloseKo=knockedOut||barrierTouched||(next.assetType==='ko'&&productPrice!==null&&productPrice<=0);
     if(next.assetType==='ko'&&next.outcome==='open'&&shouldCloseKo){
       next.exit=0;
       next.exitDate=expiry&&/^\d{4}-\d{2}-\d{2}$/.test(expiry)?expiry:(next.exitDate||new Date().toISOString().slice(0,10));
@@ -16690,7 +16695,7 @@ function awTogglePw(){
   }
   function isKnockedOutStatus(statusText){
     const text=(statusText||'').toUpperCase();
-    return ['KNOCK','AUSGEKNOCKT','KNOCKED','TERMINATED','EXPIRED','DELISTED','FÄLLIG','FAELLIG'].some(t=>text.includes(t));
+    return /\b(KNOCK(?:ED)?(?:\s|-)?OUT|AUSGEKNOCKT|AUSGESTOPPT|BARRIER(?:\s|-)?EVENT|TERMINATED|EXPIRED|DELISTED|FÄLLIG|FAELLIG|WERTLOS|INACTIVE|INAKTIV)\b/.test(text);
   }
   async function fetchUnderlyingPrice(underlying){
     const type=(firstPlainString(underlying,['entityType','type','instrumentType'])||'').toUpperCase();
