@@ -8569,6 +8569,22 @@ function tradeEntryLegSignature(trade){
     tradeDedupeDate(trade.expiry)
   ].join('|');
 }
+function tradeEntryLegLooseSignature(trade){
+  if(!trade)return '';
+  const keyId=tradeDedupeInstrumentKey(trade);
+  const date=tradeDedupeDate(trade.entryDate);
+  if(!keyId||!date)return '';
+  return [
+    tradeDedupeText(trade.assetType||inferAssetType(trade)),
+    tradeDedupeText(trade.type),
+    keyId,
+    date,
+    tradeDedupeNumber(trade.entry),
+    tradeDedupeNumber(trade.count),
+    tradeDedupeNumber(trade.strike),
+    tradeDedupeDate(trade.expiry)
+  ].join('|');
+}
 function tradeIsFinalized(trade){
   if(!trade)return false;
   return trade.outcome==='win'||trade.outcome==='loss'||trade.exit!==null||!!trade.exitDate;
@@ -9561,6 +9577,7 @@ function zeroImportAnalyzePending(pending){
   const existingHard=new Set();
   const possibleByKey=new Map();
   const openByEntryLeg=new Map();
+  const openByLooseEntryLeg=new Map();
   const finalizedOpenLegs=new Set();
   const finalizedLooseOpenLegs=new Set();
   trades.forEach(trade=>{
@@ -9569,6 +9586,8 @@ function zeroImportAnalyzePending(pending){
     if(possibleKey&&!possibleByKey.has(possibleKey))possibleByKey.set(possibleKey,trade);
     const entryLegKey=tradeEntryLegSignature(trade);
     if(entryLegKey&&trade.outcome==='open'&&!openByEntryLeg.has(entryLegKey))openByEntryLeg.set(entryLegKey,trade);
+    const looseEntryLegKey=tradeEntryLegLooseSignature(trade);
+    if(looseEntryLegKey&&trade.outcome==='open'&&!openByLooseEntryLeg.has(looseEntryLegKey))openByLooseEntryLeg.set(looseEntryLegKey,trade);
     const openLegKey=tradeOpenLegSignature(trade);
     if(openLegKey&&tradeIsFinalized(trade))finalizedOpenLegs.add(openLegKey);
     const looseOpenLegKey=tradeOpenLegLooseSignature(trade);
@@ -9581,7 +9600,10 @@ function zeroImportAnalyzePending(pending){
     const normalized=normalizeTrade(t,trades.length+safe.length+possible.length);
     const hardKeys=tradeDedupeSignatures(normalized);
     const entryLegKey=tradeEntryLegSignature(normalized);
-    const openExisting=normalized.outcome!=='open'&&entryLegKey?openByEntryLeg.get(entryLegKey):null;
+    const looseEntryLegKey=tradeEntryLegLooseSignature(normalized);
+    const openExisting=normalized.outcome!=='open'
+      ? ((entryLegKey&&openByEntryLeg.get(entryLegKey))||(looseEntryLegKey&&openByLooseEntryLeg.get(looseEntryLegKey))||null)
+      : null;
     if(openExisting){
       possible.push({existing:openExisting,incoming:normalized,decision:'update',autoClose:true});
       hardKeys.forEach(key=>existingHard.add(key));
