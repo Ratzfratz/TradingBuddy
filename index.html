@@ -8443,6 +8443,10 @@ function tradeDedupeTime(value){
 function tradeDedupeText(value){
   return String(value||'').trim().toUpperCase().replace(/\s+/g,' ');
 }
+function tradeDedupeImportKey(value){
+  const key=tradeDedupeText(value);
+  return key.indexOf('ZERO|')===0 ? key.replace(/#\d+$/,'') : key;
+}
 function tradeDedupeInstrumentKey(trade){
   if(!trade)return '';
   return tradeDedupeText(trade.wkn||trade.isin||trade.productName||trade.ticker);
@@ -8500,13 +8504,13 @@ function tradePossibleDuplicateSignature(trade){
 }
 function tradeDedupeSignature(trade){
   if(!trade)return '';
-  if(trade.importKey)return 'import|'+tradeDedupeText(trade.importKey);
+  if(trade.importKey)return 'import|'+tradeDedupeImportKey(trade.importKey);
   return tradeDedupeCoreSignature(trade);
 }
 function tradeDedupeSignatures(trade){
   if(!trade)return [];
   const keys=[];
-  const importKey=tradeDedupeText(trade.importKey);
+  const importKey=tradeDedupeImportKey(trade.importKey);
   const coreKey=tradeDedupeCoreSignature(trade);
   const dateTimeKey=tradeDedupeDateTimeSignature(trade);
   if(importKey)keys.push('import|'+importKey);
