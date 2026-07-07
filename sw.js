@@ -1,4 +1,4 @@
-const CACHE = 'warrantcalc-v62';
+const CACHE = 'warrantcalc-v63';
 
 const ASSETS = [
   '/index.html',
