@@ -6982,6 +6982,7 @@ function applyDerivativeDetailsToTrade(details){
 
   formProductName=fetchedProductName||formProductName;
   formUnderlyingSymbol=underlyingSymbol||formUnderlyingSymbol;
+  formUnderlyingName=underlyingName||formUnderlyingName;
   if(typeof syncProductNameDisplay==='function')syncProductNameDisplay();
 
   // Klasse: OS, KO, Faktor, Aktie, ETF
@@ -7674,6 +7675,7 @@ let formType = 'call';
 let formOutcome = 'open';
 let formProductName = '';
 let formUnderlyingSymbol = '';
+let formUnderlyingName = '';
 let formAssetType = 'stock';
 let formStrikeCcy = 'EUR'; // Währung für Strike-Feld
 let _populatingTradeForm = false;
@@ -8210,6 +8212,29 @@ function normalizeTradeAttachments(raw) {
   return values.map(normalizeTradeAttachment).filter(Boolean).slice(0, MAX_TRADE_ATTACHMENTS);
 }
 
+function cleanUnderlyingDisplayName(value) {
+  const text = String(value || '').trim();
+  if (!text || /^[\[{]/.test(text)) return '';
+  return text
+    .replace(/\s+/g, ' ')
+    .replace(/\b([A-ZÄÖÜ]{3,})\b/g, word => word.charAt(0) + word.slice(1).toLowerCase())
+    .replace(/\b(Ag|Se|Sa|Nv|Plc|Inc|Corp|Ltd|Etf|Adr)\b/g, word => word.toUpperCase());
+}
+
+function inferUnderlyingNameFromProductName(productName) {
+  const parts = String(productName || '').split('/').map(part => part.trim()).filter(Boolean);
+  if (parts.length >= 3) return cleanUnderlyingDisplayName(parts[2]);
+  return '';
+}
+
+function tradeDisplayUnderlyingName(trade) {
+  if (!trade) return '';
+  return cleanUnderlyingDisplayName(trade.underlyingName) ||
+    inferUnderlyingNameFromProductName(trade.productName) ||
+    String(trade.ticker || '').trim().toUpperCase() ||
+    '—';
+}
+
 function normalizeTrade(raw, index = 0) {
   const entry = numberOrNull(raw && raw.entry);
   const count = numberOrNull(raw && raw.count);
@@ -8244,6 +8269,7 @@ function normalizeTrade(raw, index = 0) {
     outcome,
     ticker: String((raw && raw.ticker) || '').trim().toUpperCase(),
     underlyingSymbol: String((raw && raw.underlyingSymbol) || '').trim().toUpperCase(),
+    underlyingName: cleanUnderlyingDisplayName((raw && raw.underlyingName) || ''),
     productName,
     isin: String((raw && raw.isin) || '').trim().toUpperCase(),
     wkn: String((raw && raw.wkn) || '').trim().toUpperCase(),
@@ -8839,6 +8865,7 @@ function handleZeroImportWknDetails(details,error,responseIdentifier){
     if(['os','ko','faktor'].includes(productType))next.assetType=productType;
     if((direction==='call'||direction==='put')&&(next.assetType==='os'||next.assetType==='ko'||next.assetType==='faktor'))next.type=direction;
     if(productName)next.productName=productName;
+    if(details.underlyingName)next.underlyingName=cleanUnderlyingDisplayName(details.underlyingName);
     if(underlying)next.ticker=(typeof applyAlias==='function'?applyAlias(underlying):underlying).toUpperCase();
     if(next.assetType==='ko'&&koBarrier!==null)next.strike=koBarrier;
     else if((next.assetType==='os'||next.assetType==='ko')&&strike!==null)next.strike=strike;
@@ -9711,6 +9738,7 @@ function formSnapshot() {
   values.formOutcome = formOutcome;
   values.formProductName = formProductName;
   values.formUnderlyingSymbol = formUnderlyingSymbol;
+  values.formUnderlyingName = formUnderlyingName;
   values.formIdeaTags = [...formIdeaTags].sort();
   values.formResultTags = [...formResultTags].sort();
   values.formPlanAdherence = formPlanAdherence;
@@ -9802,6 +9830,7 @@ function resetForm(setToday = true) {
   editId = null;
   formProductName = '';
   formUnderlyingSymbol = '';
+  formUnderlyingName = '';
   syncProductNameDisplay();
   clearTransferredFields($('nt-body'));
 
@@ -9852,6 +9881,7 @@ function populateTradeForm(id) {
   editId = trade.id;
   formProductName = trade.productName || '';
   formUnderlyingSymbol = trade.underlyingSymbol || '';
+  formUnderlyingName = trade.underlyingName || inferUnderlyingNameFromProductName(trade.productName);
   syncProductNameDisplay();
   $('form-title').textContent = 'Trade bearbeiten';
   $('save-btn').textContent = 'ÄNDERUNGEN SPEICHERN';
@@ -10117,6 +10147,7 @@ function saveTrade() {
     outcome: formOutcome,
     ticker,
     underlyingSymbol: formUnderlyingSymbol,
+    underlyingName: formUnderlyingName,
     productName: formProductName,
     wkn: $('f-wkn') ? $('f-wkn').value.trim().toUpperCase() : '',
     entryDate: $('f-entry-date').value,
@@ -10207,6 +10238,12 @@ function setAssetTickerFilter(value) {
   if(currentPage==='statistik') renderStats();
 }
 
+function tradeAssetFilterLabel(trade) {
+  const name = tradeDisplayUnderlyingName(trade);
+  const symbol = String((trade && trade.ticker) || '').trim().toUpperCase();
+  return symbol && name && name.toUpperCase() !== symbol ? `${name} (${symbol})` : (name || symbol || 'Ohne Basiswert');
+}
+
 function updateAssetTickerOptions() {
   const select = $('f-asset-ticker');
   const group = $('filter-specific-asset-group');
@@ -10215,6 +10252,7 @@ function updateAssetTickerOptions() {
   // Nur Trades zählen, die zu den aktiven Status-/Klassen-/Richtungs-Filtern passen.
   // (Ticker-Filter selbst ausgenommen, sonst bliebe nur das gewählte Asset übrig.)
   const counts = new Map();
+  const labels = new Map();
   trades.forEach(trade => {
     const outcomeMatch = activeFilters.outcome.size === 0 || activeFilters.outcome.has(trade.outcome);
     const directionMatch = activeFilters.direction.size === 0 ||
@@ -10225,7 +10263,10 @@ function updateAssetTickerOptions() {
     const tagMatch = tradeMatchesJournalTags(trade);
     if (!(outcomeMatch && directionMatch && assetMatch && tagMatch)) return;
     const ticker = String((trade && trade.ticker) || '').trim().toUpperCase();
-    if (ticker) counts.set(ticker, (counts.get(ticker) || 0) + 1);
+    if (ticker) {
+      counts.set(ticker, (counts.get(ticker) || 0) + 1);
+      if (!labels.has(ticker)) labels.set(ticker, tradeAssetFilterLabel(trade));
+    }
   });
 
   const tickers = Array.from(counts.keys()).sort((a, b) =>
@@ -10242,7 +10283,8 @@ function updateAssetTickerOptions() {
     const option = document.createElement('option');
     option.value = ticker;
     const count = counts.get(ticker) || 0;
-    option.textContent = count > 1 ? `${ticker} (${count})` : ticker;
+    const label = labels.get(ticker) || ticker;
+    option.textContent = count > 1 ? `${label} · ${count}` : label;
     select.appendChild(option);
   });
 
@@ -10313,7 +10355,10 @@ function updateJournalFilterUi() {
   const parts = ['outcome', 'direction', 'asset']
     .map(group => Array.from(activeFilters[group]).map(value => labels[value]).join(' oder '))
     .filter(Boolean);
-  if (activeTickerFilter) parts.push('Basiswert: ' + activeTickerFilter);
+  if (activeTickerFilter) {
+    const activeTrade = trades.find(trade => String(trade.ticker || '').trim().toUpperCase() === activeTickerFilter);
+    parts.push('Basiswert: ' + (activeTrade ? tradeAssetFilterLabel(activeTrade) : activeTickerFilter));
+  }
   if (activeJournalTags.size) {
     const tagNames = [...activeJournalTags].map(id => tagLabel('idea',id) || tagLabel('result',id)).filter(Boolean);
     if (tagNames.length) parts.push('Tags: ' + tagNames.join(' + '));
@@ -10423,9 +10468,11 @@ function renderOpenPositionSummary() {
   openTrades.forEach(trade => {
     const assetType = normalizedAssetType(trade);
     const ticker = String(trade.ticker || 'Ohne Basiswert').trim() || 'Ohne Basiswert';
+    const displayName = tradeDisplayUnderlyingName(trade);
     const key = assetType + '|' + ticker.toUpperCase();
     const bucket = classGroups.get(assetType) || {assetType, count:0, capital:0, positions:new Map()};
-    const item = bucket.positions.get(key) || {ticker, count:0, capital:0, assetType, trades:[]};
+    const item = bucket.positions.get(key) || {ticker, displayName, count:0, capital:0, assetType, trades:[]};
+    if ((!item.displayName || item.displayName === item.ticker) && displayName) item.displayName = displayName;
     item.count += 1;
     item.capital += Number(trade.capital || 0);
     item.trades.push(trade);
@@ -10477,7 +10524,7 @@ function renderOpenPositionSummary() {
                 <summary>
                   <div class="ops-row">
                     <div>
-                      <div class="ops-name">${mergeEscapeHtml(item.ticker)}</div>
+                      <div class="ops-name">${mergeEscapeHtml(item.displayName || item.ticker)}</div>
                       <div class="ops-meta">${item.count} Trade${item.count===1?'':'s'}</div>
                     </div>
                   </div>
@@ -10669,10 +10716,11 @@ function tradeCardHtml(trade, showActions = true) {
   const dateText = trade.exitDate
     ? `${formatGermanDate(trade.entryDate) || '—'} → ${formatGermanDate(trade.exitDate)}`
     : (formatGermanDate(trade.entryDate) || '—');
+  const displayUnderlying = tradeDisplayUnderlyingName(trade);
   const expiryCompact = formatGermanDate(trade.expiry);
   const productSummary = [trade.wkn ? 'WKN ' + trade.wkn : '', expiryCompact ? 'Fälligkeit ' + expiryCompact : ''].filter(Boolean).join(' · ');
-  const productDetails = (trade.productName || trade.underlyingSymbol || productSummary)
-    ? `<details class="tc-product-details"><summary><span>Produktdetails</span><span class="tc-product-summary">${mergeEscapeHtml(productSummary)}</span></summary><div class="tc-product-content">${trade.productName ? mergeEscapeHtml(trade.productName) : 'Keine vollständige Produktbezeichnung gespeichert.'}${trade.underlyingSymbol ? `<span class="tc-product-symbol">Technisches Symbol: ${mergeEscapeHtml(trade.underlyingSymbol)}</span>` : ''}</div></details>`
+  const productDetails = (trade.productName || trade.underlyingSymbol || trade.underlyingName || productSummary)
+    ? `<details class="tc-product-details"><summary><span>Produktdetails</span><span class="tc-product-summary">${mergeEscapeHtml(productSummary)}</span></summary><div class="tc-product-content">${trade.underlyingName ? `<strong>Basiswert: ${mergeEscapeHtml(trade.underlyingName)}</strong><br>` : ''}${trade.productName ? mergeEscapeHtml(trade.productName) : 'Keine vollständige Produktbezeichnung gespeichert.'}${trade.underlyingSymbol ? `<span class="tc-product-symbol">Technisches Symbol: ${mergeEscapeHtml(trade.underlyingSymbol)}</span>` : ''}</div></details>`
     : '';
 
   const isCalcTrade = (normalizedAssetType(trade) === 'os' || normalizedAssetType(trade) === 'ko');
@@ -10709,7 +10757,7 @@ function tradeCardHtml(trade, showActions = true) {
   return `<div class="trade-card ${trade.outcome} asset-${cardAssetType}" data-trade-id="${trade.id}">
     <div class="tc-top">
       <div class="tc-titlewrap">
-        <span class="tc-ticker">${trade.ticker || '—'}</span>
+        <span class="tc-ticker">${mergeEscapeHtml(displayUnderlying)}</span>
         <span class="tc-badges">${tradeBadgeHtml(trade)}</span>
       </div>
       ${actions}
