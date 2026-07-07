@@ -11368,7 +11368,7 @@ function renderJournalInsights(closed) {
       return;
     }
     host.innerHTML = rows.map(row => {
-      const sample = row.count < 3 ? '<span class="tag-analysis-sample">klein</span>' : '';
+      const sample = '';
       const avg = row.avgRet === null ? '—' : fmtSignedPct(row.avgRet);
       return `<div class="tag-analysis-row"><div class="tag-analysis-name">${mergeEscapeHtml(row.tag.label)}${sample}<span class="tag-analysis-sub">${row.count} Trades · Ø ${avg}</span></div><div class="tag-analysis-bar"><span class="tag-analysis-fill" style="width:${Math.max(4,row.winRate)}%"></span></div><div class="tag-analysis-meta"><span class="tag-analysis-count">${Math.round(row.winRate)}% Win</span><span class="tag-analysis-pnl" style="color:${row.pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtEur(row.pnl)}</span></div></div>`;
     }).join('');
