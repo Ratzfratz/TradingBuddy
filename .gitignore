@@ -1,0 +1,28 @@
+*.iml
+.idea/
+.gradle
+.kotlin
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+# API-Keys etc.
+secrets.properties
+
+# Lokales Android-Studio-Projekt bleibt lokal.
+/app/
+/gradle/
+/gradlew
+/gradlew.bat
+/build.gradle.kts
+/settings.gradle.kts
+/gradle.properties
