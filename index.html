@@ -8523,6 +8523,21 @@ function tradeOpenLegSignature(trade){
     tradeDedupeDate(trade.expiry)
   ].join('|');
 }
+function tradeOpenLegLooseSignature(trade){
+  if(!trade)return '';
+  const keyId=tradeDedupeInstrumentKey(trade);
+  if(!keyId)return '';
+  return [
+    tradeDedupeText(trade.assetType||inferAssetType(trade)),
+    tradeDedupeText(trade.type),
+    keyId,
+    tradeDedupeDate(trade.entryDate),
+    tradeDedupeNumber(trade.entry),
+    tradeDedupeNumber(trade.count),
+    tradeDedupeNumber(trade.strike),
+    tradeDedupeDate(trade.expiry)
+  ].join('|');
+}
 function tradeIsFinalized(trade){
   if(!trade)return false;
   return trade.outcome==='win'||trade.outcome==='loss'||trade.exit!==null||!!trade.exitDate;
@@ -8607,12 +8622,14 @@ function tradeDedupeSignatures(trade){
   const storedImportKey=tradeDedupeStoredImportSignature(trade);
   const exactCopyKey=tradeDedupeExactCopySignature(trade);
   const closedOpenLegKey=tradeIsFinalized(trade)?tradeOpenLegSignature(trade):'';
+  const closedOpenLegLooseKey=tradeIsFinalized(trade)?tradeOpenLegLooseSignature(trade):'';
   if(importKey)keys.push('import|'+importKey);
   if(dateTimeKey)keys.push('datetime|'+dateTimeKey);
   if(coreKey)keys.push('core|'+coreKey);
   if(storedImportKey)keys.push('stored-import|'+storedImportKey);
   if(exactCopyKey)keys.push('exact-copy|'+exactCopyKey);
   if(closedOpenLegKey)keys.push('closed-open-leg|'+closedOpenLegKey);
+  if(closedOpenLegLooseKey)keys.push('closed-open-leg-loose|'+closedOpenLegLooseKey);
   return keys;
 }
 function dedupeTradesList(list){
@@ -9326,12 +9343,15 @@ function zeroImportAnalyzePending(pending){
   const existingHard=new Set();
   const possibleByKey=new Map();
   const finalizedOpenLegs=new Set();
+  const finalizedLooseOpenLegs=new Set();
   trades.forEach(trade=>{
     tradeDedupeSignatures(trade).forEach(key=>existingHard.add(key));
     const possibleKey=tradePossibleDuplicateSignature(trade);
     if(possibleKey&&!possibleByKey.has(possibleKey))possibleByKey.set(possibleKey,trade);
     const openLegKey=tradeOpenLegSignature(trade);
     if(openLegKey&&tradeIsFinalized(trade))finalizedOpenLegs.add(openLegKey);
+    const looseOpenLegKey=tradeOpenLegLooseSignature(trade);
+    if(looseOpenLegKey&&tradeIsFinalized(trade))finalizedLooseOpenLegs.add(looseOpenLegKey);
   });
   const safe=[];
   const possible=[];
@@ -9345,6 +9365,11 @@ function zeroImportAnalyzePending(pending){
     }
     const openLegKey=tradeOpenLegSignature(normalized);
     if(normalized.outcome==='open'&&openLegKey&&finalizedOpenLegs.has(openLegKey)){
+      hardDupeCount++;
+      return;
+    }
+    const looseOpenLegKey=tradeOpenLegLooseSignature(normalized);
+    if(normalized.outcome==='open'&&looseOpenLegKey&&finalizedLooseOpenLegs.has(looseOpenLegKey)){
       hardDupeCount++;
       return;
     }
@@ -10359,9 +10384,12 @@ function saveTrade() {
 
   const isDerivativeAsset = formAssetType === 'os' || formAssetType === 'ko';
   const hasDirection = isDerivativeAsset || formAssetType === 'faktor';
+  loadTrades();
+  const existingEditTrade = editId ? trades.find(item => item.id === editId) : null;
 
   const trade = normalizeTrade({
     id: editId || uid(),
+    importKey: existingEditTrade ? existingEditTrade.importKey : '',
     type: hasDirection ? formType : '',
     assetType: formAssetType,
     outcome: formOutcome,
@@ -10369,8 +10397,10 @@ function saveTrade() {
     underlyingSymbol: formUnderlyingSymbol,
     underlyingName: formUnderlyingName,
     productName: formProductName,
+    isin: existingEditTrade ? existingEditTrade.isin : '',
     wkn: $('f-wkn') ? $('f-wkn').value.trim().toUpperCase() : '',
     entryDate: $('f-entry-date').value,
+    entryTime: existingEditTrade ? existingEditTrade.entryTime : '',
     entry,
     count,
     buyFees: Math.max(0, numberOrNull($('f-buy-fees') ? $('f-buy-fees').value : '') || 0),
@@ -10380,6 +10410,7 @@ function saveTrade() {
     expiry: formAssetType === 'os' ? $('f-expiry').value : '',
     exit: numberOrNull($('f-exit').value),
     exitDate: $('f-exit-date').value,
+    exitTime: existingEditTrade ? existingEditTrade.exitTime : '',
     sellFees: Math.max(0, numberOrNull($('f-sell-fees') ? $('f-sell-fees').value : '') || 0),
     pnl,
     ret,
@@ -10397,7 +10428,6 @@ function saveTrade() {
     updatedAt: Date.now()
   });
 
-  loadTrades();
   const tradesBeforeSave = trades.slice();
 
   if (editId) {
