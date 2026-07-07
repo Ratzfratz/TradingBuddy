@@ -8237,6 +8237,45 @@ function tradeDisplayUnderlyingName(trade) {
     '—';
 }
 
+function tradeDerivativeStrikeLabel(trade) {
+  if (!trade || !isDerivativeTrade(trade)) return '';
+  const strike = numberOrNull(trade.strike);
+  if (strike === null) return '';
+  const label = normalizedAssetType(trade) === 'ko' ? 'KO' : 'Strike';
+  const currency = trade.strikeCurrency === 'USD' ? '$' : '€';
+  return `${label} ${fmt(strike)}\u202f${currency}`;
+}
+
+function tradeDerivativeDisplayName(trade) {
+  const base = tradeDisplayUnderlyingName(trade);
+  if (!trade || !isDerivativeTrade(trade)) return base;
+  const parts = [
+    base,
+    tradeDerivativeStrikeLabel(trade),
+    formatGermanDate(trade.expiry)
+  ].filter(Boolean);
+  return parts.join(' · ') || base;
+}
+
+function tradePortfolioGroupKey(trade) {
+  const assetType = normalizedAssetType(trade);
+  const instrumentCode = String((trade && (trade.wkn || trade.isin)) || '').trim().toUpperCase();
+  const strike = numberOrNull(trade && trade.strike);
+  if (isDerivativeTrade(trade)) {
+    if (instrumentCode) return assetType + '|product|' + instrumentCode;
+    return [
+      assetType,
+      String((trade && (trade.ticker || trade.underlyingSymbol || trade.underlyingName || trade.productName)) || 'Ohne Basiswert').trim().toUpperCase(),
+      String((trade && trade.type) || ''),
+      String(strike === null ? '' : strike),
+      String((trade && trade.strikeCurrency) || ''),
+      String((trade && trade.expiry) || '')
+    ].join('|');
+  }
+  const ticker = String((trade && trade.ticker) || 'Ohne Basiswert').trim().toUpperCase() || 'Ohne Basiswert';
+  return assetType + '|' + ticker;
+}
+
 function normalizeTrade(raw, index = 0) {
   const entry = numberOrNull(raw && raw.entry);
   const count = numberOrNull(raw && raw.count);
@@ -10474,11 +10513,15 @@ function renderOpenPositionSummary() {
   openTrades.forEach(trade => {
     const assetType = normalizedAssetType(trade);
     const ticker = String(trade.ticker || 'Ohne Basiswert').trim() || 'Ohne Basiswert';
-    const displayName = tradeDisplayUnderlyingName(trade);
-    const key = assetType + '|' + ticker.toUpperCase();
+    const displayName = isDerivativeTrade(trade) ? tradeDerivativeDisplayName(trade) : tradeDisplayUnderlyingName(trade);
+    const key = tradePortfolioGroupKey(trade);
+    const instrumentCode = String(trade.wkn || trade.isin || '').trim().toUpperCase();
+    const instrumentLabel = trade.wkn ? 'WKN' : (trade.isin ? 'ISIN' : '');
     const bucket = classGroups.get(assetType) || {assetType, count:0, capital:0, positions:new Map()};
-    const item = bucket.positions.get(key) || {ticker, displayName, count:0, capital:0, assetType, trades:[]};
+    const item = bucket.positions.get(key) || {ticker, displayName, instrumentCode, instrumentLabel, count:0, capital:0, assetType, trades:[]};
     if ((!item.displayName || item.displayName === item.ticker) && displayName) item.displayName = displayName;
+    if (!item.instrumentCode && instrumentCode) item.instrumentCode = instrumentCode;
+    if (!item.instrumentLabel && instrumentLabel) item.instrumentLabel = instrumentLabel;
     item.count += 1;
     item.capital += Number(trade.capital || 0);
     item.trades.push(trade);
@@ -10526,12 +10569,17 @@ function renderOpenPositionSummary() {
                     <div class="ops-trade-value">${fmtCapitalEur(Number(trade.capital || 0))}</div>
                   </div>`;
                 }).join('');
+              const countText = item.count + ' Trade' + (item.count===1?'':'s');
+              const isDerivativePosition = ['os','ko','faktor'].includes(item.assetType);
+              const metaText = isDerivativePosition && item.instrumentCode
+                ? (item.instrumentLabel || 'WKN') + ' ' + item.instrumentCode + ' · ' + countText
+                : countText;
               return `<details class="ops-position">
                 <summary>
                   <div class="ops-row">
                     <div>
                       <div class="ops-name">${mergeEscapeHtml(item.displayName || item.ticker)}</div>
-                      <div class="ops-meta">${item.count} Trade${item.count===1?'':'s'}</div>
+                      <div class="ops-meta">${mergeEscapeHtml(metaText)}</div>
                     </div>
                   </div>
                   <div class="ops-value">${fmtCapitalEur(item.capital)}</div>
@@ -10722,7 +10770,7 @@ function tradeCardHtml(trade, showActions = true) {
   const dateText = trade.exitDate
     ? `${formatGermanDate(trade.entryDate) || '—'} → ${formatGermanDate(trade.exitDate)}`
     : (formatGermanDate(trade.entryDate) || '—');
-  const displayUnderlying = tradeDisplayUnderlyingName(trade);
+  const displayUnderlying = isDerivativeTrade(trade) ? tradeDerivativeDisplayName(trade) : tradeDisplayUnderlyingName(trade);
   const expiryCompact = formatGermanDate(trade.expiry);
   const productSummary = [trade.wkn ? 'WKN ' + trade.wkn : '', expiryCompact ? 'Fälligkeit ' + expiryCompact : ''].filter(Boolean).join(' · ');
   const productDetails = (trade.productName || trade.underlyingSymbol || trade.underlyingName || productSummary)
