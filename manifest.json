@@ -2,7 +2,7 @@
   "name": "Trading Buddy",
   "short_name": "Trading Buddy",
   "description": "Optionsschein Rechner & Trade-Tagebuch für private Trader",
-  "start_url": "/app.html",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#090c10",
@@ -47,12 +47,12 @@
   "shortcuts": [
     {
       "name": "Rechner",
-      "url": "/app.html",
+      "url": "/",
       "description": "Optionsschein Rechner"
     },
     {
       "name": "Tagebuch",
-      "url": "/app.html#tagebuch",
+      "url": "/#tagebuch",
       "description": "Trade-Tagebuch"
     }
   ]

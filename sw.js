@@ -1,7 +1,7 @@
-const CACHE = 'warrantcalc-v57';
+const CACHE = 'warrantcalc-v58';
 
 const ASSETS = [
-  '/app.html',
+  '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/icons/icon-16.png',
@@ -37,7 +37,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  if (event.request.mode === 'navigate' || url.pathname === '/app.html') {
+  if (event.request.mode === 'navigate' || url.pathname === '/index.html') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
@@ -47,7 +47,7 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(() => caches.match(event.request).then(response => response || caches.match('/app.html')))
+        .catch(() => caches.match(event.request).then(response => response || caches.match('/index.html')))
     );
     return;
   }
@@ -72,7 +72,7 @@ self.addEventListener('fetch', event => {
 
           return response;
         })
-        .catch(() => caches.match('/app.html'));
+        .catch(() => caches.match('/index.html'));
     })
   );
 });
