@@ -5740,6 +5740,43 @@ html[data-small-viewport="true"] body #settings-rm-body .filters .pill,
 html[data-small-layout-viewport="460"] body #settings-rm-body .filters .pill{
   margin:0 9px 9px 0!important;
 }
+
+/* Einheitliche WKN/ISIN-Typografie in Rechner, Formular, Tagebuch und Portfolio */
+:root{
+  --tb-wkn-input-font:.88rem;
+  --tb-wkn-chip-font:.62rem;
+}
+#rc-wkn,
+#f-wkn{
+  font-family:var(--f)!important;
+  font-size:var(--tb-wkn-input-font)!important;
+  font-weight:650!important;
+  letter-spacing:.03em!important;
+  text-transform:uppercase;
+}
+.tc-wkn-badge,
+.tc-product-summary,
+.ops-meta{
+  font-size:var(--tb-wkn-chip-font)!important;
+  line-height:1.2!important;
+}
+.tc-wkn-badge{
+  font-weight:650!important;
+  letter-spacing:.03em!important;
+}
+.tc-product-summary,
+.ops-meta{
+  font-weight:600!important;
+}
+body.tb-small-viewport,
+html[data-small-viewport="true"] body,
+html[data-small-layout-viewport="460"] body,
+body.tb-comfort-phone,
+html[data-comfort-phone="true"] body,
+body.tb-compact-small{
+  --tb-wkn-input-font:var(--tb-font-input,.88rem);
+  --tb-wkn-chip-font:.62rem;
+}
 </style>
 </head>
 <body>
