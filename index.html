@@ -15185,7 +15185,7 @@ async function _awBiSync(){
     const meta=_awBackupMeta(cloudDoc);
     const cloudMs=_awDocMs(cloudDoc);
     if(meta.count>0&&localCount===0){
-      await _awPull(true);
+      _awStatus('Cloud hat '+meta.count+' Trades - zum Laden "Herunterladen" antippen.','muted');
       _awUpdateSyncStatus();
       return;
     }
@@ -15195,7 +15195,7 @@ async function _awBiSync(){
       return;
     }
     if(meta.count>0&&cloudMs>localCloudTs+1000&&cloudMs>localTs+1000){
-      await _awPull(true);
+      _awStatus('Cloud hat neuere Daten - zum Laden "Herunterladen" antippen.','muted');
       _awUpdateSyncStatus();
       return;
     }
@@ -15205,15 +15205,8 @@ async function _awBiSync(){
     _awUpdateSyncStatus();
     return;
   }
-  await _awPull();
-  const knownCloudCount=parseInt(localStorage.getItem('tb_cloud_trade_count')||'0',10);
-  const cloudChecked=parseInt(localStorage.getItem('tb_cloud_checked_at_ts')||'0',10)>0;
-  if(localCount===0&&cloudChecked&&knownCloudCount>0&&(typeof trades==='undefined'||trades.length===0)){_awUpdateSyncStatus();return;}
-  // Nur pushen wenn lokal wirklich neuere Daten vorhanden (nicht auf neuem Gerät mit 0 Trades)
-  const settingsTs=parseInt(localStorage.getItem('tb_settings_saved_at')||'0',10);
-  const cloudTs=parseInt(localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
-  if((localCount>0&&localTs>cloudTs+15000)||settingsTs>cloudTs+15000) await _awPush();
   _awUpdateSyncStatus();
+  return;
 }
 
 async function _awClearCloudBackupMeta(){
@@ -15277,8 +15270,7 @@ async function _awCheckCloudChanges(){
     try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
     if(!doc){
       if(_awHasLocalTrades())_awSchedulePush();
-      else if(settingsDoc&&_awDocMs(settingsDoc)>_awCloudSettingsMs()+1000)await _awPull(true);
-      else _awApplyDeletedCloudBackup(false);
+      else if(settingsDoc&&_awDocMs(settingsDoc)>_awCloudSettingsMs()+1000)_awStatus('Cloud hat neuere Einstellungen - zum Laden "Herunterladen" antippen.','muted');
       return;
     }
     _awMarkCloudDocChecked(doc);
@@ -15296,12 +15288,13 @@ async function _awCheckCloudChanges(){
       _awSchedulePush();
       return;
     }
-    const localCloudCount=parseInt(localStorage.getItem('tb_cloud_trade_count')||'0',10);
-    if(cloudMs>localCloudMs+1000||settingsCloudMs>localSettingsCloudMs+1000)await _awPull(true);
+    if(cloudMs>localCloudMs+1000||settingsCloudMs>localSettingsCloudMs+1000){
+      _awStatus('Cloud hat neuere Daten - zum Laden "Herunterladen" antippen.','muted');
+      _awUpdateSyncStatus();
+    }
   }catch(e){
     if(e&&e.code===404){
       if(_awHasLocalTrades())_awSchedulePush();
-      else _awApplyDeletedCloudBackup(false);
     }
     else console.warn('Cloud-Änderungsprüfung:',e);
   }
@@ -15403,7 +15396,7 @@ async function awRegister(){
     await _awSaveKeyToDevice(_awEncKey);
     _awRememberLoginEmail(email);
     _awUpdateUI();
-    await _awPull();await _awPush();
+    await _awPush();
     _awStatus('Konto erstellt ✓','ok');
     _awUpdateSyncStatus();
   }catch(e){_awStatus(_awErr(e),'error');}
@@ -16103,13 +16096,13 @@ async function awPullBackup(){
   if(!_awEncKey){_awStatus('Passwort eingeben um Daten zu entschlüsseln.','warn');return;}
   try{
     const doc=await _awGetEntityDoc('trades');
-    if(!doc){await _awApplyDeletedCloudBackup(false);return;}
+    if(!doc){_awStatus('Kein Cloud-Backup gefunden. Lokale Daten bleiben unverändert.','muted');_awUpdateSyncStatus();return;}
     _awMarkCloudDocChecked(doc);
     const validation=await _awValidateCloudBackupDoc(doc);
     if(!validation.valid){_awUpdateSyncStatus();return;}
     _awFillConfirm('pull',validation.doc||doc);
   }catch(e){
-    if(e&&e.code===404)await _awApplyDeletedCloudBackup(false);
+    if(e&&e.code===404){_awStatus('Kein Cloud-Backup gefunden. Lokale Daten bleiben unverändert.','muted');_awUpdateSyncStatus();}
     else _awStatus('Cloud nicht erreichbar.','error');
   }
 }
@@ -16144,11 +16137,30 @@ async function awAskPushBackup(){
 function awSetAutoSync(on){
   _awAutoSync=on;
   localStorage.setItem('tb_cloud_autosync',on?'1':'0');
-  if(on){_awStartCloudWatcher();_awCheckCloudChanges();}
+  if(on){_awStartCloudWatcher();_awKickAutoSync();}
   else{clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;_awCloudWatchDelay=0;clearTimeout(_awPushTimer);_awPushTimer=null;}
 }
 
 let _awLastPushError=null;
+async function _awKickAutoSync(){
+  if(!_awUser||!_awDocId||!_awEncKey){_awUpdateSyncStatus();return;}
+  if(_awSyncBusy){_awSchedulePush();return;}
+  _awStatus('Auto-Sync wird geprüft ...','muted');
+  try{
+    loadTrades();
+    if(typeof trades!=='undefined'&&trades.length>0){
+      const ok=await _awPush();
+      if(ok)_awStatus('Auto-Sync geprüft ✓','ok');
+      else if(_awLastPushError)_awStatus('Fehler: '+_awLastPushError,'error');
+    }
+    await _awCheckCloudChanges();
+  }catch(e){
+    _awStatus('Auto-Sync fehlgeschlagen.','error');
+    console.warn('Auto-Sync:',e);
+  }finally{
+    _awUpdateSyncStatus();
+  }
+}
 async function awPushBackup(){
   const ok=await _awPush(true);
   _awStatus(ok?'Sync abgeschlossen \u2713':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
@@ -16433,22 +16445,24 @@ async function _awPull(force=false){
       for(const t of remoteTrades){
         const atts=[];
         for(const att of(t.attachments||[])){
-          if(!att||!att.fileId)continue;
-          let dataUrl=localImgByFid[att.fileId];
+          const normalizedAtt=normalizeTradeAttachment(att);
+          if(!normalizedAtt)continue;
+          if(!normalizedAtt.fileId)continue;
+          let dataUrl=localImgByFid[normalizedAtt.fileId];
           if(!dataUrl){
             try{
               _awSyncLabel('','pending','Screenshots laden \u2026');
-              dataUrl=await _awDownloadImg(att.fileId);
-              localImgByFid[att.fileId]=dataUrl;
+              dataUrl=await _awDownloadImg(normalizedAtt.fileId);
+              localImgByFid[normalizedAtt.fileId]=dataUrl;
             }catch(e){
-              console.warn('Screenshot:',att.fileId,e);
+              console.warn('Screenshot:',normalizedAtt.fileId,e);
               if(isUnreadableCloudFileError(e)){
                 removedMissingAttachments=true;
                 continue;
               }
             }
           }
-          atts.push(dataUrl?Object.assign({}, att, {dataUrl:dataUrl}):att);
+          atts.push(dataUrl?Object.assign({}, normalizedAtt, {dataUrl:dataUrl}):normalizedAtt);
         }
         const remoteWithAttachments=Object.assign({}, t, {attachments:atts});
         const localMatch=tradeDedupeSignatures(remoteWithAttachments)
