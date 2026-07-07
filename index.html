@@ -507,6 +507,7 @@ tr.hl-t td:first-child{color:var(--green);font-weight:700}
 .trade-attachment-list{display:flex;flex-direction:column;gap:7px;margin-top:7px}
 .trade-attachment-preview{display:grid;grid-template-columns:72px minmax(0,1fr) 38px;align-items:center;gap:10px;padding:8px;border:1px solid var(--bd);border-radius:7px;background:var(--s2)}
 .trade-attachment-thumb{width:72px;height:54px;display:block;object-fit:cover;border-radius:5px;border:1px solid var(--bd);cursor:pointer}
+.trade-attachment-load{background:var(--s3);color:var(--muted);font:700 .62rem var(--f);text-transform:uppercase;letter-spacing:.5px}
 .trade-attachment-meta{min-width:0}.trade-attachment-name{font-size:.7rem;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.trade-attachment-info{margin-top:3px;font-size:.6rem;color:var(--muted)}
 .trade-attachment-remove{width:38px;height:38px;border:1px solid rgba(255,77,109,.32);border-radius:6px;background:rgba(255,77,109,.08);color:var(--red);font-size:1rem;cursor:pointer}
 .tc-attachment{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;background:transparent;color:var(--muted);cursor:pointer}
@@ -8035,10 +8036,17 @@ function renderFormAttachment() {
   const label = addButton.querySelector('.trade-attachment-add-label');
   if (label) label.textContent = formAttachments.length ? 'Weiteren Screenshot hinzufügen' : 'Screenshots hinzufügen';
   list.innerHTML = formAttachments.map((attachment, index) => {
-    const bytes = Math.round((attachment.dataUrl.length * 3) / 4);
+    const hasImage = !!attachment.dataUrl;
+    const bytes = hasImage ? Math.round((attachment.dataUrl.length * 3) / 4) : 0;
+    const thumb = hasImage
+      ? `<img class="trade-attachment-thumb" src="${attachment.dataUrl}" alt="Screenshot ${index + 1}" onclick="openFormTradeAttachment(${index})">`
+      : `<button class="trade-attachment-thumb trade-attachment-load" type="button" onclick="openFormTradeAttachment(${index})" aria-label="Screenshot laden">${attachment.fileId?'Laden':'Fehlt'}</button>`;
+    const info = hasImage
+      ? `${Math.max(1, Math.round(bytes / 1024))} KB · ${index + 1} von ${MAX_TRADE_ATTACHMENTS}`
+      : `Cloud-Anhang · ${index + 1} von ${MAX_TRADE_ATTACHMENTS}`;
     return `<div class="trade-attachment-preview">
-      <img class="trade-attachment-thumb" src="${attachment.dataUrl}" alt="Screenshot ${index + 1}" onclick="openFormTradeAttachment(${index})">
-      <div class="trade-attachment-meta"><div class="trade-attachment-name">${mergeEscapeHtml(attachment.name)}</div><div class="trade-attachment-info">${Math.max(1, Math.round(bytes / 1024))} KB · ${index + 1} von ${MAX_TRADE_ATTACHMENTS}</div></div>
+      ${thumb}
+      <div class="trade-attachment-meta"><div class="trade-attachment-name">${mergeEscapeHtml(attachment.name)}</div><div class="trade-attachment-info">${info}</div></div>
       <button class="trade-attachment-remove" type="button" onclick="removeTradeAttachment(${index})" aria-label="Anhang entfernen">&#x2715;</button>
     </div>`;
   }).join('');
@@ -8236,11 +8244,16 @@ function setTradeNumberInput(id, value, maximumFractionDigits = 8) {
 function normalizeTradeAttachment(value) {
   if (!value || typeof value !== 'object') return null;
   const dataUrl = String(value.dataUrl || '');
-  if (!/^data:image\/(?:jpeg|png|webp);base64,/i.test(dataUrl)) return null;
-  return {
-    dataUrl,
+  const fileId = String(value.fileId || '').trim();
+  if (dataUrl && !/^data:image\/(?:jpeg|png|webp);base64,/i.test(dataUrl)) return null;
+  if (!dataUrl && !fileId) return null;
+  const out = {
     name: String(value.name || 'Screenshot.jpg').trim().slice(0, 80) || 'Screenshot.jpg'
   };
+  if (dataUrl) out.dataUrl = dataUrl;
+  if (fileId) out.fileId = fileId;
+  if (value.mime) out.mime = String(value.mime).trim().slice(0, 80);
+  return out;
 }
 
 function normalizeTradeAttachments(raw) {
@@ -8642,6 +8655,71 @@ function dedupeTradesList(list){
     out.push(trade);
   });
   return out;
+}
+
+function mergeTradeAttachments(primaryTrade, localTrade){
+  const merged=[];
+  const byKey=new Map();
+  function add(att){
+    const normalized=normalizeTradeAttachment(att);
+    if(!normalized)return;
+    const key=normalized.fileId?('file:'+normalized.fileId):('data:'+normalized.dataUrl);
+    const existing=byKey.get(key);
+    if(existing){
+      if(!existing.dataUrl&&normalized.dataUrl)existing.dataUrl=normalized.dataUrl;
+      if(!existing.fileId&&normalized.fileId)existing.fileId=normalized.fileId;
+      if(!existing.mime&&normalized.mime)existing.mime=normalized.mime;
+      if(!existing.name&&normalized.name)existing.name=normalized.name;
+      return;
+    }
+    if(merged.length>=MAX_TRADE_ATTACHMENTS)return;
+    byKey.set(key,normalized);
+    merged.push(normalized);
+  }
+  normalizeTradeAttachments(primaryTrade).forEach(add);
+  normalizeTradeAttachments(localTrade).forEach(add);
+  return merged.slice(0,MAX_TRADE_ATTACHMENTS);
+}
+
+async function ensureAttachmentDataUrl(attachment){
+  const normalized=normalizeTradeAttachment(attachment);
+  if(!normalized)return null;
+  if(normalized.dataUrl)return normalized;
+  if(!_awStorage&&typeof _awInit==='function')_awInit();
+  if(!normalized.fileId){
+    _awStatus&&_awStatus('Screenshot hat keine Cloud-Zuordnung.','error');
+    return normalized;
+  }
+  if(typeof _awDownloadImg!=='function'||!_awStorage||!_awEncKey){
+    _awStatus&&_awStatus('Zum Laden des Screenshots Cloud entsperren.','warn');
+    return normalized;
+  }
+  const dataUrl=await _awDownloadImg(normalized.fileId);
+  return Object.assign({}, normalized, {dataUrl});
+}
+
+function persistLoadedTradeAttachment(tradeId,index,attachment){
+  if(!tradeId||!attachment||!attachment.dataUrl)return;
+  loadTrades();
+  const trade=trades.find(item=>item.id===tradeId);
+  if(!trade||!Array.isArray(trade.attachments))return;
+  let targetIndex=-1;
+  if(attachment.fileId)targetIndex=trade.attachments.findIndex(item=>String(item&&item.fileId||'')===attachment.fileId);
+  if(targetIndex<0&&trade.attachments[index])targetIndex=index;
+  if(targetIndex<0)return;
+  trade.attachments[targetIndex]=Object.assign({}, trade.attachments[targetIndex], attachment);
+  _tradesCacheValid=true;
+  localStorage.setItem(STORE_KEY,JSON.stringify(trades));
+}
+
+function buildTradeSignatureMap(list){
+  const map=new Map();
+  (Array.isArray(list)?list:[]).forEach(trade=>{
+    tradeDedupeSignatures(trade).forEach(key=>{
+      if(key&&!map.has(key))map.set(key,trade);
+    });
+  });
+  return map;
 }
 
 // ??????????????????????????????????????????????????????????????
@@ -9988,7 +10066,7 @@ function formSnapshot() {
   values.formResultTags = [...formResultTags].sort();
   values.formPlanAdherence = formPlanAdherence;
   values.formExpectationMet = formExpectationMet;
-  values.formAttachments = formAttachments.map(item => item.dataUrl);
+  values.formAttachments = formAttachments.map(item => item.dataUrl || item.fileId || item.name || '');
   values.editId = editId;
 
   return JSON.stringify(values);
@@ -10813,6 +10891,8 @@ let attachmentViewerPanX = 0;
 let attachmentViewerPanY = 0;
 let attachmentViewerSlideBusy = false;
 let attachmentViewerCloseTimer = 0;
+let attachmentViewerTradeId = '';
+let attachmentViewerFormMode = false;
 
 function applyAttachmentViewerTransform() {
   const viewer = $('trade-attachment-viewer');
@@ -10820,13 +10900,43 @@ function applyAttachmentViewerTransform() {
   if (image) image.style.transform = `translate3d(${attachmentViewerPanX}px,${attachmentViewerPanY}px,0) scale(${attachmentViewerScale})`;
 }
 
-function renderAttachmentViewerImage() {
+async function renderAttachmentViewerImage() {
   const viewer = $('trade-attachment-viewer');
   if (!viewer || !attachmentViewerItems.length) return;
   attachmentViewerScale = 1;
   attachmentViewerPanX = 0;
   attachmentViewerPanY = 0;
-  viewer.querySelector('img').src = attachmentViewerItems[attachmentViewerIndex].dataUrl;
+  const img=viewer.querySelector('img');
+  const counter=viewer.querySelector('.trade-attachment-counter');
+  let item=attachmentViewerItems[attachmentViewerIndex];
+  if(!item.dataUrl&&item.fileId){
+    if(counter)counter.textContent=`${attachmentViewerIndex + 1} / ${attachmentViewerItems.length} · lädt`;
+    img.removeAttribute('src');
+    try{
+      item=await ensureAttachmentDataUrl(item);
+      attachmentViewerItems[attachmentViewerIndex]=item;
+      if(attachmentViewerFormMode){
+        let formIndex=-1;
+        if(item.fileId)formIndex=formAttachments.findIndex(att=>String(att&&att.fileId||'')===item.fileId);
+        if(formIndex<0&&formAttachments[attachmentViewerIndex])formIndex=attachmentViewerIndex;
+        if(formIndex>=0)formAttachments[formIndex]=Object.assign({}, formAttachments[formIndex], item);
+        renderFormAttachment();
+      }else if(attachmentViewerTradeId){
+        persistLoadedTradeAttachment(attachmentViewerTradeId,attachmentViewerIndex,item);
+      }
+    }catch(e){
+      const msg=e&&e.message?e.message:'nicht geladen';
+      if(counter)counter.textContent=`${attachmentViewerIndex + 1} / ${attachmentViewerItems.length} · ${msg}`;
+      if(typeof _awStatus==='function')_awStatus(e&&e.message?e.message:'Screenshot konnte nicht geladen werden.','error');
+      return;
+    }
+  }
+  if(!item.dataUrl){
+    if(counter)counter.textContent=`${attachmentViewerIndex + 1} / ${attachmentViewerItems.length} · nicht verfügbar`;
+    img.removeAttribute('src');
+    return;
+  }
+  img.src = item.dataUrl;
   viewer.querySelector('.trade-attachment-counter').textContent = `${attachmentViewerIndex + 1} / ${attachmentViewerItems.length}`;
   applyAttachmentViewerTransform();
 }
@@ -10916,9 +11026,11 @@ function installAttachmentViewerGestures(stage) {
   });
 }
 
-function showTradeAttachmentViewer(attachments, startIndex=0) {
+function showTradeAttachmentViewer(attachments, startIndex=0, options={}) {
   attachmentViewerItems = (Array.isArray(attachments) ? attachments : [attachments]).map(normalizeTradeAttachment).filter(Boolean);
   if (!attachmentViewerItems.length) return;
+  attachmentViewerTradeId = options.tradeId || '';
+  attachmentViewerFormMode = !!options.formMode;
   attachmentViewerIndex = Math.min(Math.max(0,startIndex),attachmentViewerItems.length-1);
   let viewer = $('trade-attachment-viewer');
   if (!viewer) {
@@ -10950,17 +11062,19 @@ function closeTradeAttachmentViewer() {
     viewer.classList.add('hidden');
     viewer.classList.remove('is-closing');
     attachmentViewerItems=[];
+    attachmentViewerTradeId='';
+    attachmentViewerFormMode=false;
   },190);
 }
 
 function openFormTradeAttachment(index=0) {
-  showTradeAttachmentViewer(formAttachments,index);
+  showTradeAttachmentViewer(formAttachments,index,{formMode:true});
 }
 
 function openTradeAttachment(id) {
   loadTrades();
   const trade = trades.find(item => item.id === id);
-  if (trade) showTradeAttachmentViewer(trade.attachments);
+  if (trade) showTradeAttachmentViewer(trade.attachments,0,{tradeId:id});
 }
 
 function tradeCardHtml(trade, showActions = true) {
@@ -11368,7 +11482,7 @@ function renderJournalInsights(closed) {
       return;
     }
     host.innerHTML = rows.map(row => {
-      const sample = row.count < 3 ? '<span class="tag-analysis-sample">klein</span>' : '';
+      const sample = '';
       const avg = row.avgRet === null ? '—' : fmtSignedPct(row.avgRet);
       return `<div class="tag-analysis-row"><div class="tag-analysis-name">${mergeEscapeHtml(row.tag.label)}${sample}<span class="tag-analysis-sub">${row.count} Trades · Ø ${avg}</span></div><div class="tag-analysis-bar"><span class="tag-analysis-fill" style="width:${Math.max(4,row.winRate)}%"></span></div><div class="tag-analysis-meta"><span class="tag-analysis-count">${Math.round(row.winRate)}% Win</span><span class="tag-analysis-pnl" style="color:${row.pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtEur(row.pnl)}</span></div></div>`;
     }).join('');
@@ -14915,7 +15029,7 @@ const AW_EXCL      = new Set(['tb_roadmap_cache','tb_roadmap_ts','tb_cloud_synce
   'tb_last_backup_ts','tb_aw_img_cache']);
 
 let _awClient=null,_awAccount=null,_awDatabases=null,_awStorage=null;
-let _awUser=null,_awDocId=null,_awRtUnsub=null,_awPushTimer=null,_awCloudWatchTimer=null,_awApplying=false,_awSyncBusy=false,_awPushRequested=false;
+let _awUser=null,_awDocId=null,_awRtUnsub=null,_awPushTimer=null,_awCloudWatchTimer=null,_awCloudWatchDelay=0,_awApplying=false,_awSyncBusy=false,_awPushRequested=false;
 
 function _awInit(){
   if(_awClient||typeof Appwrite==='undefined') return !!_awClient;
@@ -15065,15 +15179,22 @@ async function _awCheckCloudChanges(){
 }
 
 function _awStartCloudWatcher(){
+  const delay=document.hidden?20000:5000;
+  if(_awCloudWatchTimer&&_awCloudWatchDelay===delay)return;
   clearInterval(_awCloudWatchTimer);
+  _awCloudWatchTimer=null;
+  _awCloudWatchDelay=0;
   if(!_awUser||!_awDocId||!_awAutoSync)return;
-  _awCloudWatchTimer=setInterval(_awCheckCloudChanges,15000);
+  _awCloudWatchDelay=delay;
+  _awCloudWatchTimer=setInterval(_awCheckCloudChanges,delay);
+  setTimeout(()=>_awCheckCloudChanges(),200);
 }
 
 document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden)_awCheckCloudChanges();
+  _awStartCloudWatcher();
+  if(!document.hidden)setTimeout(()=>_awCheckCloudChanges(),200);
 });
-window.addEventListener('focus',()=>_awCheckCloudChanges());
+window.addEventListener('focus',()=>{_awStartCloudWatcher();_awCheckCloudChanges();});
 
 async function awCheckSession(){
   if(!_awInit()) return;
@@ -15211,7 +15332,8 @@ async function awLogout(){
   if(!_awClient)return;
   try{await _awAccount.deleteSession('current');}catch(_){}
   if(window.TBNative&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();
-  clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;
+  clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;_awCloudWatchDelay=0;
+  clearTimeout(_awPushTimer);_awPushTimer=null;_awPushRequested=false;
   _awUser=null;_awDocId=null;_awEncKey=null;_awJwt=null;_awUpdateUI();_awStatus('Abgemeldet.','muted');
 }
 
@@ -15607,10 +15729,34 @@ async function _awValidateCloudBackupDoc(doc){
 }
 
 async function _awDownloadImg(fileId){
-  const url=String(_awStorage.getFileDownload(AW_BUCKET,fileId));
-  const resp=await fetch(url,{cache:'force-cache',credentials:'include',headers:await _awFetchHeaders()});
-  if(!resp.ok)throw new Error('Bild: HTTP '+resp.status);
-  const dec=await _awDecryptBytes(new Uint8Array(await resp.arrayBuffer()));
+  if(!_awStorage&&typeof _awInit==='function')_awInit();
+  if(!_awStorage)throw new Error('Cloud-Speicher nicht bereit.');
+  const urls=[];
+  if(typeof _awStorage.getFileDownload==='function')urls.push(String(_awStorage.getFileDownload(AW_BUCKET,fileId)));
+  if(typeof _awStorage.getFileView==='function')urls.push(String(_awStorage.getFileView(AW_BUCKET,fileId)));
+  let bytes=null;
+  let lastError='';
+  for(const url of Array.from(new Set(urls))){
+    try{
+      const resp=await fetch(url,{cache:'no-store',credentials:'include',headers:await _awFetchHeaders()});
+      if(!resp.ok){
+        lastError='HTTP '+resp.status;
+        continue;
+      }
+      bytes=new Uint8Array(await resp.arrayBuffer());
+      break;
+    }catch(e){
+      lastError=e&&e.message?e.message:String(e);
+    }
+  }
+  if(!bytes){
+    try{await _awStorage.getFile(AW_BUCKET,fileId);lastError=lastError||'Download blockiert';}
+    catch(e){lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);}
+    throw new Error('Screenshot-Datei nicht geladen: '+fileId+' · '+(lastError||'unbekannter Fehler'));
+  }
+  let dec;
+  try{dec=await _awDecryptBytes(bytes);}
+  catch(e){throw new Error('Screenshot-Datei passt nicht zum Cloud-Schlüssel: '+fileId);}
   return await new Promise((res,rej)=>{
     const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=rej;
     r.readAsDataURL(new Blob([dec],{type:'image/webp'}));
@@ -15861,7 +16007,7 @@ function awSetAutoSync(on){
   _awAutoSync=on;
   localStorage.setItem('tb_cloud_autosync',on?'1':'0');
   if(on){_awStartCloudWatcher();_awCheckCloudChanges();}
-  else{clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;}
+  else{clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;_awCloudWatchDelay=0;clearTimeout(_awPushTimer);_awPushTimer=null;}
 }
 
 let _awLastPushError=null;
@@ -15885,7 +16031,7 @@ function _awSchedulePush(){
     if(!ok&&_awPushRequested&&!_awSyncBusy){
       _awPushTimer=setTimeout(()=>_awSchedulePush(),2500);
     }
-  },2500);
+  },900);
 }
 
 async function _awPush(forceTrades=false){
@@ -15946,7 +16092,10 @@ async function _awPush(forceTrades=false){
       for(const trade of uploadSource){
         const remoteAtts=[];
         for(const att of normalizeTradeAttachments(trade)){
-          if(!att.dataUrl)continue;
+          if(!att.dataUrl){
+            if(att.fileId)remoteAtts.push({fileId:att.fileId,name:att.name||'screenshot.webp',mime:att.mime||'image/webp'});
+            continue;
+          }
           const sha256=await _awSha256(att.dataUrl);
           const fileId=_awFidImg(sha256);
           if(imgCache[sha256]!==fileId){
@@ -16137,8 +16286,10 @@ async function _awPull(force=false){
 
       // Lokale Screenshots nach fileId indexieren
       loadTrades();
+      const localTradesBeforePull=trades.map((trade,index)=>normalizeTrade(trade,index));
+      const localTradeBySignature=buildTradeSignatureMap(localTradesBeforePull);
       const localImgByFid={};
-      for(const t of trades){
+      for(const t of localTradesBeforePull){
         for(const att of(t.attachments||[])){
           if(att.dataUrl&&att.fileId)localImgByFid[att.fileId]=att.dataUrl;
         }
@@ -16146,6 +16297,7 @@ async function _awPull(force=false){
 
       // Trades zusammenführen, fehlende Screenshots nachladen
       const merged=[];
+      let rescuedLocalAttachments=false;
       for(const t of remoteTrades){
         const atts=[];
         for(const att of(t.attachments||[])){
@@ -16159,7 +16311,13 @@ async function _awPull(force=false){
           }
           atts.push(dataUrl?Object.assign({}, att, {dataUrl:dataUrl}):att);
         }
-        merged.push(Object.assign({}, t, {attachments:atts}));
+        const remoteWithAttachments=Object.assign({}, t, {attachments:atts});
+        const localMatch=tradeDedupeSignatures(remoteWithAttachments)
+          .map(key=>localTradeBySignature.get(key))
+          .find(Boolean);
+        const attachments=mergeTradeAttachments(remoteWithAttachments,localMatch);
+        if(localMatch&&normalizeTradeAttachments(localMatch).some(att=>att.dataUrl)&&attachments.length>atts.length)rescuedLocalAttachments=true;
+        merged.push(Object.assign({}, remoteWithAttachments, {attachments}));
       }
 
       _awApplying=true;
@@ -16178,6 +16336,11 @@ async function _awPull(force=false){
       if(typeof invalidateTradesCache==='function')invalidateTradesCache();
       if(typeof renderList==='function')renderList(true);
       if(typeof updateJournalFilterUi==='function')updateJournalFilterUi();
+      if(rescuedLocalAttachments){
+        localStorage.setItem('tb_local_saved_at',String(Date.now()));
+        _awPushRequested=true;
+        setTimeout(()=>_awSchedulePush(),0);
+      }
       if(typeof startOpenKoStatusCheck==='function')setTimeout(startOpenKoStatusCheck,800);
     }else{
       _awSyncBusy=false;
