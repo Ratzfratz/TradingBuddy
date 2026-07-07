@@ -8279,9 +8279,8 @@ function tradeDerivativeStrikeLabel(trade) {
   if (!trade || !isDerivativeTrade(trade)) return '';
   const strike = numberOrNull(trade.strike);
   if (strike === null) return '';
-  const label = normalizedAssetType(trade) === 'ko' ? 'KO' : 'Strike';
   const currency = trade.strikeCurrency === 'USD' ? '$' : '€';
-  return `${label} ${fmt(strike)}\u202f${currency}`;
+  return `${fmt(strike)}\u202f${currency}`;
 }
 
 function tradeDerivativeDisplayName(trade) {
@@ -8289,6 +8288,7 @@ function tradeDerivativeDisplayName(trade) {
   if (!trade || !isDerivativeTrade(trade)) return base;
   const parts = [
     base,
+    tradeDerivativeStrikeLabel(trade),
     formatGermanDate(trade.expiry)
   ].filter(Boolean);
   return parts.join(' · ') || base;
