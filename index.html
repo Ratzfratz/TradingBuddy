@@ -8551,6 +8551,24 @@ function tradeOpenLegLooseSignature(trade){
     tradeDedupeDate(trade.expiry)
   ].join('|');
 }
+function tradeEntryLegSignature(trade){
+  if(!trade)return '';
+  const keyId=tradeDedupeInstrumentKey(trade);
+  const date=tradeDedupeDate(trade.entryDate);
+  const time=tradeDedupeTime(trade.entryTime);
+  if(!keyId||!date||!time)return '';
+  return [
+    tradeDedupeText(trade.assetType||inferAssetType(trade)),
+    tradeDedupeText(trade.type),
+    keyId,
+    date,
+    time,
+    tradeDedupeNumber(trade.entry),
+    tradeDedupeNumber(trade.count),
+    tradeDedupeNumber(trade.strike),
+    tradeDedupeDate(trade.expiry)
+  ].join('|');
+}
 function tradeIsFinalized(trade){
   if(!trade)return false;
   return trade.outcome==='win'||trade.outcome==='loss'||trade.exit!==null||!!trade.exitDate;
@@ -9542,12 +9560,15 @@ function zeroImportTradeLine(trade){
 function zeroImportAnalyzePending(pending){
   const existingHard=new Set();
   const possibleByKey=new Map();
+  const openByEntryLeg=new Map();
   const finalizedOpenLegs=new Set();
   const finalizedLooseOpenLegs=new Set();
   trades.forEach(trade=>{
     tradeDedupeSignatures(trade).forEach(key=>existingHard.add(key));
     const possibleKey=tradePossibleDuplicateSignature(trade);
     if(possibleKey&&!possibleByKey.has(possibleKey))possibleByKey.set(possibleKey,trade);
+    const entryLegKey=tradeEntryLegSignature(trade);
+    if(entryLegKey&&trade.outcome==='open'&&!openByEntryLeg.has(entryLegKey))openByEntryLeg.set(entryLegKey,trade);
     const openLegKey=tradeOpenLegSignature(trade);
     if(openLegKey&&tradeIsFinalized(trade))finalizedOpenLegs.add(openLegKey);
     const looseOpenLegKey=tradeOpenLegLooseSignature(trade);
@@ -9559,6 +9580,13 @@ function zeroImportAnalyzePending(pending){
   (pending||[]).forEach(t=>{
     const normalized=normalizeTrade(t,trades.length+safe.length+possible.length);
     const hardKeys=tradeDedupeSignatures(normalized);
+    const entryLegKey=tradeEntryLegSignature(normalized);
+    const openExisting=normalized.outcome!=='open'&&entryLegKey?openByEntryLeg.get(entryLegKey):null;
+    if(openExisting){
+      possible.push({existing:openExisting,incoming:normalized,decision:'update',autoClose:true});
+      hardKeys.forEach(key=>existingHard.add(key));
+      return;
+    }
     if(hardKeys.some(key=>existingHard.has(key))){
       hardDupeCount++;
       return;
@@ -9589,7 +9617,7 @@ function zeroImportFinishReview(importPossible=false){
   const review=window._zeroImportReview;
   const resultBox=document.getElementById('zero-import-result');
   if(!review)return;
-  let imported=0,updated=0,skipped=review.hardDupeCount||0;
+  let imported=0,updated=review.autoUpdated||0,skipped=review.hardDupeCount||0;
   const toImport=[...(review.safe||[])];
   (review.possible||[]).forEach(item=>{
     const decision=importPossible?'import':(item.decision||'skip');
@@ -9619,6 +9647,21 @@ function zeroImportSetPossibleDecision(index,decision){
   if(!review||!review.possible||!review.possible[index])return;
   review.possible[index].decision=decision;
   renderZeroImportReview(index);
+}
+function zeroImportApplyAutoUpdates(review){
+  if(!review||!Array.isArray(review.possible))return 0;
+  let updated=0;
+  review.possible=review.possible.filter(item=>{
+    if(!item||!item.autoClose||item.decision!=='update')return true;
+    const idx=trades.findIndex(t=>t.id===item.existing.id);
+    if(idx<0)return true;
+    const next=Object.assign({}, item.incoming, {id:item.existing.id});
+    if((!next.attachments||!next.attachments.length)&&item.existing.attachments)next.attachments=item.existing.attachments;
+    trades[idx]=normalizeTrade(next,idx);
+    updated++;
+    return false;
+  });
+  return updated;
 }
 function renderZeroImportReview(index=0){
   const review=window._zeroImportReview;
@@ -9652,16 +9695,23 @@ function confirmZeroImport(){
   invalidateTradesCache();
   loadTrades();
   const review=zeroImportAnalyzePending(pending);
+  const autoUpdated=zeroImportApplyAutoUpdates(review);
+  review.autoUpdated=autoUpdated;
+  if(autoUpdated)saveTrades();
   window._zeroImportReview=review;
   if(review.possible.length){
     if(resultBox)resultBox.innerHTML=
       '<div class="tax-note warn" style="margin-top:0">'+
-      '<b>'+review.safe.length+' sichere Trades</b> · '+review.possible.length+' mögliche Duplikate · '+review.hardDupeCount+' sichere Duplikate übersprungen.<br>'+
+      '<b>'+review.safe.length+' sichere Trades</b> · '+(autoUpdated?autoUpdated+' offene Trades automatisch geschlossen · ':'')+review.possible.length+' mögliche Duplikate · '+review.hardDupeCount+' sichere Duplikate übersprungen.<br>'+
       '<button onclick="zeroImportFinishReview(false)" style="margin-top:8px;background:var(--green);color:var(--bg);border:none;border-radius:7px;padding:8px 12px;font-weight:700;font-size:.76rem;cursor:pointer">Sichere importieren</button> '+
       '<button onclick="renderZeroImportReview(0)" style="margin-top:8px;background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-weight:700;font-size:.76rem;cursor:pointer">Duplikate prüfen</button> '+
       '<button onclick="document.getElementById(\'zero-import-result\').innerHTML=\'\';window._zeroImportReview=null" style="margin-top:8px;background:var(--s3);color:var(--text);border:1px solid var(--bd);border-radius:7px;padding:8px 12px;font-weight:650;font-size:.76rem;cursor:pointer">Abbrechen</button>'+
       '</div>';
     return;
+  }
+  if(autoUpdated){
+    saveTrades();
+    refreshTradeViews({resetLimit:true});
   }
   zeroImportFinishReview(false);
 }
