@@ -8814,8 +8814,9 @@ async function _awCloudFileExists(fileId){
 
 async function _awUploadScreenshotAttachment(att,imgCache){
   if(!att||!att.dataUrl)return null;
+  if(!_awEncKey)throw new Error('Cloud ist nicht entsperrt.');
   const sha256=await _awSha256(att.dataUrl);
-  let fileId=imgCache[sha256]||_awFidImg(sha256);
+  let fileId=_awRandomFileId('Shot');
   const mime=(att.dataUrl.match(/^data:([^;]+)/)||[])[1]||'image/webp';
   const parts=String(att.dataUrl).match(/^data:([^;,]+);base64,(.+)$/);
   if(!parts)return null;
