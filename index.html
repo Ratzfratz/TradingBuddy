@@ -8502,6 +8502,31 @@ function tradePossibleDuplicateSignature(trade){
     tradeDedupeText(trade.outcome)
   ].join('|');
 }
+function tradeOpenLegSignature(trade){
+  if(!trade)return '';
+  const keyId=tradeDedupeInstrumentKey(trade);
+  if(!keyId)return '';
+  return [
+    tradeDedupeText(trade.assetType||inferAssetType(trade)),
+    tradeDedupeText(trade.type),
+    keyId,
+    tradeDedupeText(trade.ticker),
+    tradeDedupeText(trade.productName),
+    tradeDedupeDate(trade.entryDate),
+    tradeDedupeTime(trade.entryTime),
+    tradeDedupeNumber(trade.entry),
+    tradeDedupeNumber(trade.count),
+    tradeDedupeNumber(trade.buyFees),
+    tradeDedupeNumber(trade.capital),
+    tradeDedupeNumber(trade.strike),
+    tradeDedupeText(trade.strikeCurrency),
+    tradeDedupeDate(trade.expiry)
+  ].join('|');
+}
+function tradeIsFinalized(trade){
+  if(!trade)return false;
+  return trade.outcome==='win'||trade.outcome==='loss'||trade.exit!==null||!!trade.exitDate;
+}
 function tradeDedupeStoredImportSignature(trade){
   if(!trade)return '';
   const importKey=tradeDedupeImportKey(trade.importKey);
@@ -8581,11 +8606,13 @@ function tradeDedupeSignatures(trade){
   const dateTimeKey=tradeDedupeDateTimeSignature(trade);
   const storedImportKey=tradeDedupeStoredImportSignature(trade);
   const exactCopyKey=tradeDedupeExactCopySignature(trade);
+  const closedOpenLegKey=tradeIsFinalized(trade)?tradeOpenLegSignature(trade):'';
   if(importKey)keys.push('import|'+importKey);
   if(dateTimeKey)keys.push('datetime|'+dateTimeKey);
   if(coreKey)keys.push('core|'+coreKey);
   if(storedImportKey)keys.push('stored-import|'+storedImportKey);
   if(exactCopyKey)keys.push('exact-copy|'+exactCopyKey);
+  if(closedOpenLegKey)keys.push('closed-open-leg|'+closedOpenLegKey);
   return keys;
 }
 function dedupeTradesList(list){
@@ -9298,10 +9325,13 @@ function zeroImportTradeLine(trade){
 function zeroImportAnalyzePending(pending){
   const existingHard=new Set();
   const possibleByKey=new Map();
+  const finalizedOpenLegs=new Set();
   trades.forEach(trade=>{
     tradeDedupeSignatures(trade).forEach(key=>existingHard.add(key));
     const possibleKey=tradePossibleDuplicateSignature(trade);
     if(possibleKey&&!possibleByKey.has(possibleKey))possibleByKey.set(possibleKey,trade);
+    const openLegKey=tradeOpenLegSignature(trade);
+    if(openLegKey&&tradeIsFinalized(trade))finalizedOpenLegs.add(openLegKey);
   });
   const safe=[];
   const possible=[];
@@ -9310,6 +9340,11 @@ function zeroImportAnalyzePending(pending){
     const normalized=normalizeTrade(t,trades.length+safe.length+possible.length);
     const hardKeys=tradeDedupeSignatures(normalized);
     if(hardKeys.some(key=>existingHard.has(key))){
+      hardDupeCount++;
+      return;
+    }
+    const openLegKey=tradeOpenLegSignature(normalized);
+    if(normalized.outcome==='open'&&openLegKey&&finalizedOpenLegs.has(openLegKey)){
       hardDupeCount++;
       return;
     }
@@ -9335,6 +9370,10 @@ function zeroImportFinishReview(importPossible=false){
     const decision=importPossible?'import':(item.decision||'skip');
     if(decision==='import')toImport.push(item.incoming);
     else if(decision==='update'){
+      if(tradeIsFinalized(item.existing)&&item.incoming.outcome==='open'){
+        skipped++;
+        return;
+      }
       const idx=trades.findIndex(t=>t.id===item.existing.id);
       const next=Object.assign({}, item.incoming, {id:item.existing.id});
       if((!next.attachments||!next.attachments.length)&&item.existing.attachments)next.attachments=item.existing.attachments;
