@@ -8502,6 +8502,36 @@ function tradePossibleDuplicateSignature(trade){
     tradeDedupeText(trade.outcome)
   ].join('|');
 }
+function tradeDedupeStoredImportSignature(trade){
+  if(!trade)return '';
+  const importKey=tradeDedupeImportKey(trade.importKey);
+  const isZeroImport=importKey.indexOf('ZERO|')===0;
+  const isLegacyImport=!Number(trade.updatedAt||0);
+  if(!isZeroImport&&!isLegacyImport)return '';
+  const keyId=tradeDedupeInstrumentKey(trade);
+  if(!keyId)return '';
+  return [
+    tradeDedupeText(trade.assetType||inferAssetType(trade)),
+    tradeDedupeText(trade.type),
+    keyId,
+    tradeDedupeText(trade.ticker),
+    tradeDedupeText(trade.productName),
+    tradeDedupeDate(trade.entryDate),
+    tradeDedupeTime(trade.entryTime),
+    tradeDedupeNumber(trade.entry),
+    tradeDedupeNumber(trade.count),
+    tradeDedupeNumber(trade.buyFees),
+    tradeDedupeNumber(trade.capital),
+    tradeDedupeNumber(trade.strike),
+    tradeDedupeText(trade.strikeCurrency),
+    tradeDedupeDate(trade.expiry),
+    tradeDedupeText(trade.outcome),
+    tradeDedupeNumber(trade.exit),
+    tradeDedupeDate(trade.exitDate),
+    tradeDedupeTime(trade.exitTime),
+    tradeDedupeNumber(trade.sellFees)
+  ].join('|');
+}
 function tradeDedupeSignature(trade){
   if(!trade)return '';
   if(trade.importKey)return 'import|'+tradeDedupeImportKey(trade.importKey);
@@ -8513,9 +8543,11 @@ function tradeDedupeSignatures(trade){
   const importKey=tradeDedupeImportKey(trade.importKey);
   const coreKey=tradeDedupeCoreSignature(trade);
   const dateTimeKey=tradeDedupeDateTimeSignature(trade);
+  const storedImportKey=tradeDedupeStoredImportSignature(trade);
   if(importKey)keys.push('import|'+importKey);
   if(dateTimeKey)keys.push('datetime|'+dateTimeKey);
   if(coreKey)keys.push('core|'+coreKey);
+  if(storedImportKey)keys.push('stored-import|'+storedImportKey);
   return keys;
 }
 function dedupeTradesList(list){
