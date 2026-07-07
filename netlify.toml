@@ -1,5 +1,5 @@
 [build]
-  publish = "app/src/main/assets"
+  publish = "."
   command = ""
 
 [[redirects]]
