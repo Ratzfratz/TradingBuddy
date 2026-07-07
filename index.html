@@ -16614,21 +16614,29 @@ async function _awPull(force=false){
       const merged=[];
       let rescuedLocalAttachments=false;
       let failedScreenshotDownloads=0;
+      let remoteAttachmentRefs=0;
+      let loadedScreenshotCount=0;
       for(const t of remoteTrades){
         const atts=[];
         for(const att of(t.attachments||[])){
           const normalizedAtt=normalizeTradeAttachment(att);
           if(!normalizedAtt)continue;
+          remoteAttachmentRefs++;
           if(!normalizedAtt.fileId){
-            if(normalizedAtt.dataUrl)atts.push(normalizedAtt);
+            if(normalizedAtt.dataUrl){
+              loadedScreenshotCount++;
+              atts.push(normalizedAtt);
+            }
             continue;
           }
           let dataUrl=localImgByFid[normalizedAtt.fileId];
+          if(dataUrl)loadedScreenshotCount++;
           if(!dataUrl){
             try{
               _awSyncLabel('','pending','Screenshots laden \u2026');
               dataUrl=await _awDownloadImg(normalizedAtt.fileId);
               localImgByFid[normalizedAtt.fileId]=dataUrl;
+              loadedScreenshotCount++;
             }catch(e){
               console.warn('Screenshot:',normalizedAtt.fileId,e);
               failedScreenshotDownloads++;
@@ -16657,7 +16665,10 @@ async function _awPull(force=false){
       _awPushRequested=false;
 
       _awSyncLabel(doc.synced_at);
-      _awStatus(failedScreenshotDownloads?`${trades.length} Trades geladen, ${failedScreenshotDownloads} Screenshot(s) nicht lesbar`:trades.length+' Trades geladen \u2713',failedScreenshotDownloads?'warn':'ok');
+      const screenshotStatus=remoteAttachmentRefs>0
+        ? ` · Screenshots: ${loadedScreenshotCount}/${remoteAttachmentRefs}${failedScreenshotDownloads?` (${failedScreenshotDownloads} nicht lesbar)`:''}`
+        : ' · Cloud enthält keine Screenshot-Zuordnung';
+      _awStatus(trades.length+' Trades geladen'+screenshotStatus,failedScreenshotDownloads?'warn':'ok');
       if(typeof invalidateTradesCache==='function')invalidateTradesCache();
       if(typeof renderList==='function')renderList(true);
       if(typeof updateJournalFilterUi==='function')updateJournalFilterUi();
