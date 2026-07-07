@@ -8289,7 +8289,6 @@ function tradeDerivativeDisplayName(trade) {
   if (!trade || !isDerivativeTrade(trade)) return base;
   const parts = [
     base,
-    tradeDerivativeStrikeLabel(trade),
     formatGermanDate(trade.expiry)
   ].filter(Boolean);
   return parts.join(' · ') || base;
