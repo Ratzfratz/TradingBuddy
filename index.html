@@ -8215,10 +8215,12 @@ function normalizeTradeAttachments(raw) {
 function cleanUnderlyingDisplayName(value) {
   const text = String(value || '').trim();
   if (!text || /^[\[{]/.test(text)) return '';
-  return text
+  const normalized = text
     .replace(/\s+/g, ' ')
+    .replace(/[.,]+$/g, '')
     .replace(/\b([A-ZÄÖÜ]{3,})\b/g, word => word.charAt(0) + word.slice(1).toLowerCase())
     .replace(/\b(Ag|Se|Sa|Nv|Plc|Inc|Corp|Ltd|Etf|Adr)\b/g, word => word.toUpperCase());
+  return typeof applyAlias === 'function' ? applyAlias(normalized) : normalized;
 }
 
 function inferUnderlyingNameFromProductName(productName) {
@@ -8620,10 +8622,12 @@ const ZERO_ALIAS_BASE = {
   'HENSOLDT':'Hensoldt',
   'RENK':'RENK',
   'TESLA':'Tesla',
-  'MICROSOFT':'Microsoft',
+  'MICROSOFT':'Microsoft','MICROSOFT CORP':'Microsoft','MICROSOFT CORPORATION':'Microsoft',
+  'MICRON':'Micron Technology','MICRON TECHNOLOGY':'Micron Technology','MICRON TECHNOLOGY INC':'Micron Technology',
   'APPLE':'Apple',
   'PALANTIR':'Palantir','PALANTIR TECHNOLOGIES':'Palantir',
   'TAIWAN SEMICONDUCTOR':'TSMC','TAIWAN SEMICONDUCTOR MANUFACTURING':'TSMC','TSMC':'TSMC',
+  'AST SPACEMOBILE':'AST SpaceMobile','AST SPACEMOBILE A':'AST SpaceMobile','AST SPACEMOBIL':'AST SpaceMobile','AST SPACEMOBIL A':'AST SpaceMobile','ASTS':'AST SpaceMobile',
 };
 
 function getUnderlyingAliases(){
@@ -8634,9 +8638,11 @@ function getUnderlyingAliases(){
 
 function applyAlias(s){
   const aliases=getUnderlyingAliases();
-  const up=String(s||'').trim().toUpperCase();
+  const up=String(s||'').trim().replace(/[.,]+$/g,'').toUpperCase();
   if(!up)return s;
   if(aliases[up])return aliases[up];
+  const noLegal=up.replace(/\b(CORPORATION|CORP|INCORPORATED|INC|AG|SE|SA|NV|PLC|LTD|LIMITED|CLASS A|CL A|A)\b/g,' ').replace(/\s+/g,' ').trim();
+  if(aliases[noLegal])return aliases[noLegal];
   // wortweiser Treffer
   for(const k in aliases){
     const re=new RegExp('\\b'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i');
