@@ -5743,18 +5743,16 @@ html[data-small-layout-viewport="460"] body #settings-rm-body .filters .pill{
 
 /* Einheitliche WKN/ISIN-Typografie in Rechner, Formular, Tagebuch und Portfolio */
 :root{
-  --tb-wkn-input-font:.82rem;
-  --tb-wkn-chip-font:.58rem;
+  --tb-wkn-input-font:.88rem;
+  --tb-wkn-chip-font:.6rem;
 }
 #rc-wkn,
 #f-wkn{
-  font-family:Consolas,"SFMono-Regular","Roboto Mono",ui-monospace,monospace!important;
+  font-family:Arial,"Segoe UI",system-ui,sans-serif!important;
   font-size:var(--tb-wkn-input-font)!important;
   font-weight:700!important;
-  letter-spacing:.025em!important;
+  letter-spacing:0!important;
   text-transform:uppercase;
-  -webkit-font-smoothing:antialiased;
-  text-rendering:geometricPrecision;
 }
 .tc-wkn-badge,
 .tc-product-summary,
@@ -5763,11 +5761,9 @@ html[data-small-layout-viewport="460"] body #settings-rm-body .filters .pill{
   line-height:1.2!important;
 }
 .tc-wkn-badge{
-  font-family:Consolas,"SFMono-Regular","Roboto Mono",ui-monospace,monospace!important;
+  font-family:Arial,"Segoe UI",system-ui,sans-serif!important;
   font-weight:700!important;
-  letter-spacing:.025em!important;
-  -webkit-font-smoothing:antialiased;
-  text-rendering:geometricPrecision;
+  letter-spacing:0!important;
 }
 .tc-product-summary,
 .ops-meta{
@@ -5779,8 +5775,8 @@ html[data-small-layout-viewport="460"] body,
 body.tb-comfort-phone,
 html[data-comfort-phone="true"] body,
 body.tb-compact-small{
-  --tb-wkn-input-font:.82rem;
-  --tb-wkn-chip-font:.58rem;
+  --tb-wkn-input-font:.88rem;
+  --tb-wkn-chip-font:.6rem;
 }
 </style>
 </head>
