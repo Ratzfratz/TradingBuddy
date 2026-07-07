@@ -6241,9 +6241,13 @@ body.tb-compact-small{
         <div class="aw-compare-time" id="aw-pc-cloud-time">–</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div id="aw-confirm-normal-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button type="button" onclick="_awConfirmNo()" style="padding:11px;border:1px solid var(--bd);background:var(--s2);border-radius:8px;color:var(--muted);font-family:var(--f);font-size:.8rem;font-weight:600;cursor:pointer">Abbrechen</button>
       <button type="button" onclick="_awConfirmYes()" id="aw-confirm-action" style="padding:11px;border:1px solid rgba(91,138,245,.4);background:rgba(91,138,245,.15);border-radius:8px;color:var(--blue);font-family:var(--f);font-size:.8rem;font-weight:700;cursor:pointer">Bestätigen</button>
+    </div>
+    <div id="aw-confirm-conflict-actions" style="display:none;grid-template-columns:1fr 1fr;gap:8px">
+      <button type="button" onclick="_awResolveConflict('local')" style="padding:11px;border:1px solid rgba(34,211,160,.4);background:rgba(34,211,160,.13);border-radius:8px;color:var(--green);font-family:var(--f);font-size:.8rem;font-weight:700;cursor:pointer">Lokal verwenden</button>
+      <button type="button" onclick="_awResolveConflict('cloud')" style="padding:11px;border:1px solid rgba(91,138,245,.4);background:rgba(91,138,245,.15);border-radius:8px;color:var(--blue);font-family:var(--f);font-size:.8rem;font-weight:700;cursor:pointer">Cloud verwenden</button>
     </div>
   </div>
 </div>
@@ -15252,30 +15256,25 @@ async function _awBiSync(){
   const cloudKnown=parseInt(localStorage.getItem('tb_cloud_checked_at_ts')||'0',10)>0 || localCloudTs>0;
   let cloudDoc=null;
   try{cloudDoc=await _awGetEntityDoc('trades');}catch(_){}
+  let settingsDoc=null;
+  try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
   if(cloudDoc){
-    _awMarkCloudDocChecked(cloudDoc);
     const meta=_awBackupMeta(cloudDoc);
-    const cloudMs=_awDocMs(cloudDoc);
-    if(meta.count>0&&localCount===0){
-      _awStatus('Cloud hat '+meta.count+' Trades - zum Laden "Herunterladen" antippen.','muted');
-      _awUpdateSyncStatus();
-      return;
-    }
     if(meta.count>0&&!cloudKnown&&localCount>0){
-      _awStatus('Cloud hat '+meta.count+' Trades - zum Laden "Herunterladen" antippen.','muted');
-      _awUpdateSyncStatus();
+      _awShowConflictChoice(cloudDoc,settingsDoc,'start');
       return;
     }
-    if(meta.count>0&&cloudMs>localCloudTs+1000&&cloudMs>localTs+1000){
-      _awStatus('Cloud hat neuere Daten - zum Laden "Herunterladen" antippen.','muted');
-      _awUpdateSyncStatus();
-      return;
-    }
+    if(await _awHandleSyncDecision(cloudDoc,settingsDoc,'start'))return;
+    _awMarkCloudDocChecked(cloudDoc);
+  }else if(settingsDoc){
+    if(await _awHandleSyncDecision(null,settingsDoc,'start'))return;
   }
   if(localCount>0){
-    await _awPush();
-    _awUpdateSyncStatus();
-    return;
+    const ok=await _awPush();
+    if(ok){
+      _awUpdateSyncStatus();
+      return;
+    }
   }
   _awUpdateSyncStatus();
   return;
@@ -15342,16 +15341,12 @@ async function _awCheckCloudChanges(){
     try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
     if(!doc){
       if(_awHasLocalTrades())_awSchedulePush();
-      else if(settingsDoc&&_awDocMs(settingsDoc)>_awCloudSettingsMs()+1000)_awStatus('Cloud hat neuere Einstellungen - zum Laden "Herunterladen" antippen.','muted');
+      else if(settingsDoc)await _awHandleSyncDecision(null,settingsDoc,'watch');
       return;
     }
-    _awMarkCloudDocChecked(doc);
     const validation=await _awValidateCloudBackupDoc(doc);
     if(!validation.valid)return;
     const cloudMs=new Date(doc.synced_at).getTime()||0;
-    const settingsCloudMs=_awDocMs(settingsDoc);
-    const localCloudMs=_awCloudTradeMs();
-    const localSettingsCloudMs=_awCloudSettingsMs();
     const meta=_awBackupMeta(doc);
     loadTrades();
     const localTradeCount=typeof trades!=='undefined'?trades.length:0;
@@ -15360,10 +15355,8 @@ async function _awCheckCloudChanges(){
       _awSchedulePush();
       return;
     }
-    if(cloudMs>localCloudMs+1000||settingsCloudMs>localSettingsCloudMs+1000){
-      _awStatus('Cloud hat neuere Daten - zum Laden "Herunterladen" antippen.','muted');
-      _awUpdateSyncStatus();
-    }
+    if(await _awHandleSyncDecision(doc,settingsDoc,'watch'))return;
+    _awMarkCloudDocChecked(doc);
   }catch(e){
     if(e&&e.code===404){
       if(_awHasLocalTrades())_awSchedulePush();
@@ -16073,15 +16066,8 @@ function _awCloudTradeCount(doc){
 function _awMarkCloudDocChecked(doc){
   if(!doc)return;
   const meta=_awBackupMeta(doc);
-  const cloudMs=new Date(doc.synced_at).getTime()||0;
   localStorage.setItem('tb_cloud_trade_count',String(meta.count||0));
   localStorage.setItem('tb_cloud_checked_at_ts',String(Date.now()));
-  if(cloudMs){
-    localStorage.setItem('tb_cloud_trades_synced_at',doc.synced_at||'');
-    localStorage.setItem('tb_cloud_trades_synced_at_ts',String(cloudMs));
-    localStorage.setItem('tb_cloud_synced_at',doc.synced_at||'');
-    localStorage.setItem('tb_cloud_synced_at_ts',String(cloudMs));
-  }
 }
 
 function _awDocMs(doc){
@@ -16108,6 +16094,50 @@ function _awSetLatestCloudSync(iso){
     localStorage.setItem('tb_cloud_synced_at',iso);
     localStorage.setItem('tb_cloud_synced_at_ts',String(ms));
   }
+}
+
+function _awNewestLocalMs(){
+  return Math.max(_awLocalMs('tb_local_saved_at'),_awLocalMs('tb_settings_saved_at'));
+}
+
+function _awNewestCloudMs(tradeDoc=null,settingsDoc=null){
+  return Math.max(
+    _awCloudTradeMs(tradeDoc),
+    _awCloudSettingsMs(settingsDoc),
+    _awLocalMs('tb_cloud_synced_at_ts')
+  );
+}
+
+function _awResolveSyncDecision(tradeDoc=null,settingsDoc=null){
+  const baseTs=_awLocalMs('tb_cloud_synced_at_ts');
+  const localTs=_awNewestLocalMs();
+  const cloudTs=_awNewestCloudMs(tradeDoc,settingsDoc);
+  const localNewer=localTs>baseTs+1000;
+  const cloudNewer=cloudTs>baseTs+1000;
+  if(localNewer&&cloudNewer)return 'conflict';
+  if(cloudNewer)return 'pull';
+  if(localNewer)return 'push';
+  return 'none';
+}
+
+async function _awHandleSyncDecision(tradeDoc=null,settingsDoc=null,source='auto'){
+  const decision=_awResolveSyncDecision(tradeDoc,settingsDoc);
+  if(decision==='pull'){
+    await _awPull(true);
+    _awUpdateSyncStatus();
+    return true;
+  }
+  if(decision==='push'){
+    await _awPush();
+    _awUpdateSyncStatus();
+    return true;
+  }
+  if(decision==='conflict'){
+    _awShowConflictChoice(tradeDoc,settingsDoc,source);
+    return true;
+  }
+  _awUpdateSyncStatus();
+  return false;
 }
 
 function _awUpdateSyncStatus(){
@@ -16137,9 +16167,11 @@ function _awUpdateSyncStatus(){
 }
 
 let _awConfirmMode='pull';
+let _awConflictDocs=null;
 
 function _awFillConfirm(mode, doc){
   _awConfirmMode=mode==='push'?'push':'pull';
+  _awConflictDocs=null;
   const localTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
   const settingsTs=parseInt(localStorage.getItem('tb_settings_saved_at')||'0',10);
   const cloudTs=doc&&doc.synced_at?new Date(doc.synced_at).getTime():parseInt(localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
@@ -16159,6 +16191,33 @@ function _awFillConfirm(mode, doc){
     set('aw-confirm-text','Trades, Tags und Einstellungen auf diesem Gerät werden durch den Cloud-Stand ersetzt.');
     set('aw-confirm-action','Herunterladen');
   }
+  const normal=document.getElementById('aw-confirm-normal-actions');
+  const conflict=document.getElementById('aw-confirm-conflict-actions');
+  if(normal)normal.style.display='grid';
+  if(conflict)conflict.style.display='none';
+  const ov=document.getElementById('aw-pull-confirm-ov');
+  if(ov)ov.style.display='flex';
+}
+
+function _awShowConflictChoice(tradeDoc=null,settingsDoc=null,source='auto'){
+  if(document.getElementById('aw-pull-confirm-ov')&&document.getElementById('aw-pull-confirm-ov').style.display==='flex')return;
+  _awConfirmMode='conflict';
+  _awConflictDocs={tradeDoc,settingsDoc,source};
+  loadTrades();
+  const localTs=_awNewestLocalMs();
+  const cloudTs=_awNewestCloudMs(tradeDoc,settingsDoc);
+  const cloudCount=tradeDoc?_awBackupMeta(tradeDoc).count:(localStorage.getItem('tb_cloud_trade_count')||'0');
+  const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text;};
+  set('aw-confirm-title','Sync-Konflikt');
+  set('aw-confirm-text','Lokal und Cloud wurden geändert. Wähle, welcher Stand gelten soll.');
+  set('aw-pc-local-count',(typeof trades!=='undefined'?trades.length:0)+' Trades');
+  set('aw-pc-local-time',localTs?_awRelTime(localTs):'Keine lokalen Daten');
+  set('aw-pc-cloud-count',cloudCount+' Trades');
+  set('aw-pc-cloud-time',cloudTs?_awRelTime(cloudTs):'Noch nicht synchronisiert');
+  const normal=document.getElementById('aw-confirm-normal-actions');
+  const conflict=document.getElementById('aw-confirm-conflict-actions');
+  if(normal)normal.style.display='none';
+  if(conflict)conflict.style.display='grid';
   const ov=document.getElementById('aw-pull-confirm-ov');
   if(ov)ov.style.display='flex';
 }
@@ -16194,6 +16253,26 @@ async function _awConfirmYes(){
     await _awPull(true);
   }
   _awUpdateSyncStatus();
+}
+
+async function _awResolveConflict(choice){
+  _awConfirmNo();
+  _awSyncBusy=false;
+  try{
+    if(choice==='cloud'){
+      await _awPull(true);
+      _awStatus('Cloud-Stand übernommen ✓','ok');
+    }else{
+      const ok=await _awPush(true);
+      _awStatus(ok?'Lokaler Stand hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
+    }
+  }catch(e){
+    _awStatus('Sync-Konflikt konnte nicht gelöst werden.','error');
+    console.warn('Sync-Konflikt:',e);
+  }finally{
+    _awConflictDocs=null;
+    _awUpdateSyncStatus();
+  }
 }
 
 async function awAskPushBackup(){
