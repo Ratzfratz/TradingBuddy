@@ -8877,7 +8877,7 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   const encBytes=await _awEncryptBytes(bytes);
   const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
   try{
-    await _awUploadFile(fileId,file);
+    await _awUploadFile(fileId,file,false,false);
   }catch(e){
     const detail=[
       `code=${e&&e.code!==undefined?e.code:'-'}`,
@@ -8886,7 +8886,7 @@ async function _awUploadScreenshotAttachment(att,imgCache){
       `bucket=${AW_BUCKET}`,
       `file=${fileId}`,
       `size=${file.size}`,
-      `perms=${_awPermissions().join(',')}`
+      `perms=none`
     ].join(' | ');
     const err=new Error('Storage Upload fehlgeschlagen: '+detail);
     err.code=e&&e.code;
@@ -16009,11 +16009,13 @@ async function _awDecryptBytes(bytes){
 }
 
 
-async function _awUploadFile(fileId,file,publicRead=false){
-  const permissions=_awPermissions(publicRead);
+async function _awUploadFile(fileId,file,publicRead=false,withFilePermissions=true){
+  const permissions=withFilePermissions?_awPermissions(publicRead):undefined;
   try{
     const uploaded=await _awWithTimeout(
-      _awStorage.createFile(AW_BUCKET,fileId,file,permissions),
+      permissions
+        ? _awStorage.createFile(AW_BUCKET,fileId,file,permissions)
+        : _awStorage.createFile(AW_BUCKET,fileId,file),
       AW_UPLOAD_TIMEOUT_MS,
       'Screenshot-Upload'
     );
@@ -16022,7 +16024,13 @@ async function _awUploadFile(fileId,file,publicRead=false){
   }catch(e){
     if(e&&e.code===409||String(e&&e.message||'').toLowerCase().includes('already exists')){
       try{await _awStorage.deleteFile(AW_BUCKET,fileId);}catch(de){if(de.code!==404)throw de;}
-      const uploaded=await _awWithTimeout(_awStorage.createFile(AW_BUCKET,fileId,file,permissions),AW_UPLOAD_TIMEOUT_MS,'Screenshot-Upload');
+      const uploaded=await _awWithTimeout(
+        permissions
+          ? _awStorage.createFile(AW_BUCKET,fileId,file,permissions)
+          : _awStorage.createFile(AW_BUCKET,fileId,file),
+        AW_UPLOAD_TIMEOUT_MS,
+        'Screenshot-Upload'
+      );
       if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
       return uploaded;
     }
