@@ -1,4 +1,4 @@
-const CACHE = 'warrantcalc-v118';
+const CACHE = 'warrantcalc-v119';
 const SCOPE_URL = new URL(self.registration.scope);
 const scopePath = SCOPE_URL.pathname.replace(/\/$/, '');
 const appPath = path => `${scopePath}${path}`;
@@ -50,6 +50,7 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (event.request.mode === 'navigate' || isAppIndex(url)) {
     event.respondWith(
       fetch(event.request)

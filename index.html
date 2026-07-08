@@ -8875,7 +8875,7 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   const bytes=new Uint8Array(bin.length);
   for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
   const encBytes=await _awEncryptBytes(bytes);
-  const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
+  const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'image/webp'});
   try{
     await _awUploadFile(fileId,file,false,false);
   }catch(e){
@@ -15869,7 +15869,7 @@ function _awCloudFileName(kind,detail=''){
   const user=_awUserFileLabel();
   if(kind==='trades')return `${user}_Trades_${safeDetail}_${stamp}.json.gz.enc`;
   if(kind==='settings')return `${user}_Einstellungen_${stamp}.json.gz.enc`;
-  if(kind==='screenshot')return `${user}_Screenshots_${safeDetail}_${stamp}.webp.enc`;
+  if(kind==='screenshot')return `${user}_Screenshots_${safeDetail}_${stamp}.webp`;
   return `${user}_Backup_${safeDetail}_${stamp}.enc`;
 }
 
