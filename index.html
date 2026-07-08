@@ -2577,6 +2577,15 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 .aw-compare-time{font-size:.58rem;color:var(--muted)}
 .aw-compare-sep{font-size:1.1rem;color:var(--muted);opacity:.35;align-self:center}
 .aw-unsaved-badge{display:flex;align-items:center;gap:5px;font-size:.64rem;font-weight:600;color:#f5a623;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:6px;padding:5px 9px;margin-bottom:8px}
+.aw-sync-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.aw-sync-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:8px;padding:8px}
+.aw-sync-title{font-size:.7rem;font-weight:700;color:var(--text)}
+.aw-sync-meta{font-size:.56rem;color:var(--muted);margin-top:2px}
+.aw-sync-actions{display:flex;gap:5px}
+.aw-sync-icon{width:32px;height:30px;border-radius:7px;border:1px solid var(--bd);background:var(--s2);color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
+.aw-sync-icon:active{transform:translateY(1px)}
+.aw-sync-icon-up{color:var(--green);border-color:rgba(34,211,160,.24);background:rgba(34,211,160,.06)}
+.aw-sync-icon-down{color:var(--blue);border-color:rgba(91,138,245,.24);background:rgba(91,138,245,.06)}
 #settings-page-main .aw-compare-card{background:transparent;border:0;border-radius:0;padding:0;margin-bottom:10px}
 #settings-page-main .tax-settings-more{background:transparent}
 #settings-page-main .settings-info-card{background:transparent}
@@ -13959,6 +13968,38 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           <span class="s-toggle-label" style="font-size:.78rem">Auto-Sync</span>
           <input type="checkbox" id="aw-autosync-chk" class="tax-setting-toggle" checked onchange="awSetAutoSync(this.checked)">
         </div>
+        <div class="aw-sync-list">
+          <div class="aw-sync-row">
+            <div>
+              <div class="aw-sync-title">Trades</div>
+              <div class="aw-sync-meta" id="aw-sync-trades-meta">–</div>
+            </div>
+            <div class="aw-sync-actions">
+              <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('trades','upload')" title="Trades hochladen">↑</button>
+              <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('trades','download')" title="Trades herunterladen">↓</button>
+            </div>
+          </div>
+          <div class="aw-sync-row">
+            <div>
+              <div class="aw-sync-title">Einstellungen</div>
+              <div class="aw-sync-meta" id="aw-sync-settings-meta">–</div>
+            </div>
+            <div class="aw-sync-actions">
+              <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('settings','upload')" title="Einstellungen hochladen">↑</button>
+              <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('settings','download')" title="Einstellungen herunterladen">↓</button>
+            </div>
+          </div>
+          <div class="aw-sync-row">
+            <div>
+              <div class="aw-sync-title">Screenshots</div>
+              <div class="aw-sync-meta" id="aw-sync-screens-meta">–</div>
+            </div>
+            <div class="aw-sync-actions">
+              <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('screenshots','upload')" title="Screenshots hochladen">↑</button>
+              <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('screenshots','download')" title="Screenshots herunterladen">↓</button>
+            </div>
+          </div>
+        </div>
         </div><!-- end aw-sync-controls -->
       </div>
 
@@ -15309,11 +15350,13 @@ function _awIsExistingSessionError(error){
 }
 
 async function _awRest(path,options={}){
+  const isForm=typeof FormData!=='undefined'&&options.body instanceof FormData;
   const headers=Object.assign({
-    'Content-Type':'application/json',
     'X-Appwrite-Project':AW_PROJECT,
     'X-Appwrite-Response-Format':'1.8.0'
   },options.headers||{});
+  if(!isForm&&!headers['Content-Type'])headers['Content-Type']='application/json';
+  if(isForm)delete headers['Content-Type'];
   const res=await fetch(AW_ENDPOINT+path,Object.assign({},options,{headers,credentials:'include'}));
   const text=await res.text();
   let data=null;
@@ -15929,17 +15972,37 @@ async function _awDecryptBytes(bytes){
 
 
 async function _awUploadFile(fileId,file,publicRead=false){
+  const permissions=_awPermissions(publicRead);
+  async function restUpload(){
+    const form=new FormData();
+    form.append('fileId',fileId);
+    form.append('file',file);
+    permissions.forEach(p=>form.append('permissions[]',p));
+    const headers=await _awFetchHeaders();
+    delete headers['Content-Type'];
+    return await _awRest(`/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files`,{
+      method:'POST',
+      headers,
+      body:form
+    });
+  }
   let uploaded=null;
   try{
-    uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,_awPermissions(publicRead));
+    uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,permissions);
   }catch(e){
     if(e.code===409||String(e.message||'').toLowerCase().includes('already exists')){
       try{await _awStorage.deleteFile(AW_BUCKET,fileId);}catch(de){if(de.code!==404)throw de;}
-      try{uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,_awPermissions(publicRead));}
+      try{uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,permissions);}
       catch(re){
         await new Promise(r=>setTimeout(r,450));
-        uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,_awPermissions(publicRead));
+        try{uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,permissions);}
+        catch(retryErr){
+          if(!_awIsFetchFailure(retryErr))throw retryErr;
+          uploaded=await restUpload();
+        }
       }
+    }else if(_awIsFetchFailure(e)){
+      uploaded=await restUpload();
     }else throw e;
   }
   if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
@@ -16409,6 +16472,9 @@ function _awUpdateSyncStatus(){
   const cloudT=document.getElementById('aw-cloud-time');
   const badge=document.getElementById('aw-unsaved-badge');
   const chk=document.getElementById('aw-autosync-chk');
+  const tradesMeta=document.getElementById('aw-sync-trades-meta');
+  const settingsMeta=document.getElementById('aw-sync-settings-meta');
+  const screensMeta=document.getElementById('aw-sync-screens-meta');
   if(chk)chk.checked=_awAutoSync;
   const localCount=typeof trades!=='undefined'?trades.length:0;
   if(localC)localC.textContent=localCount+' Trades';
@@ -16426,6 +16492,28 @@ function _awUpdateSyncStatus(){
   if(localT)localT.textContent=newestLocalTs?_awRelTime(newestLocalTs):'Keine lokalen Daten';
   if(cloudT)cloudT.textContent=checkedTs?(cloudTs?_awRelTime(cloudTs):'Geprüft: kein Backup'):'Noch nicht geprüft';
   if(badge)badge.style.display=(newestLocalTs&&newestLocalTs>cloudTs+15000)?'flex':'none';
+  if(tradesMeta){
+    const tradeCloudTs=_awLocalMs('tb_cloud_trades_synced_at_ts');
+    tradesMeta.textContent=`Lokal ${localCount} · ${localTs?_awRelTime(localTs):'keine Änderung'} · Cloud ${tradeCloudTs?_awRelTime(tradeCloudTs):'–'}`;
+  }
+  if(settingsMeta){
+    const settingsCloudTs=_awLocalMs('tb_cloud_settings_synced_at_ts');
+    settingsMeta.textContent=`Lokal ${settingsTs?_awRelTime(settingsTs):'keine Änderung'} · Cloud ${settingsCloudTs?_awRelTime(settingsCloudTs):'–'}`;
+  }
+  if(screensMeta){
+    let localScreens=0,remoteRefs=0;
+    try{
+      loadTrades();
+      (Array.isArray(trades)?trades:[]).forEach(trade=>{
+        normalizeTradeAttachments(trade).forEach(att=>{
+          if(att.dataUrl)localScreens++;
+          if(att.fileId)remoteRefs++;
+        });
+      });
+    }catch(_){}
+    const tradeCloudTs=_awLocalMs('tb_cloud_trades_synced_at_ts');
+    screensMeta.textContent=`Lokal ${localScreens} · Cloud-Verweise ${remoteRefs} · ${tradeCloudTs?_awRelTime(tradeCloudTs):'–'}`;
+  }
 }
 
 let _awConfirmMode='pull';
@@ -16604,10 +16692,73 @@ async function _awKickAutoSync(){
   }
 }
 async function awPushBackup(){
-  const ok=await _awPush(true);
+  const ok=await _awPush(true,true);
   _awStatus(ok?'Sync abgeschlossen \u2713':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
   _awUpdateSyncStatus();
 }
+
+async function _awPullSettingsOnly(){
+  if(!_awUser||!_awDocId||!_awDatabases||_awSyncBusy)return false;
+  if(!_awEncKey){_awStatus('Cloud auf diesem Gerät entsperren.','warn');return false;}
+  _awSyncBusy=true;
+  try{
+    const settingsDoc=await _awGetEntityDoc('settings');
+    if(!settingsDoc){_awStatus('Keine Einstellungen in der Cloud gefunden.','muted');return true;}
+    const payload=await _awReadDatabaseBackup(_awBackupMeta(settingsDoc));
+    const remoteSettings=_awExtractCloudSettings(payload);
+    _awApplying=true;
+    _awApplySettings(remoteSettings);
+    localStorage.setItem('tb_cloud_settings_synced_at',settingsDoc.synced_at||'');
+    localStorage.setItem('tb_cloud_settings_synced_at_ts',String(_awDocMs(settingsDoc)||Date.now()));
+    _awSetLatestCloudSync(settingsDoc.synced_at||new Date().toISOString());
+    _awApplying=false;
+    _awStatus('Einstellungen geladen ✓','ok');
+    return true;
+  }catch(e){
+    _awStatus('Einstellungen konnten nicht geladen werden: '+(e&&e.message?e.message:'unbekannter Fehler'),'error');
+    console.warn('Einstellungen laden:',e);
+    return false;
+  }finally{
+    _awSyncBusy=false;
+    _awUpdateSyncStatus();
+  }
+}
+
+async function awSyncSection(kind,direction){
+  if(!_awUser||!_awDocId){_awStatus('Bitte anmelden.','warn');return;}
+  if(!_awEncKey){_awStatus('Cloud auf diesem Gerät entsperren.','warn');return;}
+  const upload=direction==='upload';
+  if(kind==='settings'){
+    if(upload){
+      const ok=await _awPush(false,true);
+      _awStatus(ok?'Einstellungen hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
+    }else{
+      await _awPullSettingsOnly();
+    }
+    _awUpdateSyncStatus();
+    return;
+  }
+  if(kind==='trades'){
+    if(upload){
+      const ok=await _awPush(true,false);
+      _awStatus(ok?'Trades hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
+    }else{
+      await _awPull(true);
+    }
+    _awUpdateSyncStatus();
+    return;
+  }
+  if(kind==='screenshots'){
+    if(upload){
+      const ok=await _awPush(true,false);
+      _awStatus(ok?'Screenshots hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
+    }else{
+      await _awPull(true);
+    }
+    _awUpdateSyncStatus();
+  }
+}
+
 function _awSchedulePush(){
   if(_awApplying)return;
   _awPushRequested=true;
@@ -16626,7 +16777,7 @@ function _awSchedulePush(){
   },900);
 }
 
-async function _awPush(forceTrades=false){
+async function _awPush(forceTrades=false,forceSettings=false){
   if(!_awUser||!_awDocId||!_awStorage||_awSyncBusy)return false;
   if(!await _awRequireValidCloudKey())return false;
   _awSyncBusy=true;
@@ -16643,7 +16794,7 @@ async function _awPush(forceTrades=false){
     const shouldUploadTrades=(trades.length>0||!!tradeDoc)&&(
       forceTrades || !tradeDoc || localTradeTs>cloudTradeTs+1000
     );
-    const shouldUploadSettings=!settingsDoc||localSettingsTs>cloudSettingsTs+1000;
+    const shouldUploadSettings=forceSettings||!settingsDoc||localSettingsTs>cloudSettingsTs+1000;
 
     if(!shouldUploadTrades&&!shouldUploadSettings){
       const latestIso=(settingsDoc&&settingsDoc.synced_at)||(tradeDoc&&tradeDoc.synced_at)||localStorage.getItem('tb_cloud_synced_at')||'';
@@ -16695,7 +16846,7 @@ async function _awPush(forceTrades=false){
             else throw new Error('Screenshot konnte nicht vorbereitet werden.');
           }catch(e){
             console.warn('Screenshot-Upload fehlgeschlagen:',e);
-            throw new Error('Screenshot konnte nicht in die Cloud geladen werden. Trade-Sync wurde abgebrochen.');
+            throw new Error('Screenshot konnte nicht in die Cloud geladen werden: '+(e&&e.message?e.message:'unbekannter Fehler'));
           }
         }
         tradesForUpload.push(Object.assign({}, trade, {attachments:remoteAtts}));
