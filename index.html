@@ -15297,6 +15297,55 @@ function _awInit(){
   }catch(e){console.warn('Appwrite init:',e);return false;}
 }
 
+function _awIsFetchFailure(error){
+  const msg=String(error&&error.message||error||'').toLowerCase();
+  return msg.includes('failed to fetch')||msg.includes('networkerror')||msg.includes('network request failed');
+}
+
+async function _awRest(path,options={}){
+  const headers=Object.assign({
+    'Content-Type':'application/json',
+    'X-Appwrite-Project':AW_PROJECT,
+    'X-Appwrite-Response-Format':'1.8.0'
+  },options.headers||{});
+  const res=await fetch(AW_ENDPOINT+path,Object.assign({},options,{headers,credentials:'include'}));
+  const text=await res.text();
+  let data=null;
+  try{data=text?JSON.parse(text):null;}catch(_){data={message:text};}
+  if(!res.ok){
+    const err=new Error(data&&data.message?data.message:('Appwrite HTTP '+res.status));
+    err.code=res.status;
+    err.type=data&&data.type||'';
+    throw err;
+  }
+  return data;
+}
+
+async function _awCreateEmailPasswordSession(email,password){
+  try{
+    return await _awAccount.createEmailPasswordSession(email,password);
+  }catch(e){
+    if(!_awIsFetchFailure(e))throw e;
+    return await _awRest('/account/sessions/email',{
+      method:'POST',
+      body:JSON.stringify({email,password})
+    });
+  }
+}
+
+async function _awCreateAccount(email,password){
+  try{
+    return await _awAccount.create(Appwrite.ID.unique(),email,password);
+  }catch(e){
+    if(!_awIsFetchFailure(e))throw e;
+    const userId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'unique()';
+    return await _awRest('/account',{
+      method:'POST',
+      body:JSON.stringify({userId,email,password})
+    });
+  }
+}
+
 async function _awBiSync(){
   loadTrades();
   const localCount=typeof trades!=='undefined'?trades.length:0;
@@ -15485,7 +15534,7 @@ async function awLogin(){
   _awStatus('Anmelden …','muted');
   _awAuthBusy=true;
   try{
-    const session=await _awAccount.createEmailPasswordSession(email,pw);
+    const session=await _awCreateEmailPasswordSession(email,pw);
     _awApplySession(session);
     _awUser=await _awAccount.get();_awDocId=_awUser.$id;
     _awEncKey=await _awDeriveKey(pw,_awDocId);
@@ -15509,8 +15558,8 @@ async function awRegister(){
   _awStatus('Konto erstellen …','muted');
   _awAuthBusy=true;
   try{
-    await _awAccount.create(Appwrite.ID.unique(),email,pw);
-    const session=await _awAccount.createEmailPasswordSession(email,pw);
+    await _awCreateAccount(email,pw);
+    const session=await _awCreateEmailPasswordSession(email,pw);
     _awApplySession(session);
     _awUser=await _awAccount.get();_awDocId=_awUser.$id;
     _awEncKey=await _awDeriveKey(pw,_awDocId);
@@ -16820,6 +16869,7 @@ function _awApplyData(data){Object.entries(data||{}).forEach(([k,v])=>{if(!AW_EX
 function _awDevice(){if(window.TBNative)return 'Android';if(/iphone|ipad/i.test(navigator.userAgent))return 'iOS';return 'Web';}
 function _awErr(e,action=''){
   const t=String(e&&e.type||'');
+  if(_awIsFetchFailure(e))return 'Cloud nicht erreichbar. Internet prüfen oder Appwrite kurz später erneut versuchen.';
   if(t.includes('invalid_credentials'))return 'E-Mail oder Passwort falsch.';
   if(t.includes('already_exists')||t.includes('email_already')){
     return action==='login'
