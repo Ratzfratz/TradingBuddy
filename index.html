@@ -15461,7 +15461,7 @@ function _awHasLocalUnsyncedTrades(referenceMs=0){
 function _awHasLocalUnsyncedSettings(referenceMs=0){
   const localTs=parseInt(localStorage.getItem('tb_settings_saved_at')||'0',10);
   const cloudTs=referenceMs||parseInt(localStorage.getItem('tb_cloud_settings_synced_at_ts')||localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
-  return !!localTs&&(_awPushRequested||localTs>cloudTs+1000);
+  return !!localTs&&localTs>cloudTs+1000;
 }
 
 function _awHasLocalUnsyncedData(referenceMs=0){
@@ -16662,6 +16662,14 @@ async function _awKickAutoSync(){
     try{tradeDoc=await _awGetEntityDoc('trades');}catch(_){}
     let settingsDoc=null;
     try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
+    if(_awHasLocalUnsyncedSettings(_awCloudSettingsMs(settingsDoc))){
+      const settingsOk=await _awPushSettingsOnly();
+      if(!settingsOk){
+        _awStatus('Einstellungen konnten nicht gesichert werden: '+(_awLastPushError||'unbekannt'),'error');
+        return;
+      }
+      try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
+    }
     if(tradeDoc){
       const validation=await _awValidateCloudBackupDoc(tradeDoc);
       if(validation.valid){
@@ -16724,13 +16732,53 @@ async function _awPullSettingsOnly(){
   }
 }
 
+async function _awPushSettingsOnly(){
+  if(!_awUser||!_awDocId||!_awDatabases||_awSyncBusy)return false;
+  if(!await _awRequireValidCloudKey())return false;
+  _awSyncBusy=true;
+  try{
+    _awSyncLabel('', 'pending', 'Einstellungen ...');
+    const syncedAt=new Date().toISOString();
+    const settingsDocId=_awEntityDocId('settings');
+    const settingsPayload=_awCollectSettings();
+    const settingsInlinePayload=await _awInlineBackupPayload([],settingsPayload);
+    let settingsChunkCount=0;
+    if(settingsInlinePayload.length>AW_INLINE_CHUNK_SIZE){
+      settingsChunkCount=await _awSaveInlineChunks(settingsInlinePayload,syncedAt,settingsDocId);
+      if(settingsChunkCount<=0)throw new Error('Einstellungen konnten nicht gespeichert werden.');
+    }
+    await _awUpsertEntityDoc('settings',{
+      data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount),
+      synced_at:syncedAt,
+      device:_awDevice()
+    });
+    await _awCleanupEntityChunks('settings',settingsChunkCount);
+    _awApplying=true;
+    localStorage.setItem('tb_cloud_settings_synced_at',syncedAt);
+    localStorage.setItem('tb_cloud_settings_synced_at_ts',String(Date.now()));
+    _awSetLatestCloudSync(syncedAt);
+    _awApplying=false;
+    _awLastPushError=null;
+    _awSyncLabel(syncedAt);
+    return true;
+  }catch(e){
+    _awLastPushError=e&&(e.message||e.type)||'Einstellungen konnten nicht gespeichert werden.';
+    _awSyncLabel('','error');
+    console.warn('Einstellungen speichern:',e);
+    return false;
+  }finally{
+    _awSyncBusy=false;
+    _awUpdateSyncStatus();
+  }
+}
+
 async function awSyncSection(kind,direction){
   if(!_awUser||!_awDocId){_awStatus('Bitte anmelden.','warn');return;}
   if(!_awEncKey){_awStatus('Cloud auf diesem Gerät entsperren.','warn');return;}
   const upload=direction==='upload';
   if(kind==='settings'){
     if(upload){
-      const ok=await _awPush(false,true);
+      const ok=await _awPushSettingsOnly();
       _awStatus(ok?'Einstellungen hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPullSettingsOnly();
@@ -16769,7 +16817,9 @@ function _awSchedulePush(){
       _awSchedulePush();
       return;
     }
-    const ok=await _awPush();
+    let ok=true;
+    if(_awHasLocalUnsyncedSettings())ok=await _awPushSettingsOnly();
+    if(ok&&_awHasLocalUnsyncedTrades())ok=await _awPush();
     _awUpdateSyncStatus();
     if(!ok&&_awPushRequested&&!_awSyncBusy){
       _awPushTimer=setTimeout(()=>_awSchedulePush(),2500);
@@ -16827,9 +16877,29 @@ async function _awPush(forceTrades=false,forceSettings=false){
         }
       }catch(_){}
     }
+    const syncedAt=new Date().toISOString();
+    const tradeDocId=_awEntityDocId('trades');
+    const settingsDocId=_awEntityDocId('settings');
+    const settingsPayload=_awCollectSettings();
+    const settingsInlinePayload=shouldUploadSettings?await _awInlineBackupPayload([],settingsPayload):'';
+    let settingsChunkCount=0;
+    if(shouldUploadSettings&&settingsInlinePayload.length>AW_INLINE_CHUNK_SIZE){
+      try{settingsChunkCount=await _awSaveInlineChunks(settingsInlinePayload,syncedAt,settingsDocId);}catch(e){console.warn('Einstellungen-Database speichern:',e);}
+      if(settingsChunkCount<=0)throw new Error('Einstellungen konnten nicht gespeichert werden.');
+    }
+    if(shouldUploadSettings){
+      _awSyncLabel('', 'pending', 'Einstellungen ...');
+      await _awUpsertEntityDoc('settings',{data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount),synced_at:syncedAt,device:_awDevice()});
+      await _awCleanupEntityChunks('settings',settingsChunkCount);
+      _awApplying=true;
+      localStorage.setItem('tb_cloud_settings_synced_at',syncedAt);
+      localStorage.setItem('tb_cloud_settings_synced_at_ts',String(Date.now()));
+      _awSetLatestCloudSync(syncedAt);
+      _awApplying=false;
+    }
+
     const imgCache=_awGetImgCache();
     const tradesForUpload=[];
-
     if(shouldUploadTrades){
       let uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
       for(const trade of uploadSource){
@@ -16857,30 +16927,17 @@ async function _awPush(forceTrades=false,forceSettings=false){
     _awSyncLabel('', 'pending', shouldUploadTrades?'Trades ...':'Einstellungen ...');
     const tradesFileId='';
     const settingsFileId='';
-    const settingsPayload=_awCollectSettings();
 
     // DB-Dokument aktualisieren
-    const syncedAt=new Date().toISOString();
-    const tradeDocId=_awEntityDocId('trades');
-    const settingsDocId=_awEntityDocId('settings');
     const tradeInlinePayload=shouldUploadTrades?await _awInlineBackupPayload(tradesForUpload,{}):'';
-    const settingsInlinePayload=shouldUploadSettings?await _awInlineBackupPayload([],settingsPayload):'';
-    let tradeChunkCount=0,settingsChunkCount=0;
+    let tradeChunkCount=0;
     if(shouldUploadTrades&&tradeInlinePayload.length>AW_INLINE_CHUNK_SIZE){
       try{tradeChunkCount=await _awSaveInlineChunks(tradeInlinePayload,syncedAt,tradeDocId);}catch(e){console.warn('Trade-Database speichern:',e);}
       if(tradeChunkCount<=0)throw new Error('Trade-Backup konnte nicht gespeichert werden.');
     }
-    if(shouldUploadSettings&&settingsInlinePayload.length>AW_INLINE_CHUNK_SIZE){
-      try{settingsChunkCount=await _awSaveInlineChunks(settingsInlinePayload,syncedAt,settingsDocId);}catch(e){console.warn('Einstellungen-Database speichern:',e);}
-      if(settingsChunkCount<=0)throw new Error('Einstellungen konnten nicht gespeichert werden.');
-    }
     if(shouldUploadTrades){
       await _awUpsertEntityDoc('trades',{data:_awMainDocData('trades',tradesForUpload.length,tradeInlinePayload,tradeChunkCount),synced_at:syncedAt,device:_awDevice()});
       await _awCleanupEntityChunks('trades',tradeChunkCount);
-    }
-    if(shouldUploadSettings){
-      await _awUpsertEntityDoc('settings',{data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount),synced_at:syncedAt,device:_awDevice()});
-      await _awCleanupEntityChunks('settings',settingsChunkCount);
     }
     await _awCleanupOldUserNumberDocs();
 
@@ -16890,10 +16947,6 @@ async function _awPush(forceTrades=false,forceSettings=false){
       localStorage.setItem('tb_cloud_trades_synced_at',syncedAt);
       localStorage.setItem('tb_cloud_trades_synced_at_ts',String(Date.now()));
       localStorage.setItem('tb_cloud_trade_count',String(tradesForUpload.length));
-    }
-    if(shouldUploadSettings){
-      localStorage.setItem('tb_cloud_settings_synced_at',syncedAt);
-      localStorage.setItem('tb_cloud_settings_synced_at_ts',String(Date.now()));
     }
     _awSetLatestCloudSync(syncedAt);
     localStorage.setItem('tb_cloud_checked_at_ts',String(Date.now()));
