@@ -15780,7 +15780,13 @@ function _awBackupMeta(doc){
 let _awJwt=null,_awJwtExpiry=0;
 async function _awGetJwt(){
   if(_awJwt&&Date.now()<_awJwtExpiry)return _awJwt;
-  const r=await _awAccount.createJWT();
+  let r=null;
+  try{
+    r=await _awAccount.createJWT();
+  }catch(e){
+    if(!_awIsFetchFailure(e))throw e;
+    r=await _awRest('/account/jwts',{method:'POST'});
+  }
   _awJwt=r.jwt;_awJwtExpiry=Date.now()+14*60*1000;
   try{if(_awClient&&typeof _awClient.setJWT==='function')_awClient.setJWT(_awJwt);}catch(_){}
   return _awJwt;
@@ -15792,6 +15798,54 @@ async function _awFetchHeaders(){
   const cf=localStorage.getItem('cookieFallback');
   if(cf)h['X-Fallback-Cookies']=cf;
   return h;
+}
+
+function _awDocPath(id){
+  return `/databases/${encodeURIComponent(AW_DB)}/collections/${encodeURIComponent(AW_COL)}/documents/${encodeURIComponent(id)}`;
+}
+
+async function _awGetDocument(id){
+  try{return await _awDatabases.getDocument(AW_DB,AW_COL,id);}
+  catch(e){
+    if(e&&e.code===404)return null;
+    if(!_awIsFetchFailure(e))throw e;
+    try{return await _awRest(_awDocPath(id),{method:'GET',headers:await _awFetchHeaders()});}
+    catch(re){if(re&&re.code===404)return null;throw re;}
+  }
+}
+
+async function _awCreateDocument(id,payload,permissions){
+  try{return await _awDatabases.createDocument(AW_DB,AW_COL,id,payload,permissions);}
+  catch(e){
+    if(!_awIsFetchFailure(e))throw e;
+    return await _awRest(`/databases/${encodeURIComponent(AW_DB)}/collections/${encodeURIComponent(AW_COL)}/documents`,{
+      method:'POST',
+      headers:await _awFetchHeaders(),
+      body:JSON.stringify({documentId:id,data:payload,permissions:permissions||_awPermissions()})
+    });
+  }
+}
+
+async function _awUpdateDocument(id,payload){
+  try{return await _awDatabases.updateDocument(AW_DB,AW_COL,id,payload);}
+  catch(e){
+    if(!_awIsFetchFailure(e))throw e;
+    return await _awRest(_awDocPath(id),{
+      method:'PATCH',
+      headers:await _awFetchHeaders(),
+      body:JSON.stringify({data:payload})
+    });
+  }
+}
+
+async function _awDeleteDocument(id){
+  try{return await _awDatabases.deleteDocument(AW_DB,AW_COL,id);}
+  catch(e){
+    if(e&&e.code===404)return null;
+    if(!_awIsFetchFailure(e))throw e;
+    try{return await _awRest(_awDocPath(id),{method:'DELETE',headers:await _awFetchHeaders()});}
+    catch(re){if(re&&re.code===404)return null;throw re;}
+  }
 }
 
 // ── Clientseitige Verschlüsselung (AES-256-GCM + PBKDF2) ──────────────────
@@ -15885,9 +15939,9 @@ async function _awSaveInlineChunks(encodedPayload,syncedAt,baseDocId=''){
   for(let i=0;i<chunks.length;i++){
     const payload={data:['chunk',i,chunks.length,chunks[i]].join(':'),synced_at:syncedAt,device:_awDevice()};
     const id=_awChunkDocId(i,baseDocId);
-    try{await _awDatabases.updateDocument(AW_DB,AW_COL,id,payload);}
+    try{await _awUpdateDocument(id,payload);}
     catch(e){
-      if(e&&e.code===404)await _awDatabases.createDocument(AW_DB,AW_COL,id,payload,_awPermissions());
+      if(e&&e.code===404)await _awCreateDocument(id,payload,_awPermissions());
       else throw e;
     }
   }
@@ -15905,7 +15959,8 @@ async function _awReadChunkedBackup(meta){
     const chunks=[];
     const baseDocId=meta.docId||_awEntityDocId(meta.kind==='einstellungen'?'settings':'trades');
     for(let i=0;i<meta.chunkCount;i++){
-      const doc=await _awDatabases.getDocument(AW_DB,AW_COL,_awChunkDocId(i,baseDocId));
+      const doc=await _awGetDocument(_awChunkDocId(i,baseDocId));
+      if(!doc)throw new Error('Chunk fehlt');
       const parts=String(doc&&doc.data||'').split(':');
       if(parts[0]!=='chunk'||parseInt(parts[1]||'-1',10)!==i)throw new Error('Chunk-Reihenfolge ungültig');
       chunks.push(parts.slice(3).join(':'));
@@ -15928,7 +15983,8 @@ async function _awEncodedBackupBytes(meta){
   const chunks=[];
   const baseDocId=meta.docId||_awEntityDocId(meta.kind==='einstellungen'?'settings':'trades');
   for(let i=0;i<meta.chunkCount;i++){
-    const doc=await _awDatabases.getDocument(AW_DB,AW_COL,_awChunkDocId(i,baseDocId));
+    const doc=await _awGetDocument(_awChunkDocId(i,baseDocId));
+    if(!doc)throw new Error('Chunk fehlt');
     const parts=String(doc&&doc.data||'').split(':');
     if(parts[0]!=='chunk'||parseInt(parts[1]||'-1',10)!==i)throw new Error('Chunk-Reihenfolge ungültig');
     chunks.push(parts.slice(3).join(':'));
@@ -16023,7 +16079,7 @@ function _awExtractCloudSettings(payload){
 
 async function _awGetEntityDoc(kind='trades'){
   const id=_awEntityDocId(kind);
-  try{return await _awDatabases.getDocument(AW_DB,AW_COL,id);}
+  try{return await _awGetDocument(id);}
   catch(e){
     if(e&&e.code===404)return null;
     throw e;
@@ -16032,15 +16088,15 @@ async function _awGetEntityDoc(kind='trades'){
 
 async function _awUpsertEntityDoc(kind, payload){
   const id=_awEntityDocId(kind);
-  try{return await _awDatabases.updateDocument(AW_DB,AW_COL,id,payload);}
+  try{return await _awUpdateDocument(id,payload);}
   catch(e){
-    if(e&&e.code===404)return await _awDatabases.createDocument(AW_DB,AW_COL,id,payload,_awPermissions());
+    if(e&&e.code===404)return await _awCreateDocument(id,payload,_awPermissions());
     throw e;
   }
 }
 
 async function _awDeleteEntityDoc(kind){
-  try{await _awDatabases.deleteDocument(AW_DB,AW_COL,_awEntityDocId(kind));}
+  try{await _awDeleteDocument(_awEntityDocId(kind));}
   catch(e){if(e&&e.code!==404)console.warn('Cloud-Dokument löschen:',kind,e);}
   await _awCleanupEntityChunks(kind,0);
 }
@@ -16049,7 +16105,7 @@ async function _awCleanupEntityChunks(kind, keepCount=0){
   if(!_awDatabases)return;
   const base=_awEntityDocId(kind);
   for(let i=keepCount;i<30;i++){
-    try{await _awDatabases.deleteDocument(AW_DB,AW_COL,_awChunkDocId(i,base));}
+    try{await _awDeleteDocument(_awChunkDocId(i,base));}
     catch(e){if(e&&e.code!==404)console.warn('Alten Chunk löschen:',kind,i,e);}
   }
 }
@@ -16059,10 +16115,10 @@ async function _awCleanupOldUserNumberDocs(){
   const suffix=_awUserShortId();
   const oldBases=[`User1_Trades_${suffix}`.slice(0,36),`User1_Einstellungen_${suffix}`.slice(0,36)];
   for(const base of oldBases){
-    try{await _awDatabases.deleteDocument(AW_DB,AW_COL,base);}
+    try{await _awDeleteDocument(base);}
     catch(e){if(e&&e.code!==404)console.warn('Altes User-Dokument löschen:',base,e);}
     for(let i=0;i<30;i++){
-      try{await _awDatabases.deleteDocument(AW_DB,AW_COL,_awChunkDocId(i,base));}
+      try{await _awDeleteDocument(_awChunkDocId(i,base));}
       catch(e){if(e&&e.code!==404)console.warn('Alten User-Chunk löschen:',base,i,e);}
     }
   }
@@ -16115,8 +16171,11 @@ async function _awDownloadImg(fileId){
       lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);
     }
     const err=new Error('Screenshot-Datei nicht geladen: '+fileId+' · '+(lastError||'unbekannter Fehler'));
-    if(missing||/\b404\b|not.?found|not found|nicht gefunden|permission|permissions|read|unauthorized|forbidden/i.test(lastError)){
+    if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
+      err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
+    }else if(/permission|permissions|read|unauthorized|forbidden/i.test(lastError)){
+      err.blockedFileId=fileId;
       err.message='Screenshot-Datei ist nicht lesbar: '+fileId;
     }
     throw err;
@@ -16786,6 +16845,7 @@ async function _awPull(force=false){
       const merged=[];
       let rescuedLocalAttachments=false;
       let failedScreenshotDownloads=0;
+      let removedMissingScreenshotRefs=0;
       let remoteAttachmentRefs=0;
       let loadedScreenshotCount=0;
       for(const t of remoteTrades){
@@ -16811,6 +16871,10 @@ async function _awPull(force=false){
               loadedScreenshotCount++;
             }catch(e){
               console.warn('Screenshot:',normalizedAtt.fileId,e);
+              if(e&&e.missingFileId){
+                removedMissingScreenshotRefs++;
+                continue;
+              }
               failedScreenshotDownloads++;
             }
           }
@@ -16838,13 +16902,13 @@ async function _awPull(force=false){
 
       _awSyncLabel(doc.synced_at);
       const screenshotStatus=remoteAttachmentRefs>0
-        ? ` · Screenshots: ${loadedScreenshotCount}/${remoteAttachmentRefs}${failedScreenshotDownloads?` (${failedScreenshotDownloads} nicht lesbar)`:''}`
+        ? ` · Screenshots: ${loadedScreenshotCount}/${remoteAttachmentRefs}${removedMissingScreenshotRefs?` (${removedMissingScreenshotRefs} entfernt)`:''}${failedScreenshotDownloads?` (${failedScreenshotDownloads} nicht lesbar)`:''}`
         : ' · Cloud enthält keine Screenshot-Zuordnung';
-      _awStatus(trades.length+' Trades geladen'+screenshotStatus,failedScreenshotDownloads?'warn':'ok');
+      _awStatus(trades.length+' Trades geladen'+screenshotStatus,(failedScreenshotDownloads||removedMissingScreenshotRefs)?'warn':'ok');
       if(typeof invalidateTradesCache==='function')invalidateTradesCache();
       if(typeof renderList==='function')renderList(true);
       if(typeof updateJournalFilterUi==='function')updateJournalFilterUi();
-      if(rescuedLocalAttachments){
+      if(rescuedLocalAttachments||removedMissingScreenshotRefs){
         localStorage.setItem('tb_local_saved_at',String(Date.now()));
         _awPushRequested=true;
         setTimeout(()=>_awSchedulePush(),0);
