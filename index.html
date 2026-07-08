@@ -15316,6 +15316,7 @@ const AW_DB        = '6a3a8a970024081a55d4';
 const AW_COL       = 'backups';
 const AW_BUCKET    = '6a3a8d040010afe2fbab';
 const AW_INLINE_CHUNK_SIZE = 12000;
+const AW_UPLOAD_TIMEOUT_MS = 12000;
 const AW_SYNC_KEYS = new Set(['tb_trade_tags_v1','tb_tax_settings','tb_theme','tb_depot_capital',
   'tb_underlying_aliases','tb_underlying_merge_groups_v2','tb_underlying_merge_history_v1','tb_calc_v1']);
 const AW_EXCL      = new Set(['tb_roadmap_cache','tb_roadmap_ts','tb_cloud_synced_at',
@@ -15349,15 +15350,42 @@ function _awIsExistingSessionError(error){
   return (type.includes('already_exists')||type.includes('session_already')||msg.includes('session')&&msg.includes('already'));
 }
 
+function _awWithTimeout(promise,ms,label='Cloud-Anfrage'){
+  let timer=null;
+  const timeout=new Promise((_,reject)=>{
+    timer=setTimeout(()=>{
+      const err=new Error(label+' Timeout');
+      err.code='timeout';
+      reject(err);
+    },ms);
+  });
+  return Promise.race([promise,timeout]).finally(()=>clearTimeout(timer));
+}
+
 async function _awRest(path,options={}){
   const isForm=typeof FormData!=='undefined'&&options.body instanceof FormData;
+  const controller=(typeof AbortController!=='undefined')?new AbortController():null;
+  let timer=null;
   const headers=Object.assign({
     'X-Appwrite-Project':AW_PROJECT,
     'X-Appwrite-Response-Format':'1.8.0'
   },options.headers||{});
   if(!isForm&&!headers['Content-Type'])headers['Content-Type']='application/json';
   if(isForm)delete headers['Content-Type'];
-  const res=await fetch(AW_ENDPOINT+path,Object.assign({},options,{headers,credentials:'include'}));
+  if(controller)timer=setTimeout(()=>controller.abort(),options.timeoutMs||AW_UPLOAD_TIMEOUT_MS);
+  let res;
+  try{
+    res=await fetch(AW_ENDPOINT+path,Object.assign({},options,{headers,credentials:'include',signal:controller?controller.signal:options.signal}));
+  }catch(e){
+    if(e&&e.name==='AbortError'){
+      const err=new Error('Appwrite Anfrage Timeout');
+      err.code='timeout';
+      throw err;
+    }
+    throw e;
+  }finally{
+    if(timer)clearTimeout(timer);
+  }
   const text=await res.text();
   let data=null;
   try{data=text?JSON.parse(text):null;}catch(_){data={message:text};}
@@ -15983,25 +16011,30 @@ async function _awUploadFile(fileId,file,publicRead=false){
     return await _awRest(`/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files`,{
       method:'POST',
       headers,
-      body:form
+      body:form,
+      timeoutMs:AW_UPLOAD_TIMEOUT_MS
     });
   }
   let uploaded=null;
   try{
-    uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,permissions);
+    uploaded=await _awWithTimeout(
+      _awStorage.createFile(AW_BUCKET,fileId,file,permissions),
+      AW_UPLOAD_TIMEOUT_MS,
+      'Screenshot-Upload'
+    );
   }catch(e){
     if(e.code===409||String(e.message||'').toLowerCase().includes('already exists')){
       try{await _awStorage.deleteFile(AW_BUCKET,fileId);}catch(de){if(de.code!==404)throw de;}
-      try{uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,permissions);}
+      try{uploaded=await _awWithTimeout(_awStorage.createFile(AW_BUCKET,fileId,file,permissions),AW_UPLOAD_TIMEOUT_MS,'Screenshot-Upload');}
       catch(re){
         await new Promise(r=>setTimeout(r,450));
-        try{uploaded=await _awStorage.createFile(AW_BUCKET,fileId,file,permissions);}
+        try{uploaded=await _awWithTimeout(_awStorage.createFile(AW_BUCKET,fileId,file,permissions),AW_UPLOAD_TIMEOUT_MS,'Screenshot-Upload');}
         catch(retryErr){
-          if(!_awIsFetchFailure(retryErr))throw retryErr;
+          if(!_awIsFetchFailure(retryErr)&&retryErr.code!=='timeout')throw retryErr;
           uploaded=await restUpload();
         }
       }
-    }else if(_awIsFetchFailure(e)){
+    }else if(_awIsFetchFailure(e)||e.code==='timeout'){
       uploaded=await restUpload();
     }else throw e;
   }
@@ -16512,7 +16545,9 @@ function _awUpdateSyncStatus(){
       });
     }catch(_){}
     const tradeCloudTs=_awLocalMs('tb_cloud_trades_synced_at_ts');
-    screensMeta.textContent=`Lokal ${localScreens} · Cloud-Verweise ${remoteRefs} · ${tradeCloudTs?_awRelTime(tradeCloudTs):'–'}`;
+    screensMeta.textContent=_awLastScreenshotError
+      ? `Fehler: ${_awLastScreenshotError}`
+      : `Lokal ${localScreens} · Cloud-Verweise ${remoteRefs} · ${tradeCloudTs?_awRelTime(tradeCloudTs):'–'}`;
   }
 }
 
@@ -16653,6 +16688,7 @@ function awSetAutoSync(on){
 }
 
 let _awLastPushError=null;
+let _awLastScreenshotError='';
 async function _awKickAutoSync(){
   if(!_awUser||!_awDocId||!_awEncKey){_awUpdateSyncStatus();return;}
   if(_awSyncBusy){_awUpdateSyncStatus();return;}
@@ -16916,6 +16952,7 @@ async function _awPush(forceTrades=false,forceSettings=false){
             else throw new Error('Screenshot konnte nicht vorbereitet werden.');
           }catch(e){
             console.warn('Screenshot-Upload fehlgeschlagen:',e);
+            _awLastScreenshotError=e&&e.message?e.message:'unbekannter Fehler';
             throw new Error('Screenshot konnte nicht in die Cloud geladen werden: '+(e&&e.message?e.message:'unbekannter Fehler'));
           }
         }
@@ -16947,6 +16984,7 @@ async function _awPush(forceTrades=false,forceSettings=false){
       localStorage.setItem('tb_cloud_trades_synced_at',syncedAt);
       localStorage.setItem('tb_cloud_trades_synced_at_ts',String(Date.now()));
       localStorage.setItem('tb_cloud_trade_count',String(tradesForUpload.length));
+      _awLastScreenshotError='';
     }
     _awSetLatestCloudSync(syncedAt);
     localStorage.setItem('tb_cloud_checked_at_ts',String(Date.now()));
