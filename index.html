@@ -16305,11 +16305,25 @@ async function _awDownloadImg(fileId){
   try{await _awGetJwt();}catch(_){}
   let bytes=null;
   let lastError='';
+  if(window.TBNative&&typeof TBNative.downloadAppwriteStorageFile==='function'){
+    try{
+      const jwt=await _awGetJwt();
+      const result=JSON.parse(TBNative.downloadAppwriteStorageFile(AW_ENDPOINT,AW_BUCKET,fileId,jwt||'',AW_PROJECT));
+      if(result&&result.ok&&result.data){
+        bytes=_awB64ToBytes(result.data);
+      }else{
+        lastError=result&&result.error?String(result.error):'Native Download fehlgeschlagen';
+      }
+    }catch(e){
+      lastError=e&&e.message?e.message:String(e);
+    }
+  }
   if(_awClient&&typeof _awClient.call==='function'){
     try{
       const uri=new URL(`${AW_ENDPOINT}/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files/${encodeURIComponent(fileId)}/download`);
       const buf=await _awClient.call('get',uri,{}, {}, 'arrayBuffer');
-      bytes=new Uint8Array(buf);
+      const raw=buf instanceof ArrayBuffer?new Uint8Array(buf):(buf instanceof Uint8Array?buf:null);
+      if(raw&&raw.length)bytes=raw;
     }catch(e){
       lastError=e&&e.code?('HTTP '+e.code):(e&&e.message?e.message:String(e));
     }
@@ -16357,8 +16371,14 @@ async function _awDownloadImg(fileId){
     return png||jpg||webp;
   };
   if(!isPlainImage(bytes)){
+    try{
+      const text=new TextDecoder().decode(bytes.slice(0,160)).trim();
+      if(text&&/^[\[{<]|error|message|html/i.test(text))throw new Error(text.slice(0,120));
+    }catch(e){
+      if(e&&e.message)throw new Error('Screenshot-Datei ist kein Bild: '+fileId+' · '+e.message);
+    }
     try{dec=await _awDecryptBytes(bytes);}
-    catch(e){throw new Error('Screenshot-Datei passt nicht zum Cloud-Schlüssel: '+fileId);}
+    catch(e){throw new Error('Screenshot-Datei ist kein lesbares Bild: '+fileId);}
   }
   return await new Promise((res,rej)=>{
     const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=rej;
