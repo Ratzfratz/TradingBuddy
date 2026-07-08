@@ -8112,6 +8112,43 @@ async function deleteUnreferencedAttachmentFiles(fileIds) {
   }
 }
 
+function referencedAttachmentFileIdsFromTrades(list) {
+  const refs = new Set();
+  (Array.isArray(list) ? list : []).forEach(trade => {
+    normalizeTradeAttachments(trade).forEach(att => {
+      const fileId = String(att && att.fileId || '').trim();
+      if (fileId) refs.add(fileId);
+    });
+  });
+  return refs;
+}
+
+async function cleanupUnreferencedCloudScreenshotFiles(referenceFileIds) {
+  if (!_awUser || !_awDocId) return;
+  if (!_awStorage && typeof _awInit === 'function') _awInit();
+  if (!_awStorage || typeof _awStorage.listFiles !== 'function') return;
+  const refs = referenceFileIds instanceof Set ? referenceFileIds : referencedAttachmentFileIdsFromTrades(trades);
+  const ownScreenshotPrefix = `${_awUserFileLabel()}_Screenshot`;
+  let listed;
+  try {
+    listed = await _awStorage.listFiles(AW_BUCKET);
+  } catch (error) {
+    console.warn('Screenshot-Dateien konnten nicht geprüft werden:', error);
+    return;
+  }
+  const files = Array.isArray(listed && listed.files) ? listed.files : [];
+  for (const file of files) {
+    const fileId = String(file && file.$id || '').trim();
+    const name = String(file && file.name || '');
+    if (!fileId || !name.startsWith(ownScreenshotPrefix) || refs.has(fileId)) continue;
+    try {
+      await _awStorage.deleteFile(AW_BUCKET, fileId);
+    } catch (error) {
+      if (Number(error && error.code) !== 404) console.warn('Verwaiste Screenshot-Datei konnte nicht gelöscht werden:', fileId, error);
+    }
+  }
+}
+
 function readAttachmentFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -8867,8 +8904,14 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   if(!att||!att.dataUrl)return null;
   if(!_awEncKey)throw new Error('Cloud ist nicht entsperrt.');
   const sha256=await _awSha256(att.dataUrl);
-  let fileId=_awRandomFileId('Shot');
   const mime=(att.dataUrl.match(/^data:([^;]+)/)||[])[1]||'image/webp';
+  const existingFileId=String(att.fileId||imgCache[sha256]||'').trim();
+  if(existingFileId){
+    imgCache[sha256]=existingFileId;
+    localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
+    return {fileId:existingFileId,name:att.name||'screenshot.webp',mime};
+  }
+  let fileId=_awRandomFileId('Shot');
   const parts=String(att.dataUrl).match(/^data:([^;,]+);base64,(.+)$/);
   if(!parts)return null;
   const bin=atob(parts[2]);
@@ -8876,7 +8919,7 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
   const file=new File([bytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:mime||'image/webp'});
   try{
-    await _awUploadFile(fileId,file,false,false);
+    await _awUploadFile(fileId,file,false,true);
   }catch(e){
     const detail=[
       `code=${e&&e.code!==undefined?e.code:'-'}`,
@@ -8887,7 +8930,7 @@ async function _awUploadScreenshotAttachment(att,imgCache){
       `size=${file.size}`,
       `name=${file.name}`,
       `mime=${file.type}`,
-      `perms=none`
+      `perms=${_awPermissions(false).join(',')}`
     ].join(' | ');
     const err=new Error('Storage Upload fehlgeschlagen: '+detail);
     err.code=e&&e.code;
@@ -8895,6 +8938,7 @@ async function _awUploadScreenshotAttachment(att,imgCache){
     throw err;
   }
   imgCache[sha256]=fileId;
+  localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
   return {fileId,name:att.name||'screenshot.webp',mime};
 }
 
@@ -17006,6 +17050,7 @@ async function _awPush(forceTrades=false,forceSettings=false){
       localStorage.setItem('tb_cloud_trades_synced_at_ts',String(Date.now()));
       localStorage.setItem('tb_cloud_trade_count',String(tradesForUpload.length));
       _awLastScreenshotError='';
+      setTimeout(()=>cleanupUnreferencedCloudScreenshotFiles(referencedAttachmentFileIdsFromTrades(tradesForUpload)),500);
     }
     _awSetLatestCloudSync(syncedAt);
     localStorage.setItem('tb_cloud_checked_at_ts',String(Date.now()));
