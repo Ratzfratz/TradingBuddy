@@ -8874,8 +8874,7 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   const bin=atob(parts[2]);
   const bytes=new Uint8Array(bin.length);
   for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
-  const encBytes=await _awEncryptBytes(bytes);
-  const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'image/webp'});
+  const file=new File([bytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:mime||'image/webp'});
   try{
     await _awUploadFile(fileId,file,false,false);
   }catch(e){
@@ -8886,6 +8885,8 @@ async function _awUploadScreenshotAttachment(att,imgCache){
       `bucket=${AW_BUCKET}`,
       `file=${fileId}`,
       `size=${file.size}`,
+      `name=${file.name}`,
+      `mime=${file.type}`,
       `perms=none`
     ].join(' | ');
     const err=new Error('Storage Upload fehlgeschlagen: '+detail);
@@ -16303,9 +16304,18 @@ async function _awDownloadImg(fileId){
     }
     throw err;
   }
-  let dec;
-  try{dec=await _awDecryptBytes(bytes);}
-  catch(e){throw new Error('Screenshot-Datei passt nicht zum Cloud-Schlüssel: '+fileId);}
+  let dec=bytes;
+  const isPlainImage=raw=>{
+    if(!raw||raw.length<12)return false;
+    const png=raw[0]===0x89&&raw[1]===0x50&&raw[2]===0x4e&&raw[3]===0x47;
+    const jpg=raw[0]===0xff&&raw[1]===0xd8;
+    const webp=raw[0]===0x52&&raw[1]===0x49&&raw[2]===0x46&&raw[3]===0x46&&raw[8]===0x57&&raw[9]===0x45&&raw[10]===0x42&&raw[11]===0x50;
+    return png||jpg||webp;
+  };
+  if(!isPlainImage(bytes)){
+    try{dec=await _awDecryptBytes(bytes);}
+    catch(e){throw new Error('Screenshot-Datei passt nicht zum Cloud-Schlüssel: '+fileId);}
+  }
   return await new Promise((res,rej)=>{
     const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=rej;
     r.readAsDataURL(new Blob([dec],{type:'image/webp'}));
