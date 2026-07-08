@@ -8879,9 +8879,19 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   try{
     await _awUploadFile(fileId,file);
   }catch(e){
-    if(!isUnreadableCloudFileError(e)&&Number(e&&e.code)!==409&&!/already exists|permission|read/i.test(String(e&&e.message||e)))throw e;
-    fileId=_awRandomFileId('Shot');
-    await _awUploadFile(fileId,file);
+    const detail=[
+      `code=${e&&e.code!==undefined?e.code:'-'}`,
+      `type=${e&&e.type?e.type:'-'}`,
+      `msg=${e&&e.message?e.message:String(e||'unbekannt')}`,
+      `bucket=${AW_BUCKET}`,
+      `file=${fileId}`,
+      `size=${file.size}`,
+      `perms=${_awPermissions().join(',')}`
+    ].join(' | ');
+    const err=new Error('Storage Upload fehlgeschlagen: '+detail);
+    err.code=e&&e.code;
+    err.type=e&&e.type;
+    throw err;
   }
   imgCache[sha256]=fileId;
   return {fileId,name:att.name||'screenshot.webp',mime};
@@ -16001,45 +16011,23 @@ async function _awDecryptBytes(bytes){
 
 async function _awUploadFile(fileId,file,publicRead=false){
   const permissions=_awPermissions(publicRead);
-  async function restUpload(){
-    const form=new FormData();
-    form.append('fileId',fileId);
-    form.append('file',file);
-    permissions.forEach(p=>form.append('permissions[]',p));
-    const headers=await _awFetchHeaders();
-    delete headers['Content-Type'];
-    return await _awRest(`/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files`,{
-      method:'POST',
-      headers,
-      body:form,
-      timeoutMs:AW_UPLOAD_TIMEOUT_MS
-    });
-  }
-  let uploaded=null;
   try{
-    uploaded=await _awWithTimeout(
+    const uploaded=await _awWithTimeout(
       _awStorage.createFile(AW_BUCKET,fileId,file,permissions),
       AW_UPLOAD_TIMEOUT_MS,
       'Screenshot-Upload'
     );
+    if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
+    return uploaded;
   }catch(e){
-    if(e.code===409||String(e.message||'').toLowerCase().includes('already exists')){
+    if(e&&e.code===409||String(e&&e.message||'').toLowerCase().includes('already exists')){
       try{await _awStorage.deleteFile(AW_BUCKET,fileId);}catch(de){if(de.code!==404)throw de;}
-      try{uploaded=await _awWithTimeout(_awStorage.createFile(AW_BUCKET,fileId,file,permissions),AW_UPLOAD_TIMEOUT_MS,'Screenshot-Upload');}
-      catch(re){
-        await new Promise(r=>setTimeout(r,450));
-        try{uploaded=await _awWithTimeout(_awStorage.createFile(AW_BUCKET,fileId,file,permissions),AW_UPLOAD_TIMEOUT_MS,'Screenshot-Upload');}
-        catch(retryErr){
-          if(!_awIsFetchFailure(retryErr)&&retryErr.code!=='timeout')throw retryErr;
-          uploaded=await restUpload();
-        }
-      }
-    }else if(_awIsFetchFailure(e)||e.code==='timeout'){
-      uploaded=await restUpload();
-    }else throw e;
+      const uploaded=await _awWithTimeout(_awStorage.createFile(AW_BUCKET,fileId,file,permissions),AW_UPLOAD_TIMEOUT_MS,'Screenshot-Upload');
+      if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
+      return uploaded;
+    }
+    throw e;
   }
-  if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
-  return uploaded;
 }
 
 async function _awInlineBackupPayload(tradesPayload,settingsPayload){
