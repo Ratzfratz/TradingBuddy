@@ -15781,8 +15781,8 @@ async function awLogout(){
   if(!_awClient)return;
   const oldDocId=_awDocId;
   try{await _awAccount.deleteSession('current');}catch(_){}
-  if(window.TBNative&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();
-  try{if(oldDocId)localStorage.removeItem('tb_aw_device_key_'+oldDocId);}catch(_){}
+  if(_awUseNativeKeyStore()&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();
+  try{if(oldDocId)localStorage.removeItem('tb_aw_device_key_'+oldDocId);localStorage.removeItem('tb_web_enc_key');}catch(_){}
   clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;_awCloudWatchDelay=0;
   clearTimeout(_awPushTimer);_awPushTimer=null;_awPushRequested=false;
   _awUser=null;_awDocId=null;_awEncKey=null;_awJwt=null;_awUpdateUI();_awStatus('Abgemeldet.','muted');
@@ -16021,15 +16021,19 @@ async function _awSaveKeyToDevice(key){
   try{
     const raw=await crypto.subtle.exportKey('raw',key);
     const b64=btoa(String.fromCharCode(...new Uint8Array(raw)));
-    if(window.TBNative&&typeof TBNative.storeEncKey==='function')TBNative.storeEncKey(b64);
+    if(_awUseNativeKeyStore())TBNative.storeEncKey(b64);
     else if(_awDocId)localStorage.setItem('tb_aw_device_key_'+_awDocId,b64);
   }catch(_){}
+}
+
+function _awUseNativeKeyStore(){
+  return !!(window.TBNative&&!TBNative.__browserShim&&typeof TBNative.storeEncKey==='function'&&typeof TBNative.retrieveEncKey==='function');
 }
 
 async function _awLoadKeyFromDevice(){
   try{
     let b64='';
-    if(window.TBNative&&typeof TBNative.retrieveEncKey==='function')b64=TBNative.retrieveEncKey();
+    if(_awUseNativeKeyStore())b64=TBNative.retrieveEncKey();
     else if(_awDocId)b64=localStorage.getItem('tb_aw_device_key_'+_awDocId)||'';
     if(!b64)return null;
     const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
@@ -16190,7 +16194,8 @@ async function _awRequireValidCloudKey(){
   }
   if(await _awValidateCurrentKeyWithCloud())return true;
   _awEncKey=null;
-  try{if(window.TBNative&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();}catch(_){}
+  try{if(_awUseNativeKeyStore()&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();}catch(_){}
+  try{if(_awDocId)localStorage.removeItem('tb_aw_device_key_'+_awDocId);localStorage.removeItem('tb_web_enc_key');}catch(_){}
   _awStatus('Cloud-Schlüssel passt nicht. Bitte Passwort neu eingeben.','error');
   _awUpdateUI();
   return false;
@@ -17292,7 +17297,7 @@ async function _awPull(force=false){
 
 function _awCollect(){const d={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!AW_EXCL.has(k))d[k]=localStorage.getItem(k);}return d;}
 function _awApplyData(data){Object.entries(data||{}).forEach(([k,v])=>{if(!AW_EXCL.has(k)&&typeof v==='string')localStorage.setItem(k,v);});}
-function _awDevice(){if(window.TBNative)return 'Android';if(/iphone|ipad/i.test(navigator.userAgent))return 'iOS';return 'Web';}
+function _awDevice(){if(window.TBNative&&!TBNative.__browserShim)return 'Android';if(/iphone|ipad/i.test(navigator.userAgent))return 'iOS';return 'Web';}
 function _awErr(e,action=''){
   const t=String(e&&e.type||'');
   if(_awIsFetchFailure(e))return 'Cloud nicht erreichbar. Internet prüfen oder Appwrite kurz später erneut versuchen.';
@@ -18011,6 +18016,7 @@ function awTogglePw(){
 
   // ── Die eigentliche TBNative-Bridge für den Browser ────────────────────
   window.TBNative = {
+    __browserShim: true,
     fetchDerivativeDetails: function(identifier){
       (async()=>{
         const clean=String(identifier||'').trim().toUpperCase().replace(/\s+/g,'');
