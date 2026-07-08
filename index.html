@@ -13882,8 +13882,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <button type="button" id="aw-login-btn" onclick="awLogin()" class="s-btn">Anmelden</button>
-          <button type="button" id="aw-register-btn" onclick="awRegister()" class="s-btn s-btn-accent">Registrieren</button>
+          <button type="button" id="aw-login-btn" class="s-btn">Anmelden</button>
+          <button type="button" id="aw-register-btn" class="s-btn s-btn-accent">Registrieren</button>
         </div>
       </div>
 
@@ -15473,13 +15473,17 @@ function _awCryptoReady(){
   return !!(window.crypto&&crypto.subtle&&window.TextEncoder);
 }
 
+let _awAuthBusy=false;
+
 async function awLogin(){
+  if(_awAuthBusy)return;
   if(!_awInit()){_awStatus('SDK nicht geladen.','error');return;}
   if(!_awCryptoReady()){_awStatus('Verschlüsselung wird von dieser WebView nicht unterstützt. Bitte Android System WebView aktualisieren.','error');return;}
   const email=(document.getElementById('aw-email')||{value:''}).value.trim();
   const pw=(document.getElementById('aw-pw')||{value:''}).value;
   if(!email||!pw){_awStatus('E-Mail und Passwort eingeben.','warn');return;}
   _awStatus('Anmelden …','muted');
+  _awAuthBusy=true;
   try{
     const session=await _awAccount.createEmailPasswordSession(email,pw);
     _awApplySession(session);
@@ -15490,10 +15494,12 @@ async function awLogin(){
     _awRememberLoginEmail(email);
     _awUpdateUI();await _awBiSync();_awStartCloudWatcher();
     _awStatus('Eingeloggt ✓','ok');
-  }catch(e){_awStatus(_awErr(e),'error');}
+  }catch(e){_awStatus(_awErr(e,'login'),'error');}
+  finally{_awAuthBusy=false;}
 }
 
 async function awRegister(){
+  if(_awAuthBusy)return;
   if(!_awInit()){_awStatus('SDK nicht geladen.','error');return;}
   if(!_awCryptoReady()){_awStatus('Verschlüsselung wird von dieser WebView nicht unterstützt. Bitte Android System WebView aktualisieren.','error');return;}
   const email=(document.getElementById('aw-email')||{value:''}).value.trim();
@@ -15501,6 +15507,7 @@ async function awRegister(){
   if(!email||!pw){_awStatus('E-Mail und Passwort eingeben.','warn');return;}
   if(pw.length<8){_awStatus('Passwort mind. 8 Zeichen.','warn');return;}
   _awStatus('Konto erstellen …','muted');
+  _awAuthBusy=true;
   try{
     await _awAccount.create(Appwrite.ID.unique(),email,pw);
     const session=await _awAccount.createEmailPasswordSession(email,pw);
@@ -15514,7 +15521,8 @@ async function awRegister(){
     await _awPush();
     _awStatus('Konto erstellt ✓','ok');
     _awUpdateSyncStatus();
-  }catch(e){_awStatus(_awErr(e),'error');}
+  }catch(e){_awStatus(_awErr(e,'register'),'error');}
+  finally{_awAuthBusy=false;}
 }
 
 let _awAuthTapLock=0;
@@ -16810,7 +16818,16 @@ async function _awPull(force=false){
 function _awCollect(){const d={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!AW_EXCL.has(k))d[k]=localStorage.getItem(k);}return d;}
 function _awApplyData(data){Object.entries(data||{}).forEach(([k,v])=>{if(!AW_EXCL.has(k)&&typeof v==='string')localStorage.setItem(k,v);});}
 function _awDevice(){if(window.TBNative)return 'Android';if(/iphone|ipad/i.test(navigator.userAgent))return 'iOS';return 'Web';}
-function _awErr(e){const t=String(e.type||'');if(t.includes('invalid_credentials'))return 'E-Mail oder Passwort falsch.';if(t.includes('already_exists')||t.includes('email_already'))return 'E-Mail bereits registriert – bitte anmelden.';return e.message||'Verbindungsfehler.';}
+function _awErr(e,action=''){
+  const t=String(e&&e.type||'');
+  if(t.includes('invalid_credentials'))return 'E-Mail oder Passwort falsch.';
+  if(t.includes('already_exists')||t.includes('email_already')){
+    return action==='login'
+      ? 'Anmeldung fehlgeschlagen. Bitte Passwort prüfen oder kurz abmelden und erneut anmelden.'
+      : 'E-Mail bereits registriert – bitte anmelden.';
+  }
+  return (e&&e.message)||'Verbindungsfehler.';
+}
 let _awStatusTimer=null;
 function _awStatus(msg,type){
   const el=document.getElementById('aw-sync-status');if(!el)return;
