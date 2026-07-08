@@ -15302,6 +15302,12 @@ function _awIsFetchFailure(error){
   return msg.includes('failed to fetch')||msg.includes('networkerror')||msg.includes('network request failed');
 }
 
+function _awIsExistingSessionError(error){
+  const type=String(error&&error.type||'').toLowerCase();
+  const msg=String(error&&error.message||error||'').toLowerCase();
+  return (type.includes('already_exists')||type.includes('session_already')||msg.includes('session')&&msg.includes('already'));
+}
+
 async function _awRest(path,options={}){
   const headers=Object.assign({
     'Content-Type':'application/json',
@@ -15325,11 +15331,23 @@ async function _awCreateEmailPasswordSession(email,password){
   try{
     return await _awAccount.createEmailPasswordSession(email,password);
   }catch(e){
+    if(_awIsExistingSessionError(e)){
+      const user=await _awAccount.get();
+      if(user&&String(user.email||'').toLowerCase()===String(email||'').toLowerCase())return null;
+    }
     if(!_awIsFetchFailure(e))throw e;
-    return await _awRest('/account/sessions/email',{
-      method:'POST',
-      body:JSON.stringify({email,password})
-    });
+    try{
+      return await _awRest('/account/sessions/email',{
+        method:'POST',
+        body:JSON.stringify({email,password})
+      });
+    }catch(restErr){
+      if(_awIsExistingSessionError(restErr)){
+        const user=await _awAccount.get();
+        if(user&&String(user.email||'').toLowerCase()===String(email||'').toLowerCase())return null;
+      }
+      throw restErr;
+    }
   }
 }
 
@@ -16937,7 +16955,7 @@ function _awErr(e,action=''){
   if(t.includes('invalid_credentials'))return 'E-Mail oder Passwort falsch.';
   if(t.includes('already_exists')||t.includes('email_already')){
     return action==='login'
-      ? 'Anmeldung fehlgeschlagen. Bitte Passwort prüfen oder kurz abmelden und erneut anmelden.'
+      ? 'Es besteht bereits eine Cloud-Sitzung. Bitte einmal abmelden oder App neu öffnen.'
       : 'E-Mail bereits registriert – bitte anmelden.';
   }
   return (e&&e.message)||'Verbindungsfehler.';
