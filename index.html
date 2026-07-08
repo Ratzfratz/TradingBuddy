@@ -16936,19 +16936,30 @@ async function _awPush(forceTrades=false,forceSettings=false){
 
     const imgCache=_awGetImgCache();
     const tradesForUpload=[];
+    let uploadSource=[];
     if(shouldUploadTrades){
-      let uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
+      uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
       for(const trade of uploadSource){
         const remoteAtts=[];
+        const localAtts=[];
         for(const att of normalizeTradeAttachments(trade)){
           if(!att.dataUrl){
-            if(att.fileId)remoteAtts.push({fileId:att.fileId,name:att.name||'screenshot.webp',mime:att.mime||'image/webp'});
+            if(att.fileId){
+              const remoteAtt={fileId:att.fileId,name:att.name||'screenshot.webp',mime:att.mime||'image/webp'};
+              remoteAtts.push(remoteAtt);
+              localAtts.push(Object.assign({}, att, remoteAtt));
+            }else{
+              localAtts.push(att);
+            }
             continue;
           }
           _awSyncLabel('','pending','Screenshots ...');
           try{
             const uploaded=await _awUploadScreenshotAttachment(att,imgCache);
-            if(uploaded)remoteAtts.push(uploaded);
+            if(uploaded){
+              remoteAtts.push(uploaded);
+              localAtts.push(Object.assign({}, att, uploaded));
+            }
             else throw new Error('Screenshot konnte nicht vorbereitet werden.');
           }catch(e){
             console.warn('Screenshot-Upload fehlgeschlagen:',e);
@@ -16956,6 +16967,7 @@ async function _awPush(forceTrades=false,forceSettings=false){
             throw new Error('Screenshot konnte nicht in die Cloud geladen werden: '+(e&&e.message?e.message:'unbekannter Fehler'));
           }
         }
+        trade.attachments=localAtts;
         tradesForUpload.push(Object.assign({}, trade, {attachments:remoteAtts}));
       }
     }
@@ -16980,6 +16992,9 @@ async function _awPush(forceTrades=false,forceSettings=false){
 
     _awApplying=true;
     if(shouldUploadTrades){
+      trades=uploadSource.map((trade,index)=>normalizeTrade(trade,index));
+      localStorage.setItem(STORE_KEY,JSON.stringify(trades));
+      _tradesCacheValid=true;
       localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
       localStorage.setItem('tb_cloud_trades_synced_at',syncedAt);
       localStorage.setItem('tb_cloud_trades_synced_at_ts',String(Date.now()));
