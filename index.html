@@ -13901,7 +13901,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         <div id="aw-unlock-section" style="display:none">
           <div style="display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted);margin-bottom:8px">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Passwort zur Entschlüsselung eingeben
+            Cloud auf diesem Gerät entsperren
           </div>
           <div style="position:relative;margin-bottom:8px">
             <input type="password" id="aw-unlock-pw" class="inp" placeholder="Passwort" autocomplete="current-password" enterkeyhint="done" onkeydown="if(event.key==='Enter')awUnlock()" style="padding-right:38px">
@@ -13911,7 +13911,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           </div>
           <button onclick="awUnlock()" class="s-btn s-btn-sync">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
-            Entsperren & Sync
+            Entsperren
           </button>
         </div>
 
@@ -15385,7 +15385,7 @@ async function _awBiSync(){
   }else if(settingsDoc){
     if(await _awHandleSyncDecision(null,settingsDoc,'start'))return;
   }
-  if(!cloudDoc&&!settingsDoc&&localCount>0){
+  if(!cloudDoc&&!settingsDoc&&_awHasLocalUnsyncedData()){
     await _awPush();
     _awUpdateSyncStatus();
     return;
@@ -15413,6 +15413,16 @@ function _awHasLocalUnsyncedTrades(referenceMs=0){
   const localTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
   const cloudTs=referenceMs||parseInt(localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
   return count>0&&(_awPushRequested||localTs>cloudTs+1000);
+}
+
+function _awHasLocalUnsyncedSettings(referenceMs=0){
+  const localTs=parseInt(localStorage.getItem('tb_settings_saved_at')||'0',10);
+  const cloudTs=referenceMs||parseInt(localStorage.getItem('tb_cloud_settings_synced_at_ts')||localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
+  return !!localTs&&(_awPushRequested||localTs>cloudTs+1000);
+}
+
+function _awHasLocalUnsyncedData(referenceMs=0){
+  return _awHasLocalUnsyncedTrades(referenceMs)||_awHasLocalUnsyncedSettings(referenceMs);
 }
 
 function _awHasLocalTrades(){
@@ -15448,13 +15458,13 @@ async function _awApplyDeletedCloudBackup(syncCloudMeta=false){
 }
 
 async function _awCheckCloudChanges(){
-  if(!_awUser||!_awDocId||!_awDatabases||_awSyncBusy||!_awAutoSync)return;
+  if(!_awUser||!_awDocId||!_awDatabases||!_awEncKey||_awSyncBusy||!_awAutoSync)return;
   try{
     const doc=await _awGetEntityDoc('trades');
     let settingsDoc=null;
     try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
     if(!doc){
-      if(_awHasLocalTrades())_awSchedulePush();
+      if(_awHasLocalUnsyncedData())_awSchedulePush();
       else if(settingsDoc)await _awHandleSyncDecision(null,settingsDoc,'watch');
       return;
     }
@@ -15473,7 +15483,7 @@ async function _awCheckCloudChanges(){
     _awMarkCloudDocChecked(doc);
   }catch(e){
     if(e&&e.code===404){
-      if(_awHasLocalTrades())_awSchedulePush();
+      if(_awHasLocalUnsyncedData())_awSchedulePush();
     }
     else console.warn('Cloud-Änderungsprüfung:',e);
   }
@@ -15485,7 +15495,7 @@ function _awStartCloudWatcher(){
   clearInterval(_awCloudWatchTimer);
   _awCloudWatchTimer=null;
   _awCloudWatchDelay=0;
-  if(!_awUser||!_awDocId||!_awAutoSync)return;
+  if(!_awUser||!_awDocId||!_awEncKey||!_awAutoSync)return;
   _awCloudWatchDelay=delay;
   _awCloudWatchTimer=setInterval(_awCheckCloudChanges,delay);
   setTimeout(()=>_awCheckCloudChanges(),200);
@@ -15643,8 +15653,10 @@ function awToggleUnlockPw(){
 
 async function awLogout(){
   if(!_awClient)return;
+  const oldDocId=_awDocId;
   try{await _awAccount.deleteSession('current');}catch(_){}
   if(window.TBNative&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();
+  try{if(oldDocId)localStorage.removeItem('tb_aw_device_key_'+oldDocId);}catch(_){}
   clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;_awCloudWatchDelay=0;
   clearTimeout(_awPushTimer);_awPushTimer=null;_awPushRequested=false;
   _awUser=null;_awDocId=null;_awEncKey=null;_awJwt=null;_awUpdateUI();_awStatus('Abgemeldet.','muted');
@@ -15880,18 +15892,19 @@ async function _awDeriveKey(password,userId){
 }
 
 async function _awSaveKeyToDevice(key){
-  if(!window.TBNative||typeof TBNative.storeEncKey!=='function')return;
   try{
     const raw=await crypto.subtle.exportKey('raw',key);
     const b64=btoa(String.fromCharCode(...new Uint8Array(raw)));
-    TBNative.storeEncKey(b64);
+    if(window.TBNative&&typeof TBNative.storeEncKey==='function')TBNative.storeEncKey(b64);
+    else if(_awDocId)localStorage.setItem('tb_aw_device_key_'+_awDocId,b64);
   }catch(_){}
 }
 
 async function _awLoadKeyFromDevice(){
-  if(!window.TBNative||typeof TBNative.retrieveEncKey!=='function')return null;
   try{
-    const b64=TBNative.retrieveEncKey();
+    let b64='';
+    if(window.TBNative&&typeof TBNative.retrieveEncKey==='function')b64=TBNative.retrieveEncKey();
+    else if(_awDocId)b64=localStorage.getItem('tb_aw_device_key_'+_awDocId)||'';
     if(!b64)return null;
     const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
     return await crypto.subtle.importKey('raw',bytes,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
@@ -16369,6 +16382,7 @@ function _awResolveSyncDecision(tradeDoc=null,settingsDoc=null){
 }
 
 async function _awHandleSyncDecision(tradeDoc=null,settingsDoc=null,source='auto'){
+  if(!_awUser||!_awDocId||!_awEncKey)return false;
   const decision=_awResolveSyncDecision(tradeDoc,settingsDoc);
   if(decision==='pull'){
     await _awPull(true);
@@ -16420,6 +16434,7 @@ let _awLastConflictPromptKey='';
 let _awLastConflictPromptAt=0;
 
 function _awFillConfirm(mode, doc){
+  if(!_awUser||!_awDocId||!_awEncKey)return;
   _awConfirmMode=mode==='push'?'push':'pull';
   _awConflictDocs=null;
   const localTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
@@ -16450,6 +16465,7 @@ function _awFillConfirm(mode, doc){
 }
 
 function _awShowConflictChoice(tradeDoc=null,settingsDoc=null,source='auto'){
+  if(!_awUser||!_awDocId||!_awEncKey)return;
   if(document.getElementById('aw-pull-confirm-ov')&&document.getElementById('aw-pull-confirm-ov').style.display==='flex')return;
   loadTrades();
   const localTs=_awNewestLocalMs();
@@ -16574,9 +16590,9 @@ async function _awKickAutoSync(){
       return;
     }
     loadTrades();
-    if(typeof trades!=='undefined'&&trades.length>0){
+    if(_awHasLocalUnsyncedData()){
       const ok=await _awPush();
-      _awStatus(ok?'Lokaler Stand hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
+      _awStatus(ok?'Lokale Änderungen hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       _awStatus('Kein Cloud-Backup gefunden.','muted');
     }
@@ -16767,8 +16783,8 @@ async function _awPull(force=false){
           _awApplying=false;
           _awSyncLabel(settingsDoc.synced_at||'');
           _awStatus(Object.keys(remoteSettings||{}).length?'Einstellungen geladen ✓':'Cloud-Backup ist leer.','muted');
-        }else if(_awHasLocalTrades()){
-          _awSyncLabel('','pending','Lokale Trades hochladen ...');
+        }else if(_awHasLocalUnsyncedData()){
+          _awSyncLabel('','pending','Lokale Änderungen hochladen ...');
           setTimeout(()=>_awPush().then(()=>_awUpdateSyncStatus()),250);
         }else{
           localStorage.setItem('tb_cloud_trade_count','0');
@@ -16992,6 +17008,7 @@ function _awUpdateUI(){
     const controls=document.getElementById('aw-sync-controls');
     if(unlock)unlock.style.display=_awEncKey?'none':'block';
     if(controls)controls.style.display=_awEncKey?'block':'none';
+    if(!_awEncKey)_awConfirmNo();
     if(_awEncKey)_awSyncLabel(localStorage.getItem('tb_cloud_synced_at')||'');
     _awUpdateSyncStatus();
     if(_awEncKey)_awCheckCloudChanges();
