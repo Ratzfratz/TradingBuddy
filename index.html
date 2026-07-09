@@ -15784,7 +15784,7 @@ async function awRegister(){
     _awApplySession(session);
     _awUser=await _awAccount.get();_awDocId=_awUser.$id;
     _awEncKey=await _awDeriveKey(pw,_awDocId);
-    if(!await _awRequireValidCloudKey())return;
+    if(!await _awRequireValidCloudKey({allowMismatch:true}))return;
     await _awSaveKeyToDevice(_awEncKey);
     _awRememberLoginEmail(email);
     _awUpdateUI();
@@ -16268,10 +16268,7 @@ async function _awRequireValidCloudKey(options={}){
     _awUpdateUI();
     return true;
   }
-  _awEncKey=null;
-  try{if(_awUseNativeKeyStore()&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();}catch(_){}
-  try{if(_awDocId)localStorage.removeItem('tb_aw_device_key_'+_awDocId);localStorage.removeItem('tb_web_enc_key');}catch(_){}
-  _awStatus('Cloud-Schlüssel passt nicht. Bitte Passwort neu eingeben.','error');
+  _awStatus('Cloud ist mit einem anderen Schlüssel gesichert.','warn');
   _awUpdateUI();
   return false;
 }
@@ -17024,7 +17021,7 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
   if(!_awUser||!_awDocId){_awLastPushError='Nicht angemeldet.';return false;}
   if(!_awStorage){_awLastPushError='Cloud-Speicher nicht bereit.';return false;}
   if(!await _awRequireValidCloudKey({allowMismatch:allowKeyMismatch})){
-    _awLastPushError='Cloud-Schlüssel passt nicht.';
+    _awLastPushError='Cloud ist mit einem anderen Schlüssel gesichert.';
     return false;
   }
   _awSyncBusy=true;
