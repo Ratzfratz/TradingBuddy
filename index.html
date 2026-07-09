@@ -15706,7 +15706,7 @@ async function awCheckSession(){
     if(!_awEncKey){_awUpdateUI();return;}
     if(!await _awRequireValidCloudKey({allowMismatch:true}))return;
     _awUpdateUI();
-    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert. Lokal hochladen überschreibt den Cloud-Stand.','warn');return;}
+    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert.','warn');_awShowKeyMismatchChoice();return;}
     await _awBiSync();_awStartCloudWatcher();
   }catch(e){_awUser=null;_awUpdateUI();}
 }
@@ -15761,7 +15761,7 @@ async function awLogin(){
     await _awSaveKeyToDevice(_awEncKey);
     _awRememberLoginEmail(email);
     _awUpdateUI();
-    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert. Lokal hochladen überschreibt den Cloud-Stand.','warn');return;}
+    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert.','warn');_awShowKeyMismatchChoice();return;}
     await _awBiSync();_awStartCloudWatcher();
     _awStatus('Eingeloggt ✓','ok');
   }catch(e){_awStatus(_awErr(e,'login'),'error');}
@@ -15831,7 +15831,7 @@ async function awUnlock(){
     if(!await _awRequireValidCloudKey({allowMismatch:true}))return;
     await _awSaveKeyToDevice(_awEncKey);
     _awUpdateUI();
-    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert. Lokal hochladen überschreibt den Cloud-Stand.','warn');return;}
+    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert.','warn');_awShowKeyMismatchChoice();return;}
     await _awBiSync();_awStartCloudWatcher();
     _awStatus('Entsperrt ✓','ok');
   }catch(e){
@@ -16735,6 +16735,16 @@ function _awFillConfirm(mode, doc){
   if(ov)ov.style.display='flex';
 }
 
+function _awShowKeyMismatchChoice(){
+  if(!_awUser||!_awDocId||!_awEncKey)return;
+  loadTrades();
+  _awFillConfirm('push',null);
+  const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text;};
+  set('aw-confirm-title','Cloud neu verschlüsseln?');
+  set('aw-confirm-text','Die Cloud-Daten wurden mit einem anderen Schlüssel gesichert. Hochladen ersetzt den Cloud-Stand durch dieses Gerät und verschlüsselt ihn neu.');
+  set('aw-confirm-action','Cloud überschreiben');
+}
+
 function _awShowConflictChoice(tradeDoc=null,settingsDoc=null,source='auto'){
   if(!_awUser||!_awDocId||!_awEncKey)return;
   if(document.getElementById('aw-pull-confirm-ov')&&document.getElementById('aw-pull-confirm-ov').style.display==='flex')return;
@@ -16789,7 +16799,7 @@ async function _awConfirmYes(){
   _awConfirmNo();
   _awSyncBusy=false;
   if(_awConfirmMode==='push'){
-    const ok=await _awPush(true);
+    const ok=await _awPush(true,true,_awCloudKeyMismatch);
     _awStatus(ok?'Sync abgeschlossen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
   }else{
     await _awPull(true);
