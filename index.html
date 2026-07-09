@@ -16527,6 +16527,13 @@ async function _awDownloadImg(fileId){
 async function _awDownloadImg(fileId){
   if(!_awStorage&&typeof _awInit==='function')_awInit();
   if(!_awStorage)throw new Error('Cloud-Speicher nicht bereit.');
+  let fileMeta=null;
+  let metaError='';
+  try{
+    fileMeta=await _awStorage.getFile(AW_BUCKET,fileId);
+  }catch(e){
+    metaError=e&&e.code?`HTTP ${e.code}: ${e.message||e.type||'Datei-Metadaten nicht lesbar'}`:(e&&e.message?e.message:String(e));
+  }
   const imageMime=raw=>{
     if(!raw||raw.length<12)return '';
     const png=raw[0]===0x89&&raw[1]===0x50&&raw[2]===0x4e&&raw[3]===0x47;
@@ -16542,6 +16549,7 @@ async function _awDownloadImg(fileId){
   };
   let bytes=null;
   let lastError='';
+  const downloadErrors=[];
   if(window.TBNative&&typeof TBNative.downloadAppwriteStorageFile==='function'){
     try{
       const jwt=await _awGetJwt();
@@ -16551,6 +16559,7 @@ async function _awDownloadImg(fileId){
     }catch(e){
       lastError=e&&e.message?e.message:String(e);
     }
+    if(!bytes&&lastError)downloadErrors.push('native='+lastError);
   }
   if(!bytes&&_awClient&&typeof _awClient.call==='function'){
     try{
@@ -16563,6 +16572,7 @@ async function _awDownloadImg(fileId){
     }catch(e){
       lastError='SDK: '+(e&&e.message?e.message:String(e));
     }
+    if(!bytes&&lastError)downloadErrors.push(lastError);
   }
   if(!bytes){
     try{
@@ -16580,21 +16590,30 @@ async function _awDownloadImg(fileId){
     }catch(e){
       lastError=e&&e.message?e.message:String(e);
     }
+    if(!bytes&&lastError)downloadErrors.push('fetch='+lastError);
   }
   if(!bytes){
     let missing=false;
-    try{await _awStorage.getFile(AW_BUCKET,fileId);lastError=lastError||'Download blockiert';}
+    try{fileMeta=fileMeta||await _awStorage.getFile(AW_BUCKET,fileId);lastError=lastError||'Download blockiert';}
     catch(e){
       missing=Number(e&&e.code)===404;
       lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);
     }
-    const err=new Error('Screenshot-Datei nicht geladen: '+fileId+' - '+(lastError||'unbekannter Fehler'));
+    const perms=Array.isArray(fileMeta&&fileMeta.$permissions)?fileMeta.$permissions.join(','):'keine Permissions sichtbar';
+    const size=fileMeta&&fileMeta.sizeOriginal?`${fileMeta.sizeOriginal} Bytes`:(fileMeta&&fileMeta.size?`${fileMeta.size} Bytes`:'Groesse unbekannt');
+    const metaInfo=fileMeta
+      ? `Metadaten OK, ${size}, Permissions: ${perms}`
+      : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
+    const err=new Error('Screenshot-Datei nicht geladen: '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
     }else if(/permission|permissions|read|unauthorized|forbidden/i.test(lastError)){
       err.blockedFileId=fileId;
-      err.message='Screenshot-Datei ist nicht lesbar: '+fileId;
+      err.message='Screenshot-Datei ist nicht lesbar: '+fileId+' - '+metaInfo;
+    }else if(/failed to fetch|networkerror|load failed|fetch/i.test(lastError)){
+      err.fetchBlockedFileId=fileId;
+      err.message='Screenshot-Download vom Browser blockiert: '+fileId+' - '+metaInfo;
     }
     throw err;
   }
