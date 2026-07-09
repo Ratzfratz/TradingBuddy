@@ -8074,7 +8074,10 @@ function removeTradeAttachment(index) {
 
 function queueDeletedAttachmentFile(attachment) {
   const fileId = String(attachment && attachment.fileId || '').trim();
-  if (fileId) pendingDeletedAttachmentFileIds.add(fileId);
+  if (fileId) {
+    pendingDeletedAttachmentFileIds.add(fileId);
+    persistPendingAttachmentDeletes(pendingDeletedAttachmentFileIds);
+  }
 }
 
 function queueDeletedAttachmentFilesFromTrade(trade) {
@@ -8090,26 +8093,69 @@ function isAttachmentFileStillReferenced(fileId) {
 }
 
 function scheduleDeleteQueuedAttachmentFiles(fileIds) {
-  const ids = [...(fileIds || [])].map(String).filter(Boolean);
+  const ids = [...new Set([...loadPendingAttachmentDeletes(), ...(fileIds || [])].map(String).filter(Boolean))];
+  persistPendingAttachmentDeletes(ids);
   if (!ids.length) return;
   setTimeout(() => deleteUnreferencedAttachmentFiles(ids), 250);
 }
 
 async function deleteUnreferencedAttachmentFiles(fileIds) {
-  if (!_awUser || !_awDocId) return;
+  const queuedIds = [...new Set([...(fileIds || []), ...loadPendingAttachmentDeletes()].map(String).filter(Boolean))];
+  if (!_awUser || !_awDocId) {
+    persistPendingAttachmentDeletes(queuedIds);
+    return;
+  }
   if (!_awStorage && typeof _awInit === 'function') _awInit();
-  if (!_awStorage) return;
-  for (const fileId of [...new Set(fileIds)]) {
+  if (!_awStorage) {
+    persistPendingAttachmentDeletes(queuedIds);
+    return;
+  }
+  const stillPending = new Set(queuedIds);
+  for (const fileId of queuedIds) {
     if (isAttachmentFileStillReferenced(fileId)) continue;
     try {
       await _awStorage.deleteFile(AW_BUCKET, fileId);
+      removeFileIdFromImgCache(fileId);
+      stillPending.delete(fileId);
     } catch (error) {
       if (Number(error && error.code) !== 404) {
         console.warn('Screenshot-Datei konnte nicht gelöscht werden:', fileId, error);
         if (typeof _awStatus === 'function') _awStatus('Screenshot-Datei konnte nicht aus der Cloud gelöscht werden.', 'warn');
+      } else {
+        removeFileIdFromImgCache(fileId);
+        stillPending.delete(fileId);
       }
     }
   }
+  persistPendingAttachmentDeletes(stillPending);
+}
+
+function removeFileIdFromImgCache(fileId) {
+  const id = String(fileId || '').trim();
+  if (!id) return;
+  const imgCache = _awGetImgCache();
+  let changed = false;
+  Object.keys(imgCache).forEach(key => {
+    if (String(imgCache[key] || '') === id) {
+      delete imgCache[key];
+      changed = true;
+    }
+  });
+  if (changed) localStorage.setItem('tb_aw_img_cache', JSON.stringify(imgCache));
+}
+
+function loadPendingAttachmentDeletes() {
+  try {
+    return JSON.parse(localStorage.getItem('tb_pending_attachment_deletes') || '[]').map(String).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
+function persistPendingAttachmentDeletes(fileIds) {
+  const ids = [...new Set([...(fileIds || [])].map(String).filter(Boolean))];
+  if (ids.length) localStorage.setItem('tb_pending_attachment_deletes', JSON.stringify(ids));
+  else localStorage.removeItem('tb_pending_attachment_deletes');
 }
 
 function referencedAttachmentFileIdsFromTrades(list) {
@@ -8143,8 +8189,10 @@ async function cleanupUnreferencedCloudScreenshotFiles(referenceFileIds) {
     if (!fileId || !name.startsWith(ownScreenshotPrefix) || refs.has(fileId)) continue;
     try {
       await _awStorage.deleteFile(AW_BUCKET, fileId);
+      removeFileIdFromImgCache(fileId);
     } catch (error) {
       if (Number(error && error.code) !== 404) console.warn('Verwaiste Screenshot-Datei konnte nicht gelöscht werden:', fileId, error);
+      else removeFileIdFromImgCache(fileId);
     }
   }
 }
@@ -8807,6 +8855,15 @@ function mergeTradeAttachments(primaryTrade, localTrade){
   return merged.slice(0,MAX_TRADE_ATTACHMENTS);
 }
 
+function shouldRescueLocalAttachments(remoteTrade,localTrade){
+  if(!localTrade)return false;
+  const localAttachments=normalizeTradeAttachments(localTrade);
+  if(!localAttachments.some(att=>att.dataUrl))return false;
+  const remoteUpdated=Number(remoteTrade&&remoteTrade.updatedAt)||0;
+  const localUpdated=Number(localTrade&&localTrade.updatedAt)||0;
+  return !remoteUpdated || !localUpdated || localUpdated>=remoteUpdated;
+}
+
 async function ensureAttachmentDataUrl(attachment){
   const normalized=normalizeTradeAttachment(attachment);
   if(!normalized)return null;
@@ -8907,9 +8964,14 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   const mime=(att.dataUrl.match(/^data:([^;]+)/)||[])[1]||'image/webp';
   const existingFileId=String(att.fileId||imgCache[sha256]||'').trim();
   if(existingFileId){
-    imgCache[sha256]=existingFileId;
-    localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
-    return {fileId:existingFileId,name:att.name||'screenshot.webp',mime};
+    const exists=await _awCloudFileExists(existingFileId);
+    if(exists){
+      imgCache[sha256]=existingFileId;
+      localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
+      return {fileId:existingFileId,name:att.name||'screenshot.webp',mime};
+    }
+    if(att.fileId)delete att.fileId;
+    if(imgCache[sha256]===existingFileId)delete imgCache[sha256];
   }
   let fileId=_awRandomFileId('Shot');
   const parts=String(att.dataUrl).match(/^data:([^;,]+);base64,(.+)$/);
@@ -8917,7 +8979,8 @@ async function _awUploadScreenshotAttachment(att,imgCache){
   const bin=atob(parts[2]);
   const bytes=new Uint8Array(bin.length);
   for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
-  const file=new File([bytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:mime||'image/webp'});
+  const encBytes=await _awEncryptBytes(bytes);
+  const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
   try{
     await _awUploadFile(fileId,file,false,true);
   }catch(e){
@@ -15584,7 +15647,7 @@ async function _awApplyDeletedCloudBackup(syncCloudMeta=false){
 }
 
 async function _awCheckCloudChanges(){
-  if(!_awUser||!_awDocId||!_awDatabases||!_awEncKey||_awSyncBusy||!_awAutoSync)return;
+  if(!_awUser||!_awDocId||!_awDatabases||!_awEncKey||_awCloudKeyMismatch||_awSyncBusy||!_awAutoSync)return;
   try{
     const doc=await _awGetEntityDoc('trades');
     let settingsDoc=null;
@@ -15692,10 +15755,12 @@ async function awLogin(){
     _awApplySession(session);
     _awUser=await _awAccount.get();_awDocId=_awUser.$id;
     _awEncKey=await _awDeriveKey(pw,_awDocId);
-    if(!await _awRequireValidCloudKey())return;
+    if(!await _awRequireValidCloudKey({allowMismatch:true}))return;
     await _awSaveKeyToDevice(_awEncKey);
     _awRememberLoginEmail(email);
-    _awUpdateUI();await _awBiSync();_awStartCloudWatcher();
+    _awUpdateUI();
+    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert. Lokal hochladen überschreibt den Cloud-Stand.','warn');return;}
+    await _awBiSync();_awStartCloudWatcher();
     _awStatus('Eingeloggt ✓','ok');
   }catch(e){_awStatus(_awErr(e,'login'),'error');}
   finally{_awAuthBusy=false;}
@@ -15761,9 +15826,11 @@ async function awUnlock(){
   _awStatus('Entschlüssele …','muted');
   try{
     _awEncKey=await _awDeriveKey(pw,_awDocId);
-    if(!await _awRequireValidCloudKey())return;
+    if(!await _awRequireValidCloudKey({allowMismatch:true}))return;
     await _awSaveKeyToDevice(_awEncKey);
-    _awUpdateUI();await _awBiSync();_awStartCloudWatcher();
+    _awUpdateUI();
+    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert. Lokal hochladen überschreibt den Cloud-Stand.','warn');return;}
+    await _awBiSync();_awStartCloudWatcher();
     _awStatus('Entsperrt ✓','ok');
   }catch(e){
     _awEncKey=null;
@@ -15914,7 +15981,7 @@ function _awCloudFileName(kind,detail=''){
   const user=_awUserFileLabel();
   if(kind==='trades')return `${user}_Trades_${safeDetail}_${stamp}.json.gz.enc`;
   if(kind==='settings')return `${user}_Einstellungen_${stamp}.json.gz.enc`;
-  if(kind==='screenshot')return `${user}_Screenshots_${safeDetail}_${stamp}.webp`;
+  if(kind==='screenshot')return `${user}_Screenshots_${safeDetail}_${stamp}.webp.enc`;
   return `${user}_Backup_${safeDetail}_${stamp}.enc`;
 }
 
@@ -16186,13 +16253,19 @@ async function _awValidateCurrentKeyWithCloud(){
   }
 }
 
-async function _awRequireValidCloudKey(){
+async function _awRequireValidCloudKey(options={}){
   if(!_awEncKey){
     _awStatus('Cloud ist nicht entsperrt. Bitte Passwort eingeben.','warn');
     _awUpdateUI();
     return false;
   }
-  if(await _awValidateCurrentKeyWithCloud())return true;
+  if(await _awValidateCurrentKeyWithCloud()){_awCloudKeyMismatch=false;return true;}
+  _awCloudKeyMismatch=true;
+  if(options&&options.allowMismatch){
+    _awStatus('Cloud ist mit einem anderen Schlüssel gesichert.','warn');
+    _awUpdateUI();
+    return true;
+  }
   _awEncKey=null;
   try{if(_awUseNativeKeyStore()&&typeof TBNative.clearEncKey==='function')TBNative.clearEncKey();}catch(_){}
   try{if(_awDocId)localStorage.removeItem('tb_aw_device_key_'+_awDocId);localStorage.removeItem('tb_web_enc_key');}catch(_){}
@@ -16368,14 +16441,14 @@ async function _awDownloadImg(fileId){
     throw err;
   }
   let dec=bytes;
-  const isPlainImage=raw=>{
+  const imageMime=raw=>{
     if(!raw||raw.length<12)return false;
     const png=raw[0]===0x89&&raw[1]===0x50&&raw[2]===0x4e&&raw[3]===0x47;
     const jpg=raw[0]===0xff&&raw[1]===0xd8;
     const webp=raw[0]===0x52&&raw[1]===0x49&&raw[2]===0x46&&raw[3]===0x46&&raw[8]===0x57&&raw[9]===0x45&&raw[10]===0x42&&raw[11]===0x50;
-    return png||jpg||webp;
+    return png?'image/png':(jpg?'image/jpeg':(webp?'image/webp':''));
   };
-  if(!isPlainImage(bytes)){
+  if(!imageMime(bytes)){
     try{
       const text=new TextDecoder().decode(bytes.slice(0,160)).trim();
       if(text&&/^[\[{<]|error|message|html/i.test(text))throw new Error(text.slice(0,120));
@@ -16385,9 +16458,10 @@ async function _awDownloadImg(fileId){
     try{dec=await _awDecryptBytes(bytes);}
     catch(e){throw new Error('Screenshot-Datei ist kein lesbares Bild: '+fileId);}
   }
+  const outMime=imageMime(dec)||'image/webp';
   return await new Promise((res,rej)=>{
     const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=rej;
-    r.readAsDataURL(new Blob([dec],{type:'image/webp'}));
+    r.readAsDataURL(new Blob([dec],{type:outMime}));
   });
 }
 
@@ -16764,11 +16838,14 @@ function awSetAutoSync(on){
 
 let _awLastPushError=null;
 let _awLastScreenshotError='';
+let _awCloudKeyMismatch=false;
 async function _awKickAutoSync(){
   if(!_awUser||!_awDocId||!_awEncKey){_awUpdateSyncStatus();return;}
+  if(_awCloudKeyMismatch){_awStatus('Auto-Sync pausiert: Cloud-Schlüsselkonflikt.','warn');_awUpdateSyncStatus();return;}
   if(_awSyncBusy){_awUpdateSyncStatus();return;}
   _awStatus('Auto-Sync wird geprüft ...','muted');
   try{
+    scheduleDeleteQueuedAttachmentFiles([]);
     let tradeDoc=null;
     try{tradeDoc=await _awGetEntityDoc('trades');}catch(_){}
     let settingsDoc=null;
@@ -16811,7 +16888,7 @@ async function _awKickAutoSync(){
   }
 }
 async function awPushBackup(){
-  const ok=await _awPush(true,true);
+  const ok=await _awPush(true,true,true);
   _awStatus(ok?'Sync abgeschlossen \u2713':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
   _awUpdateSyncStatus();
 }
@@ -16843,9 +16920,9 @@ async function _awPullSettingsOnly(){
   }
 }
 
-async function _awPushSettingsOnly(){
+async function _awPushSettingsOnly(allowKeyMismatch=false){
   if(!_awUser||!_awDocId||!_awDatabases||_awSyncBusy)return false;
-  if(!await _awRequireValidCloudKey())return false;
+  if(!await _awRequireValidCloudKey({allowMismatch:allowKeyMismatch}))return false;
   _awSyncBusy=true;
   try{
     _awSyncLabel('', 'pending', 'Einstellungen ...');
@@ -16870,6 +16947,7 @@ async function _awPushSettingsOnly(){
     _awSetLatestCloudSync(syncedAt);
     _awApplying=false;
     _awLastPushError=null;
+    _awCloudKeyMismatch=false;
     _awSyncLabel(syncedAt);
     return true;
   }catch(e){
@@ -16887,9 +16965,10 @@ async function awSyncSection(kind,direction){
   if(!_awUser||!_awDocId){_awStatus('Bitte anmelden.','warn');return;}
   if(!_awEncKey){_awStatus('Cloud auf diesem Gerät entsperren.','warn');return;}
   const upload=direction==='upload';
+  if(_awCloudKeyMismatch&&!upload){_awStatus('Cloud-Daten können mit diesem Schlüssel nicht gelesen werden.','warn');return;}
   if(kind==='settings'){
     if(upload){
-      const ok=await _awPushSettingsOnly();
+      const ok=await _awPushSettingsOnly(true);
       _awStatus(ok?'Einstellungen hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPullSettingsOnly();
@@ -16899,7 +16978,7 @@ async function awSyncSection(kind,direction){
   }
   if(kind==='trades'){
     if(upload){
-      const ok=await _awPush(true,false);
+      const ok=await _awPush(true,false,true);
       _awStatus(ok?'Trades hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPull(true);
@@ -16909,7 +16988,7 @@ async function awSyncSection(kind,direction){
   }
   if(kind==='screenshots'){
     if(upload){
-      const ok=await _awPush(true,false);
+      const ok=await _awPush(true,false,true);
       _awStatus(ok?'Screenshots hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPull(true);
@@ -16938,9 +17017,9 @@ function _awSchedulePush(){
   },900);
 }
 
-async function _awPush(forceTrades=false,forceSettings=false){
+async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=false){
   if(!_awUser||!_awDocId||!_awStorage||_awSyncBusy)return false;
-  if(!await _awRequireValidCloudKey())return false;
+  if(!await _awRequireValidCloudKey({allowMismatch:allowKeyMismatch}))return false;
   _awSyncBusy=true;
   try{
     loadTrades();
@@ -17082,6 +17161,8 @@ async function _awPush(forceTrades=false,forceSettings=false){
     _awApplying=false;
 
     _awPushRequested=false;
+    _awCloudKeyMismatch=false;
+    scheduleDeleteQueuedAttachmentFiles([]);
     _awSyncLabel(syncedAt);_awLastPushError=null;return true;
   }catch(e){
     _awLastPushError=e&&(e.message||e.type)||'Unbekannter Fehler';
@@ -17251,7 +17332,9 @@ async function _awPull(force=false){
         const localMatch=tradeDedupeSignatures(remoteWithAttachments)
           .map(key=>localTradeBySignature.get(key))
           .find(Boolean);
-        const attachments=mergeTradeAttachments(remoteWithAttachments,localMatch);
+        const attachments=shouldRescueLocalAttachments(remoteWithAttachments,localMatch)
+          ? mergeTradeAttachments(remoteWithAttachments,localMatch)
+          : normalizeTradeAttachments(remoteWithAttachments);
         if(localMatch&&normalizeTradeAttachments(localMatch).some(att=>att.dataUrl)&&attachments.length>atts.length)rescuedLocalAttachments=true;
         merged.push(Object.assign({}, remoteWithAttachments, {attachments}));
       }
@@ -17344,7 +17427,7 @@ function _awUpdateUI(){
     if(!_awEncKey)_awConfirmNo();
     if(_awEncKey)_awSyncLabel(localStorage.getItem('tb_cloud_synced_at')||'');
     _awUpdateSyncStatus();
-    if(_awEncKey)_awCheckCloudChanges();
+    if(_awEncKey&&!_awCloudKeyMismatch)_awCheckCloudChanges();
   }else{out.style.display='block';inn.style.display='none';}
 }
 
