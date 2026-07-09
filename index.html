@@ -16477,6 +16477,14 @@ async function _awDownloadImg(fileId){
   };
   let outMime=imageMime(bytes);
   if(!outMime){
+    try{
+      const rawText=new TextDecoder().decode(bytes.slice(0,220)).trim();
+      if(/^<!doctype html|^<html\b/i.test(rawText)){
+        throw new Error('Storage-Download lieferte die App-Seite statt der Screenshot-Datei. Bitte App neu laden und erneut synchronisieren.');
+      }
+    }catch(e){
+      if(e&&e.message&&/Storage-Download/.test(e.message))throw e;
+    }
     let decryptError=null;
     try{
       dec=await _awDecryptBytes(bytes);
