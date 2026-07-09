@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de-DE">
 <head>
 <meta charset="UTF-8">
@@ -8957,12 +8957,12 @@ async function _awCloudFileExists(fileId){
   }
 }
 
-async function _awUploadScreenshotAttachment(att,imgCache){
+async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
   if(!att||!att.dataUrl)return null;
   if(!_awEncKey)throw new Error('Cloud ist nicht entsperrt.');
   const sha256=await _awSha256(att.dataUrl);
   const mime=(att.dataUrl.match(/^data:([^;]+)/)||[])[1]||'image/webp';
-  const existingFileId=String(att.fileId||imgCache[sha256]||'').trim();
+  const existingFileId=forceNew?'':String(att.fileId||imgCache[sha256]||'').trim();
   if(existingFileId){
     const exists=await _awCloudFileExists(existingFileId);
     if(exists){
@@ -16447,20 +16447,30 @@ async function _awDownloadImg(fileId){
     const webp=raw[0]===0x52&&raw[1]===0x49&&raw[2]===0x46&&raw[3]===0x46&&raw[8]===0x57&&raw[9]===0x45&&raw[10]===0x42&&raw[11]===0x50;
     return png?'image/png':(jpg?'image/jpeg':(webp?'image/webp':''));
   };
-  if(!imageMime(bytes)){
+  let outMime=imageMime(bytes);
+  if(!outMime){
+    let decryptError=null;
     try{
-      const text=new TextDecoder().decode(bytes.slice(0,160)).trim();
-      if(text&&/^[\[{<]|error|message|html/i.test(text))throw new Error(text.slice(0,120));
+      dec=await _awDecryptBytes(bytes);
+      outMime=imageMime(dec);
     }catch(e){
-      if(e&&e.message)throw new Error('Screenshot-Datei ist kein Bild: '+fileId+' · '+e.message);
+      decryptError=e;
     }
-    try{dec=await _awDecryptBytes(bytes);}
-    catch(e){throw new Error('Screenshot-Datei ist kein lesbares Bild: '+fileId);}
+    if(!outMime){
+      let detail='';
+      try{
+        const text=new TextDecoder().decode(bytes.slice(0,220)).trim();
+        if(text&&/^[\[{<]|error|message|html/i.test(text))detail=' · '+text.slice(0,160);
+      }catch(_){}
+      const reason=decryptError&&decryptError.message?decryptError.message:'kein lesbares Bild nach Entschlüsselung';
+      const err=new Error('Screenshot-Datei kann mit diesem Cloud-Schlüssel nicht gelesen werden: '+fileId+' · '+reason+detail);
+      err.decryptFailedFileId=fileId;
+      throw err;
+    }
   }
-  const outMime=imageMime(dec)||'image/webp';
   return await new Promise((res,rej)=>{
     const r=new FileReader();r.onload=()=>res(String(r.result||''));r.onerror=rej;
-    r.readAsDataURL(new Blob([dec],{type:outMime}));
+    r.readAsDataURL(new Blob([dec],{type:outMime||'image/webp'}));
   });
 }
 
@@ -17123,7 +17133,7 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
           }
           _awSyncLabel('','pending','Screenshots ...');
           try{
-            const uploaded=await _awUploadScreenshotAttachment(att,imgCache);
+            const uploaded=await _awUploadScreenshotAttachment(att,imgCache,allowKeyMismatch);
             if(uploaded){
               remoteAtts.push(uploaded);
               localAtts.push(Object.assign({}, att, uploaded));
@@ -17337,6 +17347,7 @@ async function _awPull(force=false){
                 removedMissingScreenshotRefs++;
                 continue;
               }
+              _awLastScreenshotError=(e&&e.message?e.message:String(e||'unbekannter Fehler')).slice(0,240);
               failedScreenshotDownloads++;
             }
           }
