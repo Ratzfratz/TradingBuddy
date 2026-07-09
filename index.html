@@ -8092,6 +8092,31 @@ function isAttachmentFileStillReferenced(fileId) {
   );
 }
 
+function removeMissingAttachmentReference(fileId) {
+  const id = String(fileId || '').trim();
+  if (!id) return false;
+  loadTrades();
+  let changed = false;
+  (Array.isArray(trades) ? trades : []).forEach(trade => {
+    const before = normalizeTradeAttachments(trade);
+    const after = before.filter(att => String(att && att.fileId || '').trim() !== id);
+    if (after.length !== before.length) {
+      trade.attachments = after;
+      changed = true;
+    }
+  });
+  if (changed) {
+    _tradesCacheValid = true;
+    localStorage.setItem(STORE_KEY, JSON.stringify(trades));
+    removeFileIdFromImgCache(id);
+    if (typeof invalidateTradesCache === 'function') invalidateTradesCache();
+    if (typeof renderList === 'function') renderList(true);
+    if (typeof updateJournalFilterUi === 'function') updateJournalFilterUi();
+    if (typeof _awUpdateSyncStatus === 'function') _awUpdateSyncStatus();
+  }
+  return changed;
+}
+
 function scheduleDeleteQueuedAttachmentFiles(fileIds) {
   const ids = [...new Set([...loadPendingAttachmentDeletes(), ...(fileIds || [])].map(String).filter(Boolean))];
   persistPendingAttachmentDeletes(ids);
@@ -11301,7 +11326,10 @@ async function renderAttachmentViewerImage() {
       const msg=e&&e.message?e.message:'nicht geladen';
       if(counter)counter.textContent=`${attachmentViewerIndex + 1} / ${attachmentViewerItems.length} · ${msg}`;
       if(e&&e.missingFileId){
-        console.warn('Screenshot-Zuordnung bleibt erhalten, obwohl die Datei nicht geladen werden konnte:',e.missingFileId);
+        removeMissingAttachmentReference(e.missingFileId);
+        attachmentViewerItems=attachmentViewerItems.filter(att=>String(att&&att.fileId||'').trim()!==String(e.missingFileId||'').trim());
+        if(!attachmentViewerItems.length){closeTradeAttachmentViewer();return;}
+        attachmentViewerIndex=Math.min(attachmentViewerIndex,attachmentViewerItems.length-1);
       }
       if(typeof _awStatus==='function')_awStatus(e&&e.message?e.message:'Screenshot konnte nicht geladen werden.','error');
       return;
@@ -16635,8 +16663,47 @@ function _awResolveSyncDecision(tradeDoc=null,settingsDoc=null){
   return 'none';
 }
 
+function _awResolveSectionSyncDecision(tradeDoc=null,settingsDoc=null){
+  const tradeBase=_awLocalMs('tb_cloud_trades_synced_at_ts')||_awLocalMs('tb_cloud_synced_at_ts');
+  const settingsBase=_awLocalMs('tb_cloud_settings_synced_at_ts')||_awLocalMs('tb_cloud_synced_at_ts');
+  const tradeCloudTs=_awDocMs(tradeDoc);
+  const settingsCloudTs=_awDocMs(settingsDoc);
+  return {
+    tradeLocal:_awLocalMs('tb_local_saved_at')>tradeBase+1000,
+    tradeCloud:tradeCloudTs>tradeBase+1000,
+    settingsLocal:_awLocalMs('tb_settings_saved_at')>settingsBase+1000,
+    settingsCloud:settingsCloudTs>settingsBase+1000
+  };
+}
+
 async function _awHandleSyncDecision(tradeDoc=null,settingsDoc=null,source='auto'){
   if(!_awUser||!_awDocId||!_awEncKey)return false;
+  const sectionDecision=_awResolveSectionSyncDecision(tradeDoc,settingsDoc);
+  if((sectionDecision.tradeLocal&&sectionDecision.tradeCloud)||(sectionDecision.settingsLocal&&sectionDecision.settingsCloud)){
+    _awShowConflictChoice(tradeDoc,settingsDoc,source);
+    return true;
+  }
+  let handled=false;
+  if(sectionDecision.settingsLocal){
+    await _awPushSettingsOnly();
+    handled=true;
+  }
+  if(sectionDecision.settingsCloud){
+    await _awPullSettingsOnly();
+    handled=true;
+  }
+  if(sectionDecision.tradeLocal){
+    await _awPush(false,false,false,{only:'trades'});
+    handled=true;
+  }
+  if(sectionDecision.tradeCloud){
+    await _awPull(true,{includeSettings:false});
+    handled=true;
+  }
+  if(handled){
+    _awUpdateSyncStatus();
+    return true;
+  }
   const decision=_awResolveSyncDecision(tradeDoc,settingsDoc);
   if(decision==='pull'){
     await _awPull(true);
@@ -16997,7 +17064,7 @@ async function awSyncSection(kind,direction){
   }
   if(kind==='trades'){
     if(upload){
-      const ok=await _awPush(true,false,true);
+      const ok=await _awPush(true,false,true,{only:'trades'});
       _awStatus(ok?'Trades hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPull(true);
@@ -17007,7 +17074,7 @@ async function awSyncSection(kind,direction){
   }
   if(kind==='screenshots'){
     if(upload){
-      const ok=await _awPush(true,false,true);
+      const ok=await _awPush(true,false,true,{only:'trades'});
       _awStatus(ok?'Screenshots hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPull(true);
@@ -17028,7 +17095,7 @@ function _awSchedulePush(){
     }
     let ok=true;
     if(_awHasLocalUnsyncedSettings())ok=await _awPushSettingsOnly();
-    if(ok&&_awHasLocalUnsyncedTrades())ok=await _awPush();
+    if(ok&&_awHasLocalUnsyncedTrades())ok=await _awPush(false,false,false,{only:'trades'});
     _awUpdateSyncStatus();
     if(!ok&&_awPushRequested&&!_awSyncBusy){
       _awPushTimer=setTimeout(()=>_awSchedulePush(),2500);
@@ -17036,7 +17103,7 @@ function _awSchedulePush(){
   },900);
 }
 
-async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=false){
+async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=false,options={}){
   if(_awSyncBusy){_awLastPushError='Sync läuft bereits.';return false;}
   if(!_awUser||!_awDocId){_awLastPushError='Nicht angemeldet.';return false;}
   if(!_awStorage){_awLastPushError='Cloud-Speicher nicht bereit.';return false;}
@@ -17055,10 +17122,11 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
     const localSettingsTs=_awLocalMs('tb_settings_saved_at');
     const cloudTradeTs=_awCloudTradeMs(tradeDoc);
     const cloudSettingsTs=_awCloudSettingsMs(settingsDoc);
-    const shouldUploadTrades=(trades.length>0||!!tradeDoc)&&(
+    const only=options&&options.only?String(options.only):'';
+    const shouldUploadTrades=only==='settings'?false:(trades.length>0||!!tradeDoc)&&(
       forceTrades || !tradeDoc || localTradeTs>cloudTradeTs+1000
     );
-    const shouldUploadSettings=forceSettings||!settingsDoc||localSettingsTs>cloudSettingsTs+1000;
+    const shouldUploadSettings=only==='trades'?false:(forceSettings||!settingsDoc||localSettingsTs>cloudSettingsTs+1000);
 
     if(!shouldUploadTrades&&!shouldUploadSettings){
       const latestIso=(settingsDoc&&settingsDoc.synced_at)||(tradeDoc&&tradeDoc.synced_at)||localStorage.getItem('tb_cloud_synced_at')||'';
@@ -17194,8 +17262,9 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
   }finally{_awSyncBusy=false;}
 }
 
-async function _awPull(force=false){
+async function _awPull(force=false,options={}){
   if(!_awUser||!_awDocId||!_awDatabases||_awSyncBusy)return;
+  const includeSettings=!(options&&options.includeSettings===false);
   _awSyncBusy=true;
   try{
     let doc;
@@ -17206,7 +17275,7 @@ async function _awPull(force=false){
     }catch(e){
       if(e.code===404){
         let settingsDoc=null;
-        try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
+        if(includeSettings)try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
         if(settingsDoc&&_awBackupMeta(settingsDoc).version==='v7'){
           if(!_awEncKey){_awStatus('Passwort eingeben um Daten zu entschlüsseln.','warn');return;}
           const settingsPayload=await _awReadDatabaseBackup(_awBackupMeta(settingsDoc));
@@ -17274,9 +17343,9 @@ async function _awPull(force=false){
         return;
       }
       remoteTrades=_awExtractCloudTrades(databasePayload);
-      remoteSettings=_awExtractCloudSettings(databasePayload);
+      remoteSettings=includeSettings?_awExtractCloudSettings(databasePayload):{};
 
-      try{
+      if(includeSettings)try{
         const settingsDoc=await _awGetEntityDoc('settings');
         if(settingsDoc){
           const settingsPayload=await _awReadDatabaseBackup(_awBackupMeta(settingsDoc));
@@ -17290,13 +17359,13 @@ async function _awPull(force=false){
 
       if(!Array.isArray(remoteTrades)||remoteTrades.length===0){
         _awApplying=true;
-        _awApplySettings(remoteSettings);
+        if(includeSettings)_awApplySettings(remoteSettings);
         localStorage.setItem('tb_cloud_trades_synced_at',doc.synced_at);
         localStorage.setItem('tb_cloud_trades_synced_at_ts',String(cloudMs));
         _awSetLatestCloudSync(doc.synced_at);
         _awApplying=false;
         _awSyncLabel(doc.synced_at);
-        _awStatus(Object.keys(remoteSettings||{}).length?'Einstellungen geladen ✓':'Cloud-Backup ist leer.','muted');
+        _awStatus(includeSettings&&Object.keys(remoteSettings||{}).length?'Einstellungen geladen ✓':'Cloud-Backup ist leer.','muted');
         return;
       }
 
@@ -17345,6 +17414,7 @@ async function _awPull(force=false){
               console.warn('Screenshot:',normalizedAtt.fileId,e);
               if(e&&e.missingFileId){
                 removedMissingScreenshotRefs++;
+                removeFileIdFromImgCache(e.missingFileId);
                 continue;
               }
               _awLastScreenshotError=(e&&e.message?e.message:String(e||'unbekannter Fehler')).slice(0,240);
@@ -17368,7 +17438,7 @@ async function _awPull(force=false){
       trades=dedupeTradesList(merged).map((r,i)=>normalizeTrade(r,i));
       localStorage.setItem(STORE_KEY,JSON.stringify(trades));
       _tradesCacheValid=true;
-      _awApplySettings(remoteSettings);
+      if(includeSettings)_awApplySettings(remoteSettings);
       localStorage.setItem('tb_cloud_trades_synced_at',doc.synced_at);
       localStorage.setItem('tb_cloud_trades_synced_at_ts',String(cloudMs));
       _awSetLatestCloudSync(doc.synced_at);
