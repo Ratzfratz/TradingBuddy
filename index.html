@@ -16552,6 +16552,18 @@ async function _awDownloadImg(fileId){
       lastError=e&&e.message?e.message:String(e);
     }
   }
+  if(!bytes&&_awClient&&typeof _awClient.call==='function'){
+    try{
+      await _awGetJwt();
+      const uri=new URL(`${AW_ENDPOINT}/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files/${encodeURIComponent(fileId)}/download`);
+      const buf=await _awClient.call('get',uri,{Accept:'application/octet-stream'}, {}, 'arrayBuffer');
+      const raw=buf instanceof ArrayBuffer?new Uint8Array(buf):(buf instanceof Uint8Array?buf:null);
+      if(raw&&raw.length)bytes=raw;
+      else lastError='SDK Download ohne Daten';
+    }catch(e){
+      lastError='SDK: '+(e&&e.message?e.message:String(e));
+    }
+  }
   if(!bytes){
     try{
       const url=`${AW_ENDPOINT}/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files/${encodeURIComponent(fileId)}/download?project=${encodeURIComponent(AW_PROJECT)}`;
