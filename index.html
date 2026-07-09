@@ -15704,8 +15704,10 @@ async function awCheckSession(){
     // Schlüssel aus Android Keystore laden – kein Passwort nötig
     if(!_awEncKey) _awEncKey=await _awLoadKeyFromDevice();
     if(!_awEncKey){_awUpdateUI();return;}
-    if(!await _awRequireValidCloudKey())return;
-    _awUpdateUI();await _awBiSync();_awStartCloudWatcher();
+    if(!await _awRequireValidCloudKey({allowMismatch:true}))return;
+    _awUpdateUI();
+    if(_awCloudKeyMismatch){_awStatus('Cloud ist mit einem anderen Schlüssel gesichert. Lokal hochladen überschreibt den Cloud-Stand.','warn');return;}
+    await _awBiSync();_awStartCloudWatcher();
   }catch(e){_awUser=null;_awUpdateUI();}
 }
 
@@ -16807,7 +16809,7 @@ async function _awResolveConflict(choice){
       await _awPull(true);
       _awStatus('Cloud-Stand übernommen ✓','ok');
     }else{
-      const ok=await _awPush(true);
+      const ok=await _awPush(true,true,true);
       _awStatus(ok?'Lokaler Stand hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }
   }catch(e){
@@ -17018,8 +17020,13 @@ function _awSchedulePush(){
 }
 
 async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=false){
-  if(!_awUser||!_awDocId||!_awStorage||_awSyncBusy)return false;
-  if(!await _awRequireValidCloudKey({allowMismatch:allowKeyMismatch}))return false;
+  if(_awSyncBusy){_awLastPushError='Sync läuft bereits.';return false;}
+  if(!_awUser||!_awDocId){_awLastPushError='Nicht angemeldet.';return false;}
+  if(!_awStorage){_awLastPushError='Cloud-Speicher nicht bereit.';return false;}
+  if(!await _awRequireValidCloudKey({allowMismatch:allowKeyMismatch})){
+    _awLastPushError='Cloud-Schlüssel passt nicht.';
+    return false;
+  }
   _awSyncBusy=true;
   try{
     loadTrades();
