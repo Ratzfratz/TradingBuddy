@@ -16030,13 +16030,15 @@ function _awCloudFileName(kind,detail=''){
 function _awBackupMeta(doc){
   const raw=String(doc&&doc.data||'');
   const parts=raw.split(':');
+  const chunkCount=parseInt(parts[4]||'0',10)||0;
   if(parts[0]==='v7')return{
     version:'v7',
     userLabel:parts[1]||_awUserFileLabel(),
     kind:parts[2]||'trades',
     count:parseInt(parts[3]||'0',10)||0,
-    chunkCount:parseInt(parts[4]||'0',10)||0,
-    inline:parts.slice(5).join(':'),
+    chunkCount,
+    chunkBase:chunkCount>0?(parts[5]||doc&&doc.$id||''):'',
+    inline:chunkCount>0?'':parts.slice(5).join(':'),
     docId:doc&&doc.$id||''
   };
   return{version:'',count:0};
@@ -16291,14 +16293,23 @@ async function _awInlineBackupPayload(tradesPayload,settingsPayload){
   return _awBytesToB64Url(enc);
 }
 
-function _awMainDocData(kind,count,encodedPayload,chunkCount){
+function _awMainDocData(kind,count,encodedPayload,chunkCount,chunkBase=''){
   const base=['v7',_awUserFileLabel(),_awEntityLabel(kind),count,chunkCount].join(':');
-  return chunkCount>0?base:base+':'+encodedPayload;
+  return chunkCount>0?base+':'+chunkBase:base+':'+encodedPayload;
 }
 
 function _awChunkDocId(index, baseDocId=''){
-  const base=String(baseDocId||_awDocId||'backup').slice(0,31);
+  const suffix='_c'+index;
+  const base=String(baseDocId||_awDocId||'backup').slice(0,36-suffix.length);
   return `${base}_c${index}`.slice(0,36);
+}
+
+function _awNewChunkBaseId(kind){
+  const user=_awUserShortId();
+  const label=kind==='settings'?'s':'t';
+  const stamp=Date.now().toString(36);
+  const rnd=Math.random().toString(36).slice(2,6);
+  return `${user}_${label}_${stamp}_${rnd}`.slice(0,30);
 }
 
 async function _awSaveInlineChunks(encodedPayload,syncedAt,baseDocId=''){
@@ -16327,7 +16338,7 @@ async function _awReadChunkedBackup(meta){
   if(!meta.chunkCount)return null;
   try{
     const chunks=[];
-    const baseDocId=meta.docId||_awEntityDocId(meta.kind==='einstellungen'?'settings':'trades');
+    const baseDocId=meta.chunkBase||meta.docId||_awEntityDocId(meta.kind==='einstellungen'?'settings':'trades');
     for(let i=0;i<meta.chunkCount;i++){
       const doc=await _awGetDocument(_awChunkDocId(i,baseDocId));
       if(!doc)throw new Error('Chunk fehlt');
@@ -16351,7 +16362,7 @@ async function _awEncodedBackupBytes(meta){
   if(meta.inline)return _awB64UrlToBytes(meta.inline);
   if(!meta.chunkCount)return null;
   const chunks=[];
-  const baseDocId=meta.docId||_awEntityDocId(meta.kind==='einstellungen'?'settings':'trades');
+  const baseDocId=meta.chunkBase||meta.docId||_awEntityDocId(meta.kind==='einstellungen'?'settings':'trades');
   for(let i=0;i<meta.chunkCount;i++){
     const doc=await _awGetDocument(_awChunkDocId(i,baseDocId));
     if(!doc)throw new Error('Chunk fehlt');
@@ -16685,7 +16696,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 143): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 144): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
@@ -17389,13 +17400,15 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
     const settingsPayload=_awCollectSettings();
     const settingsInlinePayload=shouldUploadSettings?await _awInlineBackupPayload([],settingsPayload):'';
     let settingsChunkCount=0;
+    let settingsChunkBase='';
     if(shouldUploadSettings&&settingsInlinePayload.length>AW_INLINE_CHUNK_SIZE){
-      try{settingsChunkCount=await _awSaveInlineChunks(settingsInlinePayload,syncedAt,settingsDocId);}catch(e){console.warn('Einstellungen-Database speichern:',e);}
-      if(settingsChunkCount<=0)throw new Error('Einstellungen konnten nicht gespeichert werden.');
+      settingsChunkBase=_awNewChunkBaseId('settings');
+      try{settingsChunkCount=await _awSaveInlineChunks(settingsInlinePayload,syncedAt,settingsChunkBase);}catch(e){console.warn('Einstellungen-Database speichern:',e);throw new Error('Einstellungen konnten nicht gespeichert werden: '+(e&&e.message?e.message:String(e)));}
+      if(settingsChunkCount<=0)throw new Error('Einstellungen konnten nicht gespeichert werden: keine Chunks erzeugt.');
     }
     if(shouldUploadSettings){
       _awSyncLabel('', 'pending', 'Einstellungen ...');
-      await _awUpsertEntityDoc('settings',{data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount),synced_at:syncedAt,device:_awDevice()});
+      await _awUpsertEntityDoc('settings',{data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount,settingsChunkBase),synced_at:syncedAt,device:_awDevice()});
       await _awCleanupEntityChunks('settings',settingsChunkCount);
       _awApplying=true;
       localStorage.setItem('tb_cloud_settings_synced_at',syncedAt);
@@ -17450,12 +17463,14 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
     // DB-Dokument aktualisieren
     const tradeInlinePayload=shouldUploadTrades?await _awInlineBackupPayload(tradesForUpload,{}):'';
     let tradeChunkCount=0;
+    let tradeChunkBase='';
     if(shouldUploadTrades&&tradeInlinePayload.length>AW_INLINE_CHUNK_SIZE){
-      try{tradeChunkCount=await _awSaveInlineChunks(tradeInlinePayload,syncedAt,tradeDocId);}catch(e){console.warn('Trade-Database speichern:',e);}
-      if(tradeChunkCount<=0)throw new Error('Trade-Backup konnte nicht gespeichert werden.');
+      tradeChunkBase=_awNewChunkBaseId('trades');
+      try{tradeChunkCount=await _awSaveInlineChunks(tradeInlinePayload,syncedAt,tradeChunkBase);}catch(e){console.warn('Trade-Database speichern:',e);throw new Error('Trade-Backup konnte nicht gespeichert werden: '+(e&&e.message?e.message:String(e)));}
+      if(tradeChunkCount<=0)throw new Error('Trade-Backup konnte nicht gespeichert werden: keine Chunks erzeugt.');
     }
     if(shouldUploadTrades){
-      await _awUpsertEntityDoc('trades',{data:_awMainDocData('trades',tradesForUpload.length,tradeInlinePayload,tradeChunkCount),synced_at:syncedAt,device:_awDevice()});
+      await _awUpsertEntityDoc('trades',{data:_awMainDocData('trades',tradesForUpload.length,tradeInlinePayload,tradeChunkCount,tradeChunkBase),synced_at:syncedAt,device:_awDevice()});
       await _awCleanupEntityChunks('trades',tradeChunkCount);
     }
     await _awCleanupOldUserNumberDocs();
