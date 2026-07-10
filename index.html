@@ -16083,67 +16083,55 @@ async function _awStorageHeaders(){
   return {headers,jwtError};
 }
 
-async function _awGetStorageFileMeta(fileId){
-  let sdkError=null;
-  if(_awStorage&&typeof _awStorage.getFile==='function'){
-    try{return await _awStorage.getFile(AW_BUCKET,fileId);}
-    catch(e){sdkError=e;}
-  }
+async function _awStorageJsonRequest(path,options={}){
   const auth=await _awStorageHeaders();
+  const headers=Object.assign({'X-Appwrite-Response-Format':'1.8.0'},auth.headers,options.headers||{});
+  let resp, text='';
   try{
-    return await _awRest(_awStorageFilePath(fileId),{
-      method:'GET',
-      headers:auth.headers,
-      timeoutMs:AW_UPLOAD_TIMEOUT_MS
-    });
-  }catch(restError){
-    if(auth.jwtError&&!restError.jwtError)restError.jwtError=auth.jwtError;
-    if(_awIsFetchFailure(restError)&&sdkError)restError.sdkError=sdkError;
-    throw restError;
+    resp=await fetch(AW_ENDPOINT+path,Object.assign({},options,{
+      headers,
+      credentials:'omit',
+      cache:'no-store'
+    }));
+    text=await resp.text();
+  }catch(e){
+    if(auth.jwtError&&!e.jwtError)e.jwtError=auth.jwtError;
+    throw e;
+  }
+  let data=null;
+  try{data=text?JSON.parse(text):null;}catch(_){data={message:text};}
+  if(!resp.ok){
+    const err=new Error(data&&data.message?data.message:('Appwrite Storage HTTP '+resp.status));
+    err.code=resp.status;
+    err.type=data&&data.type||'';
+    if(auth.jwtError)err.jwtError=auth.jwtError;
+    throw err;
+  }
+  return data;
+}
+
+async function _awGetStorageFileMeta(fileId){
+  try{
+    return await _awStorageJsonRequest(_awStorageFilePath(fileId),{method:'GET'});
+  }catch(e){
+    throw e;
   }
 }
 
 async function _awDeleteStorageFile(fileId){
-  let sdkError=null;
-  if(_awStorage&&typeof _awStorage.deleteFile==='function'){
-    try{return await _awStorage.deleteFile(AW_BUCKET,fileId);}
-    catch(e){
-      if(Number(e&&e.code)===404)return null;
-      sdkError=e;
-    }
-  }
-  const auth=await _awStorageHeaders();
   try{
-    return await _awRest(_awStorageFilePath(fileId),{
-      method:'DELETE',
-      headers:auth.headers,
-      timeoutMs:AW_UPLOAD_TIMEOUT_MS
-    });
+    return await _awStorageJsonRequest(_awStorageFilePath(fileId),{method:'DELETE'});
   }catch(restError){
     if(Number(restError&&restError.code)===404)return null;
-    if(auth.jwtError&&!restError.jwtError)restError.jwtError=auth.jwtError;
-    if(_awIsFetchFailure(restError)&&sdkError)restError.sdkError=sdkError;
     throw restError;
   }
 }
 
 async function _awListStorageFiles(){
-  let sdkError=null;
-  if(_awStorage&&typeof _awStorage.listFiles==='function'){
-    try{return await _awStorage.listFiles(AW_BUCKET);}
-    catch(e){sdkError=e;}
-  }
-  const auth=await _awStorageHeaders();
   try{
-    return await _awRest(`/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files`,{
-      method:'GET',
-      headers:auth.headers,
-      timeoutMs:AW_UPLOAD_TIMEOUT_MS
-    });
-  }catch(restError){
-    if(auth.jwtError&&!restError.jwtError)restError.jwtError=auth.jwtError;
-    if(_awIsFetchFailure(restError)&&sdkError)restError.sdkError=sdkError;
-    throw restError;
+    return await _awStorageJsonRequest(`/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files`,{method:'GET'});
+  }catch(e){
+    throw e;
   }
 }
 
@@ -16152,7 +16140,7 @@ async function _awDownloadStorageFileBytes(fileId){
   const headers=Object.assign({},auth.headers,{Accept:'application/octet-stream'});
   const url=`${AW_ENDPOINT}${_awStorageFilePath(fileId,'/download')}?project=${encodeURIComponent(AW_PROJECT)}`;
   try{
-    const resp=await fetch(url,{cache:'no-store',credentials:'include',headers});
+    const resp=await fetch(url,{cache:'no-store',credentials:'omit',headers});
     const raw=new Uint8Array(await resp.arrayBuffer());
     if(resp.ok&&raw.length)return raw;
     let detail='';
@@ -16697,7 +16685,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 141): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 142): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
