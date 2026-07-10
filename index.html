@@ -8139,7 +8139,7 @@ async function deleteUnreferencedAttachmentFiles(fileIds) {
   for (const fileId of queuedIds) {
     if (isAttachmentFileStillReferenced(fileId)) continue;
     try {
-      await _awStorage.deleteFile(AW_BUCKET, fileId);
+      await _awDeleteStorageFile(fileId);
       removeFileIdFromImgCache(fileId);
       stillPending.delete(fileId);
     } catch (error) {
@@ -8197,12 +8197,11 @@ function referencedAttachmentFileIdsFromTrades(list) {
 async function cleanupUnreferencedCloudScreenshotFiles(referenceFileIds) {
   if (!_awUser || !_awDocId) return;
   if (!_awStorage && typeof _awInit === 'function') _awInit();
-  if (!_awStorage || typeof _awStorage.listFiles !== 'function') return;
   const refs = referenceFileIds instanceof Set ? referenceFileIds : referencedAttachmentFileIdsFromTrades(trades);
   const ownScreenshotPrefix = `${_awUserFileLabel()}_Screenshot`;
   let listed;
   try {
-    listed = await _awStorage.listFiles(AW_BUCKET);
+    listed = await _awListStorageFiles();
   } catch (error) {
     console.warn('Screenshot-Dateien konnten nicht geprüft werden:', error);
     return;
@@ -8213,7 +8212,7 @@ async function cleanupUnreferencedCloudScreenshotFiles(referenceFileIds) {
     const name = String(file && file.name || '');
     if (!fileId || !name.startsWith(ownScreenshotPrefix) || refs.has(fileId)) continue;
     try {
-      await _awStorage.deleteFile(AW_BUCKET, fileId);
+      await _awDeleteStorageFile(fileId);
       removeFileIdFromImgCache(fileId);
     } catch (error) {
       if (Number(error && error.code) !== 404) console.warn('Verwaiste Screenshot-Datei konnte nicht gelöscht werden:', fileId, error);
@@ -8974,7 +8973,7 @@ async function _awCloudFileExists(fileId){
   if(!_awStorage&&typeof _awInit==='function')_awInit();
   if(!_awStorage)return false;
   try{
-    await _awStorage.getFile(AW_BUCKET,fileId);
+    await _awGetStorageFileMeta(fileId);
     return true;
   }catch(e){
     if(isUnreadableCloudFileError(e))return false;
@@ -12508,7 +12507,7 @@ window.addEventListener('load',function(){
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const swVersion='139';
+      const swVersion='140';
       const regs=await navigator.serviceWorker.getRegistrations();
       let removedOld=false;
       for(const oldReg of regs){
@@ -16059,12 +16058,113 @@ async function _awGetJwt(){
   return _awJwt;
 }
 
-async function _awFetchHeaders(){
+async function _awFetchHeaders(options={}){
   const h={'X-Appwrite-Project':AW_PROJECT};
   try{const jwt=await _awGetJwt();if(jwt)h['X-Appwrite-JWT']=jwt;}catch(_){}
-  const cf=localStorage.getItem('cookieFallback');
-  if(cf)h['X-Fallback-Cookies']=cf;
+  if(options.includeFallback!==false){
+    const cf=localStorage.getItem('cookieFallback');
+    if(cf)h['X-Fallback-Cookies']=cf;
+  }
   return h;
+}
+
+function _awStorageFilePath(fileId,suffix=''){
+  return `/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files/${encodeURIComponent(fileId)}${suffix}`;
+}
+
+async function _awStorageHeaders(){
+  const headers={'X-Appwrite-Project':AW_PROJECT};
+  let jwtError='';
+  try{
+    const jwt=await _awGetJwt();
+    if(jwt)headers['X-Appwrite-JWT']=jwt;
+  }catch(e){
+    jwtError=e&&e.message?e.message:String(e||'JWT fehlt');
+  }
+  return {headers,jwtError};
+}
+
+async function _awGetStorageFileMeta(fileId){
+  let sdkError=null;
+  if(_awStorage&&typeof _awStorage.getFile==='function'){
+    try{return await _awStorage.getFile(AW_BUCKET,fileId);}
+    catch(e){sdkError=e;}
+  }
+  const auth=await _awStorageHeaders();
+  try{
+    return await _awRest(_awStorageFilePath(fileId),{
+      method:'GET',
+      headers:auth.headers,
+      timeoutMs:AW_UPLOAD_TIMEOUT_MS
+    });
+  }catch(restError){
+    if(auth.jwtError&&!restError.jwtError)restError.jwtError=auth.jwtError;
+    if(_awIsFetchFailure(restError)&&sdkError)restError.sdkError=sdkError;
+    throw restError;
+  }
+}
+
+async function _awDeleteStorageFile(fileId){
+  let sdkError=null;
+  if(_awStorage&&typeof _awStorage.deleteFile==='function'){
+    try{return await _awStorage.deleteFile(AW_BUCKET,fileId);}
+    catch(e){
+      if(Number(e&&e.code)===404)return null;
+      sdkError=e;
+    }
+  }
+  const auth=await _awStorageHeaders();
+  try{
+    return await _awRest(_awStorageFilePath(fileId),{
+      method:'DELETE',
+      headers:auth.headers,
+      timeoutMs:AW_UPLOAD_TIMEOUT_MS
+    });
+  }catch(restError){
+    if(Number(restError&&restError.code)===404)return null;
+    if(auth.jwtError&&!restError.jwtError)restError.jwtError=auth.jwtError;
+    if(_awIsFetchFailure(restError)&&sdkError)restError.sdkError=sdkError;
+    throw restError;
+  }
+}
+
+async function _awListStorageFiles(){
+  let sdkError=null;
+  if(_awStorage&&typeof _awStorage.listFiles==='function'){
+    try{return await _awStorage.listFiles(AW_BUCKET);}
+    catch(e){sdkError=e;}
+  }
+  const auth=await _awStorageHeaders();
+  try{
+    return await _awRest(`/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files`,{
+      method:'GET',
+      headers:auth.headers,
+      timeoutMs:AW_UPLOAD_TIMEOUT_MS
+    });
+  }catch(restError){
+    if(auth.jwtError&&!restError.jwtError)restError.jwtError=auth.jwtError;
+    if(_awIsFetchFailure(restError)&&sdkError)restError.sdkError=sdkError;
+    throw restError;
+  }
+}
+
+async function _awDownloadStorageFileBytes(fileId){
+  const auth=await _awStorageHeaders();
+  const headers=Object.assign({},auth.headers,{Accept:'application/octet-stream'});
+  const url=`${AW_ENDPOINT}${_awStorageFilePath(fileId,'/download')}?project=${encodeURIComponent(AW_PROJECT)}`;
+  try{
+    const resp=await fetch(url,{cache:'no-store',credentials:'include',headers});
+    const raw=new Uint8Array(await resp.arrayBuffer());
+    if(resp.ok&&raw.length)return raw;
+    let detail='';
+    try{detail=new TextDecoder().decode(raw.slice(0,220)).trim();}catch(_){}
+    const err=new Error(`HTTP ${resp.status}${detail?': '+detail:''}`);
+    err.code=resp.status;
+    throw err;
+  }catch(e){
+    if(auth.jwtError&&!e.jwtError)e.jwtError=auth.jwtError;
+    throw e;
+  }
 }
 
 function _awDocPath(id){
@@ -16183,7 +16283,7 @@ async function _awUploadFile(fileId,file,publicRead=false,withFilePermissions=tr
     return uploaded;
   }catch(e){
     if(e&&e.code===409||String(e&&e.message||'').toLowerCase().includes('already exists')){
-      try{await _awStorage.deleteFile(AW_BUCKET,fileId);}catch(de){if(de.code!==404)throw de;}
+      try{await _awDeleteStorageFile(fileId);}catch(de){if(de.code!==404)throw de;}
       const uploaded=await _awWithTimeout(
         permissions
           ? _awStorage.createFile(AW_BUCKET,fileId,file,permissions)
@@ -16530,9 +16630,12 @@ async function _awDownloadImg(fileId){
   let fileMeta=null;
   let metaError='';
   try{
-    fileMeta=await _awStorage.getFile(AW_BUCKET,fileId);
+    fileMeta=await _awGetStorageFileMeta(fileId);
   }catch(e){
-    metaError=e&&e.code?`HTTP ${e.code}: ${e.message||e.type||'Datei-Metadaten nicht lesbar'}`:(e&&e.message?e.message:String(e));
+    const sdkMsg=e&&e.sdkError?(e.sdkError.code?`SDK HTTP ${e.sdkError.code}: ${e.sdkError.message||e.sdkError.type||''}`:`SDK: ${e.sdkError.message||e.sdkError}`):'';
+    const jwtMsg=e&&e.jwtError?`JWT: ${e.jwtError}`:'';
+    const restMsg=e&&e.code?`REST HTTP ${e.code}: ${e.message||e.type||'Datei-Metadaten nicht lesbar'}`:(e&&e.message?`REST: ${e.message}`:String(e));
+    metaError=[sdkMsg,restMsg,jwtMsg].filter(Boolean).join(' | ');
   }
   const imageMime=raw=>{
     if(!raw||raw.length<12)return '';
@@ -16576,25 +16679,16 @@ async function _awDownloadImg(fileId){
   }
   if(!bytes){
     try{
-      const url=`${AW_ENDPOINT}/storage/buckets/${encodeURIComponent(AW_BUCKET)}/files/${encodeURIComponent(fileId)}/download?project=${encodeURIComponent(AW_PROJECT)}`;
-      const headers=await _awFetchHeaders();
-      headers.Accept='application/octet-stream';
-      const resp=await fetch(url,{cache:'no-store',credentials:'omit',headers});
-      const raw=new Uint8Array(await resp.arrayBuffer());
-      if(resp.ok&&raw.length)bytes=raw;
-      else{
-        let detail='';
-        try{detail=new TextDecoder().decode(raw.slice(0,180)).trim();}catch(_){}
-        lastError=`HTTP ${resp.status}${detail?': '+detail:''}`;
-      }
+      bytes=await _awDownloadStorageFileBytes(fileId);
     }catch(e){
-      lastError=e&&e.message?e.message:String(e);
+      const jwtMsg=e&&e.jwtError?` | JWT: ${e.jwtError}`:'';
+      lastError=(e&&e.code?`REST HTTP ${e.code}: `:'REST: ')+(e&&e.message?e.message:String(e))+jwtMsg;
     }
     if(!bytes&&lastError)downloadErrors.push('fetch='+lastError);
   }
   if(!bytes){
     let missing=false;
-    try{fileMeta=fileMeta||await _awStorage.getFile(AW_BUCKET,fileId);lastError=lastError||'Download blockiert';}
+    try{fileMeta=fileMeta||await _awGetStorageFileMeta(fileId);lastError=lastError||'Download blockiert';}
     catch(e){
       missing=Number(e&&e.code)===404;
       lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);
@@ -16604,7 +16698,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 139): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 140): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
