@@ -12507,23 +12507,22 @@ window.addEventListener('load',function(){
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const swVersion='140';
       const regs=await navigator.serviceWorker.getRegistrations();
-      let removedOld=false;
-      for(const oldReg of regs){
-        const scriptUrl=String(oldReg&&oldReg.active&&oldReg.active.scriptURL||oldReg&&oldReg.installing&&oldReg.installing.scriptURL||oldReg&&oldReg.waiting&&oldReg.waiting.scriptURL||'');
-        if(scriptUrl&&!scriptUrl.includes('sw.js?v='+swVersion)){
-          await oldReg.unregister();
-          removedOld=true;
-        }
+      let removed=false;
+      for(const reg of regs){
+        await reg.unregister();
+        removed=true;
       }
-      const reg=await navigator.serviceWorker.register('sw.js?v='+swVersion,{updateViaCache:'none'});
-      await reg.update();
-      if(removedOld&&navigator.serviceWorker.controller&&!sessionStorage.getItem('tb_sw_upgrade_reload')){
-        sessionStorage.setItem('tb_sw_upgrade_reload','1');
+      if(window.caches&&typeof caches.keys==='function'){
+        const keys=await caches.keys();
+        await Promise.all(keys.map(key=>caches.delete(key)));
+        removed=removed||keys.length>0;
+      }
+      if(removed&&navigator.serviceWorker.controller&&!sessionStorage.getItem('tb_sw_removed_reload')){
+        sessionStorage.setItem('tb_sw_removed_reload','1');
         location.reload();
       }
-    }catch(e){console.warn('Service Worker Update fehlgeschlagen',e);}
+    }catch(e){console.warn('Service Worker Bereinigung fehlgeschlagen',e);}
   });
 }
 </script>
@@ -16698,7 +16697,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 140): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 141): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
