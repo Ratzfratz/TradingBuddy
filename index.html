@@ -8988,25 +8988,29 @@ async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
   const mime=(att.dataUrl.match(/^data:([^;]+)/)||[])[1]||'image/webp';
   const existingFileId=forceNew?'':String(att.fileId||imgCache[sha256]||'').trim();
   if(existingFileId){
-    const exists=await _awCloudFileExists(existingFileId);
-    if(exists){
-      imgCache[sha256]=existingFileId;
-      localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
-      return {fileId:existingFileId,name:att.name||'screenshot.webp',mime};
-    }
-    if(att.fileId)delete att.fileId;
-    if(imgCache[sha256]===existingFileId)delete imgCache[sha256];
+    imgCache[sha256]=existingFileId;
+    att.fileId=existingFileId;
+    localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
+    return {fileId:existingFileId,name:att.name||'screenshot.webp',mime};
   }
+  const uploadLockKey='tb_aw_uploading_'+sha256;
+  const lockedUntil=parseInt(localStorage.getItem(uploadLockKey)||'0',10)||0;
+  if(lockedUntil>Date.now())throw new Error('Screenshot-Upload läuft bereits. Bitte kurz warten.');
+  localStorage.setItem(uploadLockKey,String(Date.now()+45000));
   let fileId=_awRandomFileId('Shot');
   const parts=String(att.dataUrl).match(/^data:([^;,]+);base64,(.+)$/);
-  if(!parts)return null;
-  const bin=atob(parts[2]);
-  const bytes=new Uint8Array(bin.length);
-  for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
-  const encBytes=await _awEncryptBytes(bytes);
-  const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
   try{
+    if(!parts)return null;
+    const bin=atob(parts[2]);
+    const bytes=new Uint8Array(bin.length);
+    for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
+    const encBytes=await _awEncryptBytes(bytes);
+    const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
     await _awUploadFile(fileId,file,true,true);
+    imgCache[sha256]=fileId;
+    att.fileId=fileId;
+    localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
+    return {fileId,name:att.name||'screenshot.webp',mime};
   }catch(e){
     const detail=[
       `code=${e&&e.code!==undefined?e.code:'-'}`,
@@ -9023,10 +9027,9 @@ async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
     err.code=e&&e.code;
     err.type=e&&e.type;
     throw err;
+  }finally{
+    localStorage.removeItem(uploadLockKey);
   }
-  imgCache[sha256]=fileId;
-  localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
-  return {fileId,name:att.name||'screenshot.webp',mime};
 }
 
 async function pruneMissingCloudAttachmentsFromTrades(list){
@@ -16048,8 +16051,17 @@ let _awJwt=null,_awJwtExpiry=0;
 async function _awGetJwt(){
   if(_awJwt&&Date.now()<_awJwtExpiry)return _awJwt;
   let r=null;
+  if(window.TBNative&&!TBNative.__browserShim&&typeof TBNative.createAppwriteJWT==='function'){
+    try{
+      const nativeResult=JSON.parse(TBNative.createAppwriteJWT(AW_ENDPOINT,AW_PROJECT));
+      if(nativeResult&&nativeResult.ok&&nativeResult.jwt)r={jwt:nativeResult.jwt};
+      else throw new Error(nativeResult&&nativeResult.error?nativeResult.error:'Native JWT fehlgeschlagen');
+    }catch(e){
+      throw new Error('Native JWT fehlgeschlagen: '+(e&&e.message?e.message:String(e)));
+    }
+  }
   try{
-    r=await _awAccount.createJWT();
+    if(!r)r=await _awAccount.createJWT();
   }catch(e){
     if(!_awIsFetchFailure(e))throw e;
     r=await _awRest('/account/jwts',{method:'POST'});
@@ -16756,7 +16768,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 147): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 149): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
