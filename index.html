@@ -12467,7 +12467,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 155';
+const APP_VERSION = 'Alpha 0.40 - Build 156';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -15514,6 +15514,15 @@ function _awIsFetchFailure(error){
   return msg.includes('failed to fetch')||msg.includes('networkerror')||msg.includes('network request failed');
 }
 
+function _awFetchError(step,error){
+  const raw=String(error&&error.message||error||'Failed to fetch');
+  const err=new Error(`${step}: ${raw}`);
+  err.code=error&&error.code;
+  err.type=error&&error.type;
+  err.fetchStep=step;
+  return err;
+}
+
 function _awIsExistingSessionError(error){
   const type=String(error&&error.type||'').toLowerCase();
   const msg=String(error&&error.message||error||'').toLowerCase();
@@ -15552,6 +15561,7 @@ async function _awRest(path,options={}){
       err.code='timeout';
       throw err;
     }
+    if(_awIsFetchFailure(e))throw _awFetchError('Appwrite REST '+path,e);
     throw e;
   }finally{
     if(timer)clearTimeout(timer);
@@ -16119,6 +16129,7 @@ async function _awStorageJsonRequest(path,options={}){
     text=await resp.text();
   }catch(e){
     if(auth.jwtError&&!e.jwtError)e.jwtError=auth.jwtError;
+    if(_awIsFetchFailure(e))throw _awFetchError('Appwrite Storage REST '+path,e);
     throw e;
   }
   let data=null;
@@ -16188,7 +16199,7 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
     text=await resp.text();
   }catch(e){
     if(auth.jwtError&&!e.jwtError)e.jwtError=auth.jwtError;
-    if(_awIsFetchFailure(e))e.message='Storage Upload REST fehlgeschlagen: Failed to fetch; nativeBridge='+(isNativeAndroid?'fehlt':'browser');
+    if(_awIsFetchFailure(e))throw _awFetchError('Storage Upload REST nativeBridge='+(isNativeAndroid?'fehlt':'browser'),e);
     throw e;
   }
   let data=null;
@@ -16359,7 +16370,7 @@ async function _awUploadFile(fileId,file,publicRead=false,withFilePermissions=tr
     if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
     return uploaded;
   }catch(e){
-    if(_awIsFetchFailure(e)&&!(e&&e.nativeUploadFailed))e.message='Storage Upload fehlgeschlagen: Failed to fetch';
+    if(_awIsFetchFailure(e)&&!(e&&e.nativeUploadFailed))throw _awFetchError('Screenshot-Upload',e);
     if(e&&e.code===409||String(e&&e.message||'').toLowerCase().includes('already exists')){
       try{await _awDeleteStorageFile(fileId);}catch(de){if(de.code!==404)throw de;}
       const uploaded=await _awWithTimeout(
@@ -16783,7 +16794,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 155): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 156): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
