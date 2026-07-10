@@ -16148,7 +16148,13 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
         file.type||'application/octet-stream',
         JSON.stringify(permissions)
       ));
-      if(result&&result.ok&&result.data)return result.data;
+      if(result&&result.ok&&result.data){
+        const perms=Array.isArray(result.data.$permissions)?result.data.$permissions:[];
+        if(publicRead&&!perms.some(p=>String(p)==='read("any")'||String(p)==="read('any')")){
+          throw new Error('Native Upload ohne Leserecht gespeichert: '+perms.join(','));
+        }
+        return result.data;
+      }
       throw new Error(result&&result.error?result.error:'Native Storage Upload fehlgeschlagen');
     }catch(e){
       const err=new Error('Native Storage Upload fehlgeschlagen: '+(e&&e.message?e.message:String(e)));
@@ -16768,7 +16774,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 149): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 150): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
