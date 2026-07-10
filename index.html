@@ -16114,10 +16114,33 @@ async function _awStorageJsonRequest(path,options={}){
 
 async function _awUploadStorageFile(fileId,file,publicRead=false){
   const auth=await _awStorageHeaders();
+  const permissions=_awPermissions(publicRead);
+  if(window.TBNative&&!TBNative.__browserShim&&typeof TBNative.uploadAppwriteStorageFile==='function'){
+    try{
+      const raw=new Uint8Array(await file.arrayBuffer());
+      const result=JSON.parse(TBNative.uploadAppwriteStorageFile(
+        AW_ENDPOINT,
+        AW_BUCKET,
+        fileId,
+        auth.headers['X-Appwrite-JWT']||'',
+        AW_PROJECT,
+        _awBytesToB64(raw),
+        file.name||'screenshot.webp.enc',
+        file.type||'application/octet-stream',
+        JSON.stringify(permissions)
+      ));
+      if(result&&result.ok&&result.data)return result.data;
+      throw new Error(result&&result.error?result.error:'Native Storage Upload fehlgeschlagen');
+    }catch(e){
+      const err=new Error('Native Storage Upload fehlgeschlagen: '+(e&&e.message?e.message:String(e)));
+      err.nativeUploadFailed=true;
+      throw err;
+    }
+  }
   const form=new FormData();
   form.append('fileId',fileId);
   form.append('file',file);
-  _awPermissions(publicRead).forEach(permission=>form.append('permissions[]',permission));
+  permissions.forEach(permission=>form.append('permissions[]',permission));
   const headers=Object.assign({'X-Appwrite-Response-Format':'1.8.0'},auth.headers);
   let resp, text='';
   try{
@@ -16725,7 +16748,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 145): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 146): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
