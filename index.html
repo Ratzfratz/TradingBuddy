@@ -16115,8 +16115,15 @@ async function _awStorageJsonRequest(path,options={}){
 async function _awUploadStorageFile(fileId,file,publicRead=false){
   const auth=await _awStorageHeaders();
   const permissions=_awPermissions(publicRead);
-  if(window.TBNative&&!TBNative.__browserShim&&typeof TBNative.uploadAppwriteStorageFile==='function'){
+  const isNativeAndroid=!!(window.TBNative&&!TBNative.__browserShim);
+  if(isNativeAndroid&&typeof TBNative.uploadAppwriteStorageFile!=='function'){
+    throw new Error('Native Storage Upload-Brücke fehlt. Android-App neu installieren.');
+  }
+  if(isNativeAndroid&&typeof TBNative.uploadAppwriteStorageFile==='function'){
     try{
+      if(auth.jwtError&&!auth.headers['X-Appwrite-JWT']){
+        throw new Error('JWT konnte nicht erstellt werden: '+auth.jwtError);
+      }
       const raw=new Uint8Array(await file.arrayBuffer());
       const result=JSON.parse(TBNative.uploadAppwriteStorageFile(
         AW_ENDPOINT,
@@ -16154,6 +16161,7 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
     text=await resp.text();
   }catch(e){
     if(auth.jwtError&&!e.jwtError)e.jwtError=auth.jwtError;
+    if(_awIsFetchFailure(e))e.message='Storage Upload REST fehlgeschlagen: Failed to fetch; nativeBridge='+(isNativeAndroid?'fehlt':'browser');
     throw e;
   }
   let data=null;
@@ -16324,7 +16332,7 @@ async function _awUploadFile(fileId,file,publicRead=false,withFilePermissions=tr
     if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
     return uploaded;
   }catch(e){
-    if(_awIsFetchFailure(e))e.message='Storage Upload REST fehlgeschlagen: Failed to fetch';
+    if(_awIsFetchFailure(e))e.message='Storage Upload fehlgeschlagen: Failed to fetch';
     if(e&&e.code===409||String(e&&e.message||'').toLowerCase().includes('already exists')){
       try{await _awDeleteStorageFile(fileId);}catch(de){if(de.code!==404)throw de;}
       const uploaded=await _awWithTimeout(
@@ -16748,7 +16756,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 146): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 147): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
