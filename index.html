@@ -2580,7 +2580,9 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 .aw-sync-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .aw-sync-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:8px;padding:8px}
 .aw-sync-title{font-size:.7rem;font-weight:700;color:var(--text)}
-.aw-sync-meta{font-size:.56rem;color:var(--muted);margin-top:2px}
+.aw-sync-meta{font-size:.6rem;color:var(--muted);margin-top:2px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-height:none;overflow:visible;padding-right:2px}
+.aw-sync-build{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px;padding:7px 9px;border:1px solid rgba(91,138,245,.22);background:rgba(91,138,245,.07);border-radius:8px;color:var(--blue);font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.aw-sync-build span:last-child{font-size:.72rem;color:var(--text);letter-spacing:0;text-transform:none;white-space:nowrap}
 .aw-sync-actions{display:flex;gap:5px}
 .aw-sync-icon{width:32px;height:30px;border-radius:7px;border:1px solid var(--bd);background:var(--s2);color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
 .aw-sync-icon:active{transform:translateY(1px)}
@@ -8999,14 +9001,15 @@ async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
   localStorage.setItem(uploadLockKey,String(Date.now()+45000));
   let fileId=_awRandomFileId('Shot');
   const parts=String(att.dataUrl).match(/^data:([^;,]+);base64,(.+)$/);
+  let uploadFile=null;
   try{
     if(!parts)return null;
     const bin=atob(parts[2]);
     const bytes=new Uint8Array(bin.length);
     for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
     const encBytes=await _awEncryptBytes(bytes);
-    const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
-    await _awUploadFile(fileId,file,true,true);
+    uploadFile=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
+    await _awUploadFile(fileId,uploadFile,true,true);
     imgCache[sha256]=fileId;
     att.fileId=fileId;
     localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
@@ -9018,9 +9021,9 @@ async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
       `msg=${e&&e.message?e.message:String(e||'unbekannt')}`,
       `bucket=${AW_BUCKET}`,
       `file=${fileId}`,
-      `size=${file.size}`,
-      `name=${file.name}`,
-      `mime=${file.type}`,
+      `size=${uploadFile&&uploadFile.size!==undefined?uploadFile.size:'-'}`,
+      `name=${uploadFile&&uploadFile.name?uploadFile.name:'-'}`,
+      `mime=${uploadFile&&uploadFile.type?uploadFile.type:'-'}`,
       `perms=${_awPermissions(true).join(',')}`
     ].join(' | ');
     const err=new Error('Storage Upload fehlgeschlagen: '+detail);
@@ -12464,8 +12467,10 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40';
+const APP_VERSION = 'Alpha 0.40 - Build 155';
 function applyAppVersion(){
+  const buildLabel=document.getElementById('aw-build-label');
+  if(buildLabel)buildLabel.textContent=APP_VERSION;
   const versionButton=document.getElementById('version-btn');
   if(versionButton){
     versionButton.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
@@ -14113,6 +14118,10 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         </div>
 
         <div id="aw-last-sync" class="s-hint" style="margin-bottom:8px"></div>
+        <div class="aw-sync-build">
+          <span>Build</span>
+          <span id="aw-build-label">–</span>
+        </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
           <button onclick="awAskPushBackup()" class="s-btn s-btn-sync">
@@ -16350,7 +16359,7 @@ async function _awUploadFile(fileId,file,publicRead=false,withFilePermissions=tr
     if(uploaded&&uploaded.$id&&uploaded.$id!==fileId)throw new Error('Upload-Datei-ID passt nicht: '+uploaded.$id);
     return uploaded;
   }catch(e){
-    if(_awIsFetchFailure(e))e.message='Storage Upload fehlgeschlagen: Failed to fetch';
+    if(_awIsFetchFailure(e)&&!(e&&e.nativeUploadFailed))e.message='Storage Upload fehlgeschlagen: Failed to fetch';
     if(e&&e.code===409||String(e&&e.message||'').toLowerCase().includes('already exists')){
       try{await _awDeleteStorageFile(fileId);}catch(de){if(de.code!==404)throw de;}
       const uploaded=await _awWithTimeout(
@@ -16774,7 +16783,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 150): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 155): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
