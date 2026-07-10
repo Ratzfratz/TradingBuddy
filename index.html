@@ -12508,7 +12508,7 @@ window.addEventListener('load',function(){
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const swVersion='138';
+      const swVersion='139';
       const regs=await navigator.serviceWorker.getRegistrations();
       let removedOld=false;
       for(const oldReg of regs){
@@ -16604,7 +16604,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 138): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 139): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
