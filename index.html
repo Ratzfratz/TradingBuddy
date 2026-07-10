@@ -9006,7 +9006,7 @@ async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
   const encBytes=await _awEncryptBytes(bytes);
   const file=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
   try{
-    await _awUploadFile(fileId,file,false,true);
+    await _awUploadFile(fileId,file,true,true);
   }catch(e){
     const detail=[
       `code=${e&&e.code!==undefined?e.code:'-'}`,
@@ -9017,7 +9017,7 @@ async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
       `size=${file.size}`,
       `name=${file.name}`,
       `mime=${file.type}`,
-      `perms=${_awPermissions(false).join(',')}`
+      `perms=${_awPermissions(true).join(',')}`
     ].join(' | ');
     const err=new Error('Storage Upload fehlgeschlagen: '+detail);
     err.code=e&&e.code;
@@ -16685,13 +16685,13 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 142): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 143): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
     }else if(/permission|permissions|read|unauthorized|forbidden/i.test(lastError)){
       err.blockedFileId=fileId;
-      err.message='Screenshot-Datei ist nicht lesbar: '+fileId+' - '+metaInfo;
+      err.message='Screenshot-Datei hat keine Leserechte und muss neu hochgeladen werden: '+fileId+' - '+metaInfo;
     }else if(/failed to fetch|networkerror|load failed|fetch/i.test(lastError)){
       err.fetchBlockedFileId=fileId;
       err.message='Screenshot-Download vom Browser blockiert: '+fileId+' - '+metaInfo;
