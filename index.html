@@ -11330,9 +11330,12 @@ async function renderAttachmentViewerImage() {
     }catch(e){
       const msg=e&&e.message?e.message:'nicht geladen';
       if(counter)counter.textContent=`${attachmentViewerIndex + 1} / ${attachmentViewerItems.length} · ${msg}`;
-      if(e&&e.missingFileId){
-        removeMissingAttachmentReference(e.missingFileId);
-        attachmentViewerItems=attachmentViewerItems.filter(att=>String(att&&att.fileId||'').trim()!==String(e.missingFileId||'').trim());
+      const badFileId=e&&(e.missingFileId||e.blockedFileId);
+      if(badFileId){
+        removeMissingAttachmentReference(badFileId);
+        removeFileIdFromImgCache(badFileId);
+        scheduleDeleteQueuedAttachmentFiles([badFileId]);
+        attachmentViewerItems=attachmentViewerItems.filter(att=>String(att&&att.fileId||'').trim()!==String(badFileId||'').trim());
         if(!attachmentViewerItems.length){closeTradeAttachmentViewer();return;}
         attachmentViewerIndex=Math.min(attachmentViewerIndex,attachmentViewerItems.length-1);
       }
@@ -12467,7 +12470,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 157';
+const APP_VERSION = 'Alpha 0.40 - Build 161';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -15514,6 +15517,18 @@ function _awIsFetchFailure(error){
   return msg.includes('failed to fetch')||msg.includes('networkerror')||msg.includes('network request failed');
 }
 
+function _awIsPermissionDenied(error){
+  const code=Number(error&&error.code);
+  const msg=String(error&&(error.message||error.type)||error||'').toLowerCase();
+  return code===401||code===403||
+    msg.includes('no permissions provided')||
+    msg.includes('permission')||
+    msg.includes('unauthorized')||
+    msg.includes('forbidden')||
+    msg.includes('action "read"')||
+    msg.includes("action 'read'");
+}
+
 function _awFetchError(step,error){
   const raw=String(error&&error.message||error||'Failed to fetch');
   const err=new Error(`${step}: ${raw}`);
@@ -15920,13 +15935,21 @@ async function awLogout(){
 }
 
 function _awPermissions(publicRead=false){
-  return [
-    publicRead
-      ? Appwrite.Permission.read(Appwrite.Role.any())
-      : Appwrite.Permission.read(Appwrite.Role.user(_awDocId)),
-    Appwrite.Permission.update(Appwrite.Role.user(_awDocId)),
-    Appwrite.Permission.delete(Appwrite.Role.user(_awDocId))
+  const userRole=Appwrite.Role.user(_awDocId);
+  const permissions=[
+    Appwrite.Permission.read(userRole),
+    Appwrite.Permission.update(userRole),
+    Appwrite.Permission.delete(userRole)
   ];
+  return Array.from(new Set(permissions.filter(Boolean)));
+}
+
+function _awHasReadableFilePermission(permissions){
+  const list=Array.isArray(permissions)?permissions.map(value=>String(value)):[];
+  const userRead=_awDocId?`read("user:${_awDocId}")`:'';
+  return list.some(permission=>
+    userRead&&permission===userRead
+  );
 }
 
 async function _awSha256(value){
@@ -16170,7 +16193,7 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
       ));
       if(result&&result.ok&&result.data){
         const perms=Array.isArray(result.data.$permissions)?result.data.$permissions:[];
-        if(publicRead&&!perms.some(p=>String(p)==='read("any")'||String(p)==="read('any')")){
+        if(publicRead&&!_awHasReadableFilePermission(perms)){
           throw new Error('Native Upload ohne Leserecht gespeichert: '+perms.join(','));
         }
         return result.data;
@@ -16210,6 +16233,9 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
     err.type=data&&data.type||'';
     if(auth.jwtError)err.jwtError=auth.jwtError;
     throw err;
+  }
+  if(publicRead&&!_awHasReadableFilePermission(data&&data.$permissions)){
+    throw new Error('Storage Upload ohne Leserecht gespeichert: '+(Array.isArray(data&&data.$permissions)?data.$permissions.join(','):'keine Permissions zurückgegeben'));
   }
   return data;
 }
@@ -16783,10 +16809,12 @@ async function _awDownloadImg(fileId){
     if(!bytes&&lastError)downloadErrors.push('fetch='+lastError);
   }
   if(!bytes){
-    let missing=false;
+    let missing=false, blocked=false;
     try{fileMeta=fileMeta||await _awGetStorageFileMeta(fileId);lastError=lastError||'Download blockiert';}
     catch(e){
-      missing=Number(e&&e.code)===404;
+      const metaCode=Number(e&&e.code);
+      missing=metaCode===404;
+      blocked=metaCode===401||metaCode===403;
       lastError=e&&e.code?('Datei HTTP '+e.code):(e&&e.message?e.message:lastError);
     }
     const perms=Array.isArray(fileMeta&&fileMeta.$permissions)?fileMeta.$permissions.join(','):'keine Permissions sichtbar';
@@ -16794,11 +16822,11 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 157): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 161): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
-    }else if(/permission|permissions|read|unauthorized|forbidden/i.test(lastError)){
+    }else if(blocked||_awIsPermissionDenied(lastError+' '+metaError)){
       err.blockedFileId=fileId;
       err.message='Screenshot-Datei hat keine Leserechte und muss neu hochgeladen werden: '+fileId+' - '+metaInfo;
     }else if(/failed to fetch|networkerror|load failed|fetch/i.test(lastError)){
@@ -17196,7 +17224,7 @@ async function awPullBackup(){
     _awFillConfirm('pull',validation.doc||doc);
   }catch(e){
     if(e&&e.code===404){_awStatus('Kein Cloud-Backup gefunden. Lokale Daten bleiben unverändert.','muted');_awUpdateSyncStatus();}
-    else _awStatus('Cloud nicht erreichbar.','error');
+    else _awStatus(_awErr(e),'error');
   }
 }
 
@@ -17785,6 +17813,7 @@ async function _awPull(force=false,options={}){
       _awPushRequested=false;
 
       _awSyncLabel(doc.synced_at);
+      if(removedMissingScreenshotRefs&&!failedScreenshotDownloads)_awLastScreenshotError='';
       const screenshotStatus=remoteAttachmentRefs>0
         ? ` · Screenshots: ${loadedScreenshotCount}/${remoteAttachmentRefs}${removedMissingScreenshotRefs?` (${removedMissingScreenshotRefs} entfernt)`:''}${failedScreenshotDownloads?` (${failedScreenshotDownloads} nicht lesbar)`:''}`
         : ' · Cloud enthält keine Screenshot-Zuordnung';
@@ -17817,6 +17846,7 @@ function _awApplyData(data){Object.entries(data||{}).forEach(([k,v])=>{if(!AW_EX
 function _awDevice(){if(window.TBNative&&!TBNative.__browserShim)return 'Android';if(/iphone|ipad/i.test(navigator.userAgent))return 'iOS';return 'Web';}
 function _awErr(e,action=''){
   const t=String(e&&e.type||'');
+  if(_awIsPermissionDenied(e))return 'Berechtigung fehlt: Appwrite verweigert Lesen der Datei/Daten.';
   if(_awIsFetchFailure(e))return 'Cloud nicht erreichbar. Internet prüfen oder Appwrite kurz später erneut versuchen.';
   if(t.includes('invalid_credentials'))return 'E-Mail oder Passwort falsch.';
   if(t.includes('already_exists')||t.includes('email_already')){
