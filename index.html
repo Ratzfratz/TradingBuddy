@@ -12470,7 +12470,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 162';
+const APP_VERSION = 'Alpha 0.40 - Build 163';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -16214,7 +16214,7 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
         if(publicRead&&!_awHasReadableFilePermission(perms)){
           throw new Error('Native Upload ohne Leserecht gespeichert: '+perms.join(','));
         }
-        return result.data;
+        return await _awEnsureStorageFileReadable(fileId,file.name||'screenshot.webp.enc',result.data);
       }
       throw new Error(result&&result.error?result.error:'Native Storage Upload fehlgeschlagen');
     }catch(e){
@@ -16255,7 +16255,32 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
   if(publicRead&&!_awHasReadableFilePermission(data&&data.$permissions)){
     throw new Error('Storage Upload ohne Leserecht gespeichert: '+(Array.isArray(data&&data.$permissions)?data.$permissions.join(','):'keine Permissions zurückgegeben'));
   }
-  return data;
+  return await _awEnsureStorageFileReadable(fileId,file.name||'screenshot.webp.enc',data);
+}
+
+async function _awEnsureStorageFileReadable(fileId,fileName='screenshot.webp.enc',knownMeta=null){
+  const expected=_awPermissions(false);
+  const expectedRead=_awDocId?`read("user:${_awDocId}")`:'';
+  let meta=knownMeta;
+  if(meta&&_awHasReadableFilePermission(meta.$permissions))return meta;
+  try{
+    if(_awStorage&&typeof _awStorage.updateFile==='function'){
+      meta=await _awStorage.updateFile(AW_BUCKET,fileId,fileName,expected);
+    }else{
+      meta=await _awStorageJsonRequest(_awStorageFilePath(fileId),{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:fileName,permissions:expected})
+      });
+    }
+  }catch(e){
+    throw new Error('Storage-Rechte konnten nach Upload nicht gesetzt werden: '+(e&&e.message?e.message:String(e))+' | erwartet '+expected.join(','));
+  }
+  if(!_awHasReadableFilePermission(meta&&meta.$permissions)){
+    const got=Array.isArray(meta&&meta.$permissions)?meta.$permissions.join(','):'keine Permissions zurückgegeben';
+    throw new Error('Storage-Datei weiterhin ohne User-Leserecht: erwartet '+expectedRead+' | erhalten '+got);
+  }
+  return meta;
 }
 
 async function _awGetStorageFileMeta(fileId){
@@ -17629,7 +17654,6 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
       localStorage.setItem('tb_cloud_trades_synced_at_ts',String(Date.now()));
       localStorage.setItem('tb_cloud_trade_count',String(tradesForUpload.length));
       _awLastScreenshotError='';
-      setTimeout(()=>cleanupUnreferencedCloudScreenshotFiles(referencedAttachmentFileIdsFromTrades(tradesForUpload)),500);
     }
     _awSetLatestCloudSync(syncedAt);
     localStorage.setItem('tb_cloud_checked_at_ts',String(Date.now()));
