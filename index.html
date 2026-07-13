@@ -5844,7 +5844,7 @@ body.tb-compact-small{
     gap:14px;
     align-items:stretch;
   }
-  .calc-column{display:contents}
+  .calc-column{display:flex;flex-direction:column;gap:14px;min-width:0}
   .calc-workspace .sec{margin:0!important}
   .calc-column:first-child > .sec:first-child{grid-column:2;grid-row:1}
   .calc-column:first-child > .sec:nth-child(2){grid-column:1;grid-row:1 / span 3}
@@ -5876,7 +5876,7 @@ body.tb-compact-small{
     gap:16px;
     align-items:stretch;
   }
-  .calc-column{display:contents}
+  .calc-column{display:flex;flex-direction:column;gap:16px;min-width:0}
   .calc-workspace .sec{margin:0!important}
   .calc-column:first-child > .sec:first-child{grid-column:2;grid-row:1}
   .calc-column:first-child > .sec:nth-child(2){grid-column:1;grid-row:1 / span 3}
@@ -5982,8 +5982,8 @@ body.tb-compact-small{
   .bottom-stack .calc-dock{
     order:2;
     margin-top:auto;
-    padding:14px 0 0;
-    border-top:1px solid var(--bd);
+    padding:0;
+    border:0;
     background:transparent;
   }
   .bnav-w{
@@ -6006,12 +6006,29 @@ body.tb-compact-small{
   .bni-ic{width:34px;height:34px;flex:0 0 34px}
   .bni-ic svg{width:19px;height:19px}
   .calc-dock .calc-btn{
-    width:100%;
+    width:220px;
     min-height:46px;
     padding:0 10px;
     font-size:.72rem;
     letter-spacing:.55px;
   }
+  .bottom-stack .calc-dock.show{
+    position:fixed;
+    left:max(var(--tb-main-left),calc(50% - 356px));
+    right:auto;
+    bottom:0;
+    width:var(--tb-desktop-main);
+    display:flex;
+    justify-content:flex-end;
+    padding:12px 24px;
+    border-top:1px solid var(--bd);
+    background:var(--app-chrome-bg);
+    backdrop-filter:var(--app-chrome-filter);
+    -webkit-backdrop-filter:var(--app-chrome-filter);
+    box-shadow:0 -8px 22px rgba(0,0,0,.14);
+  }
+  .bottom-stack .calc-dock.show .calc-dock-actions{width:220px}
+  .bottom-stack .calc-dock.show .calc-btn{width:100%}
   body.page-tagebuch.journal-chrome-hidden .bottom-stack{
     transform:none!important;
     opacity:1!important;
@@ -6035,10 +6052,35 @@ body.tb-compact-small{
     box-shadow:var(--app-chrome-shadow)!important;
   }
   .fab{
-    right:max(24px,calc(50% - 536px));
-    bottom:24px;
+    top:calc(var(--status-inset) + 11px);
+    right:max(76px,calc(50% - 484px));
+    bottom:auto;
+    width:132px;
+    height:40px;
+    border-radius:8px;
+    gap:8px;
+    z-index:180;
   }
-  body.page-tagebuch.journal-chrome-hidden .fab{transform:none!important}
+  .fab::after{content:'Neuer Trade';font-size:.72rem;font-weight:750;letter-spacing:.2px;color:var(--bg)}
+  body.page-tagebuch.journal-chrome-hidden .fab{transform:translateY(-70px)!important;opacity:0!important}
+  #trade-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  #trade-list > .trade-card{height:auto}
+  #nt-body{gap:14px 16px}
+  .nt-actions{
+    display:flex;
+    justify-content:flex-end;
+    padding-left:18px;
+    padding-right:18px;
+  }
+  .nt-actions .calc-btn{
+    width:220px;
+    max-width:220px;
+    margin:0;
+  }
 }
 </style>
 </head>
