@@ -12473,7 +12473,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 168';
+const APP_VERSION = 'Alpha 0.40 - Build 170';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -16261,11 +16261,26 @@ async function _awEnsureStorageFileReadable(fileId,fileName='screenshot.webp.enc
   let meta=knownMeta;
   if(meta&&_awHasReadableFilePermission(meta.$permissions))return meta;
   try{
-    meta=await _awRest(_awStorageFilePath(fileId),{
-      method:'PUT',
-      headers:await _awFetchHeaders({includeFallback:false}),
-      body:JSON.stringify({name:fileName,permissions:expected})
-    });
+    if(window.TBNative&&!TBNative.__browserShim&&typeof TBNative.updateAppwriteStorageFilePermissions==='function'){
+      const jwt=await _awGetJwt();
+      const result=JSON.parse(TBNative.updateAppwriteStorageFilePermissions(
+        AW_ENDPOINT,
+        AW_BUCKET,
+        fileId,
+        jwt||'',
+        AW_PROJECT,
+        fileName,
+        JSON.stringify(expected)
+      ));
+      if(result&&result.ok)meta=result.data||{};
+      else throw new Error(result&&result.error?result.error:'Native Rechte-Korrektur fehlgeschlagen');
+    }else{
+      meta=await _awRest(_awStorageFilePath(fileId),{
+        method:'PUT',
+        headers:await _awFetchHeaders({includeFallback:false}),
+        body:JSON.stringify({name:fileName,permissions:expected})
+      });
+    }
   }catch(e){
     throw new Error('Storage-Rechte konnten nach Upload nicht gesetzt werden: '+(e&&e.message?e.message:String(e))+' | erwartet '+expected.join(','));
   }
