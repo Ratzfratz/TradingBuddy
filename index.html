@@ -12470,7 +12470,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 164';
+const APP_VERSION = 'Alpha 0.40 - Build 165';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -15585,9 +15585,10 @@ async function _awRest(path,options={}){
   if(!isForm&&!headers['Content-Type'])headers['Content-Type']='application/json';
   if(isForm)delete headers['Content-Type'];
   if(controller)timer=setTimeout(()=>controller.abort(),options.timeoutMs||AW_UPLOAD_TIMEOUT_MS);
+  const useCookies=String(path).startsWith('/account/');
   let res;
   try{
-    res=await fetch(AW_ENDPOINT+path,Object.assign({},options,{headers,credentials:'include',signal:controller?controller.signal:options.signal}));
+    res=await fetch(AW_ENDPOINT+path,Object.assign({},options,{headers,credentials:useCookies?'include':'omit',cache:'no-store',signal:controller?controller.signal:options.signal}));
   }catch(e){
     if(e&&e.name==='AbortError'){
       const err=new Error('Appwrite Anfrage Timeout');
