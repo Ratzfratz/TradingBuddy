@@ -12473,7 +12473,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 166';
+const APP_VERSION = 'Alpha 0.40 - Build 167';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -16214,10 +16214,6 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
         JSON.stringify(permissions)
       ));
       if(result&&result.ok&&result.data){
-        const perms=Array.isArray(result.data.$permissions)?result.data.$permissions:[];
-        if(publicRead&&!_awHasReadableFilePermission(perms)){
-          throw new Error('Native Upload ohne Leserecht gespeichert: '+perms.join(','));
-        }
         return await _awEnsureStorageFileReadable(fileId,file.name||'screenshot.webp.enc',result.data);
       }
       throw new Error(result&&result.error?result.error:'Native Storage Upload fehlgeschlagen');
@@ -16256,9 +16252,6 @@ async function _awUploadStorageFile(fileId,file,publicRead=false){
     if(auth.jwtError)err.jwtError=auth.jwtError;
     throw err;
   }
-  if(publicRead&&!_awHasReadableFilePermission(data&&data.$permissions)){
-    throw new Error('Storage Upload ohne Leserecht gespeichert: '+(Array.isArray(data&&data.$permissions)?data.$permissions.join(','):'keine Permissions zurückgegeben'));
-  }
   return await _awEnsureStorageFileReadable(fileId,file.name||'screenshot.webp.enc',data);
 }
 
@@ -16268,15 +16261,11 @@ async function _awEnsureStorageFileReadable(fileId,fileName='screenshot.webp.enc
   let meta=knownMeta;
   if(meta&&_awHasReadableFilePermission(meta.$permissions))return meta;
   try{
-    if(_awStorage&&typeof _awStorage.updateFile==='function'){
-      meta=await _awStorage.updateFile(AW_BUCKET,fileId,fileName,expected);
-    }else{
-      meta=await _awStorageJsonRequest(_awStorageFilePath(fileId),{
-        method:'PUT',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:fileName,permissions:expected})
-      });
-    }
+    meta=await _awRest(_awStorageFilePath(fileId),{
+      method:'PUT',
+      headers:await _awFetchHeaders({includeFallback:false}),
+      body:JSON.stringify({name:fileName,permissions:expected})
+    });
   }catch(e){
     throw new Error('Storage-Rechte konnten nach Upload nicht gesetzt werden: '+(e&&e.message?e.message:String(e))+' | erwartet '+expected.join(','));
   }
