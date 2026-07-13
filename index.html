@@ -5794,6 +5794,7 @@ body.tb-compact-small{
 
 <style id="large-display-layout">
 /* Tablet/Desktop: use the available canvas while preserving the phone layout. */
+.calc-workspace,.calc-column{display:contents}
 @media (min-width:720px){
   :root{
     --tb-large-content:820px;
@@ -5835,6 +5836,31 @@ body.tb-compact-small{
   .fab{right:max(20px,calc(50% - 390px))}
 }
 
+@media (min-width:900px){
+  .calc-workspace{
+    display:grid;
+    grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);
+    grid-template-rows:auto auto auto;
+    gap:14px;
+    align-items:stretch;
+  }
+  .calc-column{display:contents}
+  .calc-workspace .sec{margin:0!important}
+  .calc-column:first-child > .sec:first-child{grid-column:2;grid-row:1}
+  .calc-column:first-child > .sec:nth-child(2){grid-column:1;grid-row:1 / span 3}
+  .calc-column:nth-child(2) > .sec:first-child{grid-column:2;grid-row:2}
+  .calc-column:nth-child(2) > .sec:nth-child(2){grid-column:2;grid-row:3}
+  #trade-list,
+  #open-position-summary .ops-list{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    align-items:start;
+  }
+  #trade-list > .empty,
+  #open-position-summary .empty{grid-column:1/-1}
+}
+
 @media (min-width:1100px){
   :root{
     --tb-large-content:1120px;
@@ -5842,7 +5868,62 @@ body.tb-compact-small{
   }
   .wrap{padding-left:24px!important;padding-right:24px!important}
   header{padding-left:24px!important;padding-right:24px!important}
-  #page-rechner{max-width:820px;margin-left:auto;margin-right:auto}
+  #page-rechner{max-width:none;margin-left:auto;margin-right:auto}
+  .calc-workspace{
+    display:grid;
+    grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);
+    grid-template-rows:auto auto auto;
+    gap:16px;
+    align-items:stretch;
+  }
+  .calc-column{display:contents}
+  .calc-workspace .sec{margin:0!important}
+  .calc-column:first-child > .sec:first-child{grid-column:2;grid-row:1}
+  .calc-column:first-child > .sec:nth-child(2){grid-column:1;grid-row:1 / span 3}
+  .calc-column:nth-child(2) > .sec:first-child{grid-column:2;grid-row:2}
+  .calc-column:nth-child(2) > .sec:nth-child(2){grid-column:2;grid-row:3}
+  #results:not(.hidden){
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+    align-items:start;
+  }
+  #results > .res{margin:0}
+  #results > .warn{grid-column:1/-1;margin:0}
+  #trade-list{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    align-items:start;
+  }
+  #trade-list > .empty{grid-column:1/-1}
+  #open-position-summary .ops-list{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+    align-items:start;
+  }
+  #open-position-summary .empty{grid-column:1/-1}
+  #nt-body{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+    align-items:start;
+    padding-left:18px!important;
+    padding-right:18px!important;
+  }
+  #nt-body > .overlay-sticky-head,
+  #nt-asset-card,
+  #nt-direction-box,
+  #nt-review-card,
+  #nt-notes-card,
+  #nt-clear-area{grid-column:1/-1}
+  #nt-body > .sec{margin:0!important}
+  #nt-entry-card{grid-column:1}
+  #nt-plan-card{grid-column:2}
+  #nt-exit-card{grid-column:1}
+  #nt-result-card{grid-column:2}
+  #nt-body > .overlay-sticky-head{width:100%}
   #view-stats{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -5889,6 +5970,8 @@ body.tb-compact-small{
 
 <div id="pc">
 <div class="page" id="page-rechner">
+<div class="calc-workspace">
+<div class="calc-column">
 <div class="sec" style="margin-bottom:20px">
   <div class="sec-title">Produkttyp &amp; Richtung</div>
   <div class="mode-sel" style="margin-bottom:10px">
@@ -5932,7 +6015,9 @@ body.tb-compact-small{
   </div>
   <div class="info" id="days-info"></div>
 </div>
+</div>
 
+<div class="calc-column">
 <div class="sec">
   <div class="sec-title">Basiswert</div>
   <div class="t-row">
@@ -5965,6 +6050,8 @@ body.tb-compact-small{
       <div class="info" id="tgt-date-info"></div>
     </div>
   </div>
+</div>
+</div>
 </div>
 
 
@@ -12629,7 +12716,7 @@ if('serviceWorker' in navigator){
     <div class="overlay-title" id="form-title">Neuer Trade</div>
     <button class="overlay-head-btn overlay-head-right" onclick="cancelTradeForm()">&#x2715;</button>
   </div>
-  <div class="sec">
+  <div class="sec" id="nt-asset-card">
     <div class="asset-sel nt-asset-sel" id="nt-asset-sel">
       <button class="asset-btn active" id="fa-stock" onclick="setAssetType('stock')">Aktie</button>
       <button class="asset-btn" id="fa-etf" onclick="setAssetType('etf')">ETF</button>
@@ -12716,7 +12803,7 @@ if('serviceWorker' in navigator){
     <div class="journal-tags" id="f-idea-tags"></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="nt-exit-card">
     <div class="sec-title">Ausstieg</div>
     <div class="g2">
       <div class="field" id="field-exit"><label>Ausstiegskurs €</label><input class="inp" type="text" inputmode="decimal" id="f-exit" placeholder="leer = offen" oninput="calcPnl();clearFieldError('f-exit')" enterkeyhint="done"><span class="field-error-msg">⚠ Ausstiegskurs muss größer als 0 sein.</span></div>
@@ -12728,7 +12815,7 @@ if('serviceWorker' in navigator){
     <div id="exit-fields" style="display:none"></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="nt-result-card">
     <div class="sec-title">Ergebnis</div>
     <div class="outcome-sel">
       <button class="out-btn active open" id="fo-open" onclick="setOutcome('open')">? Offen</button>
@@ -12766,7 +12853,7 @@ if('serviceWorker' in navigator){
     <div class="journal-tags" id="f-result-tags"></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" id="nt-notes-card">
     <div class="sec-title">Schnelle Notiz</div>
     <div class="g1">
       <div class="field" id="field-notes"><label>Während oder nach dem Trade</label>
