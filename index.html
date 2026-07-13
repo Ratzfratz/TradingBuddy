@@ -12470,7 +12470,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 161';
+const APP_VERSION = 'Alpha 0.40 - Build 162';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -15558,6 +15558,24 @@ function _awWithTimeout(promise,ms,label='Cloud-Anfrage'){
 
 async function _awRest(path,options={}){
   const isForm=typeof FormData!=='undefined'&&options.body instanceof FormData;
+  const method=String(options.method||'GET').toUpperCase();
+  const isNativeAndroid=!!(window.TBNative&&!TBNative.__browserShim);
+  if(isNativeAndroid&&!isForm&&typeof TBNative.appwriteRestRequest==='function'&&!String(path).startsWith('/account/')){
+    let jwt='';
+    try{jwt=await _awGetJwt();}catch(e){throw new Error('Native REST JWT fehlt: '+(e&&e.message?e.message:String(e)));}
+    const result=JSON.parse(TBNative.appwriteRestRequest(
+      AW_ENDPOINT,
+      method,
+      path,
+      jwt||'',
+      AW_PROJECT,
+      typeof options.body==='string'?options.body:''
+    ));
+    if(result&&result.ok)return result.data||{};
+    const err=new Error(result&&result.error?result.error:'Native Appwrite REST fehlgeschlagen');
+    if(/HTTP\s+(\d+)/i.test(err.message))err.code=parseInt(RegExp.$1,10);
+    throw err;
+  }
   const controller=(typeof AbortController!=='undefined')?new AbortController():null;
   let timer=null;
   const headers=Object.assign({
@@ -16822,7 +16840,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 161): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen ('+APP_VERSION+'): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
