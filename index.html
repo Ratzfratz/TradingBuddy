@@ -8885,6 +8885,9 @@ function shouldRescueLocalAttachments(remoteTrade,localTrade){
   if(!localTrade)return false;
   const localAttachments=normalizeTradeAttachments(localTrade);
   if(!localAttachments.some(att=>att.dataUrl))return false;
+  const remoteAttachments=normalizeTradeAttachments(remoteTrade);
+  if(remoteAttachments.length===0)return true;
+  if(!remoteAttachments.some(att=>att.dataUrl))return true;
   const remoteUpdated=Number(remoteTrade&&remoteTrade.updatedAt)||0;
   const localUpdated=Number(localTrade&&localTrade.updatedAt)||0;
   return !remoteUpdated || !localUpdated || localUpdated>=remoteUpdated;
@@ -12470,7 +12473,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 165';
+const APP_VERSION = 'Alpha 0.40 - Build 166';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -17820,7 +17823,7 @@ async function _awPull(force=false,options={}){
               loadedScreenshotCount++;
             }catch(e){
               console.warn('Screenshot:',normalizedAtt.fileId,e);
-              const badFileId=e&&(e.missingFileId||e.blockedFileId);
+              const badFileId=e&&e.missingFileId;
               if(badFileId){
                 removedMissingScreenshotRefs++;
                 removeFileIdFromImgCache(badFileId);
