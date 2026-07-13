@@ -12467,7 +12467,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 156';
+const APP_VERSION = 'Alpha 0.40 - Build 157';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -16794,7 +16794,7 @@ async function _awDownloadImg(fileId){
     const metaInfo=fileMeta
       ? `Metadaten OK, ${size}, Permissions: ${perms}`
       : `Metadaten nicht lesbar: ${metaError||'unbekannt'}`;
-    const err=new Error('Screenshot-Datei nicht geladen (Build 156): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
+    const err=new Error('Screenshot-Datei nicht geladen (Build 157): '+fileId+' - '+metaInfo+' - Wege: '+(downloadErrors.join(' | ')||lastError||'unbekannter Fehler'));
     if(missing||/\b404\b|not.?found|not found|nicht gefunden/i.test(lastError)){
       err.missingFileId=fileId;
       err.message='Screenshot-Datei fehlt in der Cloud: '+fileId;
@@ -17749,9 +17749,11 @@ async function _awPull(force=false,options={}){
               loadedScreenshotCount++;
             }catch(e){
               console.warn('Screenshot:',normalizedAtt.fileId,e);
-              if(e&&e.missingFileId){
+              const badFileId=e&&(e.missingFileId||e.blockedFileId);
+              if(badFileId){
                 removedMissingScreenshotRefs++;
-                removeFileIdFromImgCache(e.missingFileId);
+                removeFileIdFromImgCache(badFileId);
+                scheduleDeleteQueuedAttachmentFiles([badFileId]);
                 continue;
               }
               _awLastScreenshotError=(e&&e.message?e.message:String(e||'unbekannter Fehler')).slice(0,240);
