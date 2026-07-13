@@ -12470,7 +12470,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 163';
+const APP_VERSION = 'Alpha 0.40 - Build 164';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -17337,9 +17337,9 @@ async function _awKickAutoSync(){
   try{
     scheduleDeleteQueuedAttachmentFiles([]);
     let tradeDoc=null;
-    try{tradeDoc=await _awGetEntityDoc('trades');}catch(_){}
+    try{tradeDoc=await _awGetEntityDoc('trades');}catch(e){_awLastPushError='Trades prüfen: '+_awErr(e);_awStatus('Trades prüfen fehlgeschlagen: '+_awErr(e),'error');return;}
     let settingsDoc=null;
-    try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
+    try{settingsDoc=await _awGetEntityDoc('settings');}catch(e){_awLastPushError='Einstellungen prüfen: '+_awErr(e);_awStatus('Einstellungen prüfen fehlgeschlagen: '+_awErr(e),'error');return;}
     if(_awHasLocalUnsyncedSettings(_awCloudSettingsMs(settingsDoc))){
       const settingsOk=await _awPushSettingsOnly();
       if(!settingsOk){
@@ -17371,7 +17371,7 @@ async function _awKickAutoSync(){
       _awStatus('Kein Cloud-Backup gefunden.','muted');
     }
   }catch(e){
-    _awStatus('Auto-Sync fehlgeschlagen.','error');
+    _awStatus('Auto-Sync fehlgeschlagen: '+_awErr(e),'error');
     console.warn('Auto-Sync:',e);
   }finally{
     _awUpdateSyncStatus();
@@ -17889,7 +17889,11 @@ function _awDevice(){if(window.TBNative&&!TBNative.__browserShim)return 'Android
 function _awErr(e,action=''){
   const t=String(e&&e.type||'');
   if(_awIsPermissionDenied(e))return 'Berechtigung fehlt: Appwrite verweigert Lesen der Datei/Daten.';
-  if(_awIsFetchFailure(e))return 'Cloud nicht erreichbar. Internet prüfen oder Appwrite kurz später erneut versuchen.';
+  if(_awIsFetchFailure(e)){
+    const step=e&&e.fetchStep?String(e.fetchStep):'Cloud-Anfrage';
+    const raw=String(e&&e.message||e||'Failed to fetch');
+    return `${step}: ${raw}`;
+  }
   if(t.includes('invalid_credentials'))return 'E-Mail oder Passwort falsch.';
   if(t.includes('already_exists')||t.includes('email_already')){
     return action==='login'
