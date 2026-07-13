@@ -12473,7 +12473,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 167';
+const APP_VERSION = 'Alpha 0.40 - Build 168';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -16285,6 +16285,10 @@ async function _awGetStorageFileMeta(fileId){
 }
 
 async function _awDeleteStorageFile(fileId){
+  if(String(fileId||'').startsWith('Shot_')){
+    console.warn('Screenshot-Storage-Delete blockiert:', fileId);
+    return null;
+  }
   try{
     return await _awStorageJsonRequest(_awStorageFilePath(fileId),{method:'DELETE'});
   }catch(restError){
