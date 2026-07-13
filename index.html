@@ -8429,6 +8429,12 @@ function normalizeTradeAttachments(raw) {
   return values.map(normalizeTradeAttachment).filter(Boolean).slice(0, MAX_TRADE_ATTACHMENTS);
 }
 
+function hasLocalScreenshotData(list){
+  return (Array.isArray(list)?list:[]).some(trade=>
+    normalizeTradeAttachments(trade).some(att=>!!att.dataUrl)
+  );
+}
+
 function cleanUnderlyingDisplayName(value) {
   const text = String(value || '').trim();
   if (!text || /^[\[{]/.test(text)) return '';
@@ -12473,7 +12479,7 @@ function rmRender(){
 </script>
 
 <script>
-const APP_VERSION = 'Alpha 0.40 - Build 170';
+const APP_VERSION = 'Alpha 0.40 - Build 171';
 function applyAppVersion(){
   const buildLabel=document.getElementById('aw-build-label');
   if(buildLabel)buildLabel.textContent=APP_VERSION;
@@ -17731,6 +17737,12 @@ async function _awPull(force=false,options={}){
     loadTrades();
     const localTradeCount=typeof trades!=='undefined'?trades.length:0;
     const localTradeTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
+    if(hasLocalScreenshotData(trades)&&localTradeTs>cloudMs+1000&&!(options&&options.allowOverwriteLocalScreenshots)){
+      _awStatus('Lokaler Screenshot ist neuer als Cloud - erst hochladen, kein Überschreiben.','warn');
+      _awPushRequested=true;
+      setTimeout(()=>_awSchedulePush(),0);
+      return;
+    }
     const localHasNewTrades=localTradeCount>0&&localTradeTs>(cloudMs||0)+1000;
     if(backupMeta.version&&cloudCount===0){
       if(localHasNewTrades){
