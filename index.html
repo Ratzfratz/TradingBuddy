@@ -6527,8 +6527,9 @@ body.tb-compact-small{
 </div>
 
 <!-- Cloud-Download Bestätigung -->
-<div id="aw-pull-confirm-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2100;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:24px">
-  <div style="background:var(--s1);border:1px solid var(--bd);border-radius:14px;max-width:340px;width:100%;padding:22px 20px;animation:fadeUp .2s ease both">
+<div id="aw-pull-confirm-ov" onclick="if(event.target===this)_awConfirmNo()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2100;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:24px">
+  <div role="dialog" aria-modal="true" aria-labelledby="aw-confirm-title" style="position:relative;background:var(--s1);border:1px solid var(--bd);border-radius:14px;max-width:340px;width:100%;padding:22px 20px;animation:fadeUp .2s ease both">
+    <button type="button" onclick="_awConfirmNo()" aria-label="Fenster schließen" title="Schließen" style="position:absolute;top:10px;right:10px;width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;border-radius:7px;color:var(--muted);font:600 1.2rem/1 var(--f);cursor:pointer">&times;</button>
     <div id="aw-confirm-title" style="font-size:.9rem;color:var(--text);font-weight:700;margin-bottom:4px">Cloud-Daten synchronisieren?</div>
     <div id="aw-confirm-text" style="font-size:.72rem;color:var(--muted);line-height:1.45;margin-bottom:14px">Bitte Aktion bestätigen.</div>
     <div class="aw-compare-card" style="margin-bottom:14px">
@@ -15958,20 +15959,11 @@ async function _awCreateAccount(email,password){
 
 async function _awBiSync(){
   loadTrades();
-  const localCount=typeof trades!=='undefined'?trades.length:0;
-  const localTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
-  const localCloudTs=parseInt(localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
-  const cloudKnown=parseInt(localStorage.getItem('tb_cloud_checked_at_ts')||'0',10)>0 || localCloudTs>0;
   let cloudDoc=null;
   try{cloudDoc=await _awGetEntityDoc('trades');}catch(_){}
   let settingsDoc=null;
   try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
   if(cloudDoc){
-    const meta=_awBackupMeta(cloudDoc);
-    if(meta.count>0&&!cloudKnown&&localCount>0){
-      _awShowConflictChoice(cloudDoc,settingsDoc,'start');
-      return;
-    }
     if(await _awHandleSyncDecision(cloudDoc,settingsDoc,'start'))return;
     _awMarkCloudDocChecked(cloudDoc);
   }else if(settingsDoc){
@@ -17396,9 +17388,61 @@ function _awResolveSectionSyncDecision(tradeDoc=null,settingsDoc=null){
   };
 }
 
+function _awComparableSyncValue(value,key=''){
+  if(key==='dataUrl')return undefined;
+  if(typeof value==='string'&&(value[0]==='{'||value[0]==='[')){
+    try{return _awComparableSyncValue(JSON.parse(value),key);}catch(_){}
+  }
+  if(Array.isArray(value))return value.map(item=>_awComparableSyncValue(item));
+  if(value&&typeof value==='object'){
+    const out={};
+    Object.keys(value).sort().forEach(k=>{
+      const comparable=_awComparableSyncValue(value[k],k);
+      if(comparable!==undefined)out[k]=comparable;
+    });
+    return out;
+  }
+  return value;
+}
+
+function _awSyncValuesEqual(localValue,cloudValue){
+  try{return JSON.stringify(_awComparableSyncValue(localValue))===JSON.stringify(_awComparableSyncValue(cloudValue));}
+  catch(_){return false;}
+}
+
+async function _awIgnoreEquivalentSectionConflicts(decision,tradeDoc=null,settingsDoc=null){
+  if(decision.tradeLocal&&decision.tradeCloud&&tradeDoc){
+    try{
+      const payload=await _awReadDatabaseBackup(_awBackupMeta(tradeDoc));
+      const remoteTrades=_awExtractCloudTrades(payload);
+      loadTrades();
+      if(_awSyncValuesEqual(Array.isArray(trades)?trades:[],remoteTrades)){
+        decision.equivalentResolved=true;
+        decision.tradeLocal=false;
+        decision.tradeCloud=false;
+        localStorage.setItem('tb_cloud_trades_synced_at_ts',String(Math.max(_awLocalMs('tb_local_saved_at'),_awDocMs(tradeDoc))));
+        _awMarkCloudDocChecked(tradeDoc);
+      }
+    }catch(e){console.warn('Trade-Stände konnten nicht verglichen werden:',e);}
+  }
+  if(decision.settingsLocal&&decision.settingsCloud&&settingsDoc){
+    try{
+      const payload=await _awReadDatabaseBackup(_awBackupMeta(settingsDoc));
+      if(_awSyncValuesEqual(_awCollectSettings(),_awExtractCloudSettings(payload))){
+        decision.equivalentResolved=true;
+        decision.settingsLocal=false;
+        decision.settingsCloud=false;
+        localStorage.setItem('tb_cloud_settings_synced_at_ts',String(Math.max(_awLocalMs('tb_settings_saved_at'),_awDocMs(settingsDoc))));
+      }
+    }catch(e){console.warn('Einstellungsstände konnten nicht verglichen werden:',e);}
+  }
+  return decision;
+}
+
 async function _awHandleSyncDecision(tradeDoc=null,settingsDoc=null,source='auto'){
   if(!_awUser||!_awDocId||!_awEncKey)return false;
   const sectionDecision=_awResolveSectionSyncDecision(tradeDoc,settingsDoc);
+  await _awIgnoreEquivalentSectionConflicts(sectionDecision,tradeDoc,settingsDoc);
   if((sectionDecision.tradeLocal&&sectionDecision.tradeCloud)||(sectionDecision.settingsLocal&&sectionDecision.settingsCloud)){
     _awShowConflictChoice(tradeDoc,settingsDoc,source);
     return true;
@@ -17421,6 +17465,10 @@ async function _awHandleSyncDecision(tradeDoc=null,settingsDoc=null,source='auto
     handled=true;
   }
   if(handled){
+    _awUpdateSyncStatus();
+    return true;
+  }
+  if(sectionDecision.equivalentResolved){
     _awUpdateSyncStatus();
     return true;
   }
@@ -17591,6 +17639,11 @@ function _awConfirmNo(){
   const ov=document.getElementById('aw-pull-confirm-ov');
   if(ov)ov.style.display='none';
 }
+
+document.addEventListener('keydown',event=>{
+  const ov=document.getElementById('aw-pull-confirm-ov');
+  if(event.key==='Escape'&&ov&&ov.style.display==='flex')_awConfirmNo();
+});
 
 async function _awConfirmYes(){
   _awConfirmNo();
