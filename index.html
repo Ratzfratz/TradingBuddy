@@ -6162,10 +6162,27 @@ body.tb-compact-small{
 .stats-chart-bar-positive{fill:var(--green)}
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
+.calc-inline-actions{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 24px}
+.calc-desktop-submit{display:none}
 @media (min-width:900px){
   #view-stats>.stats-chart-section{grid-column:2;grid-row:2}
   #view-stats>.sec:nth-child(2){grid-column:1;grid-row:2}
   #view-stats>.stats-calendar-section{grid-column:1/-1!important}
+}
+@media (min-width:1100px){
+  .bottom-stack .calc-dock.show{display:none!important}
+  .calc-inline-actions{
+    justify-content:flex-end;
+    margin:18px 0 22px;
+  }
+  .calc-desktop-submit{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:220px!important;
+    min-height:46px;
+  }
+  #page-rechner{padding-bottom:24px!important}
 }
 </style>
 </head>
@@ -6277,8 +6294,9 @@ body.tb-compact-small{
 </div>
 
 
-<div style="text-align:center;margin:16px 0 24px">
+<div class="calc-inline-actions">
   <button onclick="clearCalcForm()" class="calc-clear-big">↺ Felder löschen</button>
+  <button class="calc-btn calc-desktop-submit" type="button" onclick="calc()">BERECHNEN →</button>
 </div>
 
 <div id="results" class="hidden">
