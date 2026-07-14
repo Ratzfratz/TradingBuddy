@@ -6162,12 +6162,32 @@ body.tb-compact-small{
 .stats-chart-bar-positive{fill:var(--green)}
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
+.stats-chart-more{margin:0;border-top:1px solid var(--bd)}
+.stats-chart-more>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0 2px;color:var(--blue);font-size:.72rem;font-weight:700;cursor:pointer;list-style:none}
+.stats-chart-more>summary::-webkit-details-marker{display:none}
+.stats-chart-more>summary::after{content:'›';font-size:1rem;line-height:1;transform:rotate(90deg);transition:transform .15s ease}
+.stats-chart-more[open]>summary::after{transform:rotate(-90deg)}
+.stats-chart-more>.stats-chart-block{margin-top:10px}
 .calc-inline-actions{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 24px}
 .calc-desktop-submit{display:none}
 @media (min-width:900px){
   #view-stats>.stats-chart-section{grid-column:2;grid-row:2}
   #view-stats>.sec:nth-child(2){grid-column:1;grid-row:2}
   #view-stats>.stats-calendar-section{grid-column:1/-1!important}
+}
+@media (min-width:601px){
+  .stats-chart-more{display:contents}
+  .stats-chart-more>summary{display:none}
+  .stats-chart-more:not([open])>.stats-chart-block{display:block}
+  .stats-chart-more>.stats-chart-block{margin-top:0}
+}
+@media (max-width:600px){
+  .stats-chart-section{gap:9px;padding:14px 12px!important}
+  .stats-chart-block+.stats-chart-block{padding-top:8px}
+  .stats-chart-head{margin-bottom:5px;font-size:.7rem}
+  .stats-chart-head strong{font-size:.76rem}
+  .stats-chart-host{min-height:0}
+  .stats-chart-more>.stats-chart-block+.stats-chart-block{margin-top:9px}
 }
 @media (min-width:1100px){
   .bottom-stack .calc-dock.show{display:none!important}
@@ -6508,6 +6528,8 @@ body.tb-compact-small{
       <div class="stats-chart-head"><span>P&amp;L nach Produkttyp</span><span id="st-asset-chart-count"></span></div>
       <div class="stats-chart-host" id="st-asset-chart"></div>
     </div>
+    <details class="stats-chart-more">
+      <summary>Weitere Diagramme</summary>
     <div class="stats-chart-block">
       <div class="stats-chart-head"><span>Rendite-Verteilung</span><span id="st-return-chart-count"></span></div>
       <div class="stats-chart-host" id="st-return-chart"></div>
@@ -6516,6 +6538,7 @@ body.tb-compact-small{
       <div class="stats-chart-head"><span>Ergebnis nach Haltedauer</span><span id="st-hold-chart-count"></span></div>
       <div class="stats-chart-host" id="st-hold-chart"></div>
     </div>
+    </details>
   </div>
 
   <details class="sec stats-calendar-section" id="st-calendar-section">
