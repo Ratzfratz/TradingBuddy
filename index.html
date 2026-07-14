@@ -6158,7 +6158,7 @@ body.tb-compact-small{
 .stats-chart-selection strong{color:var(--text);font-size:.7rem}
 .stats-chart-selection-values{display:flex;align-items:center;gap:12px;white-space:nowrap}
 .stats-chart-crosshair{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4;pointer-events:none}
-.stats-chart-hitarea{fill:transparent;cursor:crosshair;touch-action:pan-y}
+.stats-chart-hitarea{fill:transparent;cursor:crosshair;touch-action:none;-webkit-user-select:none;user-select:none}
 .stats-chart-interactive:focus{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px}
 .stats-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:.75rem;color:var(--muted);font-weight:650}
 .stats-chart-head strong{font-size:.82rem;color:var(--text)}
@@ -12382,6 +12382,7 @@ function showStatsChart(button,panelId){
 
 let _equityChartPoints=[];
 let _equityChartSelectedIndex=0;
+let _equityChartPointerId=null;
 function formatChartDate(value){
   if(!value)return 'Datum unbekannt';
   const date=new Date(value+'T12:00:00');
@@ -12406,8 +12407,18 @@ function selectEquityChartPoint(event){
   _equityChartPoints.forEach((point,index)=>{const next=Math.abs(point.x-viewX);if(next<distance){distance=next;nearest=index;}});
   updateEquityChartSelection(nearest);
 }
+function startEquityChartSelection(event){
+  _equityChartPointerId=event.pointerId;
+  if(event.currentTarget.setPointerCapture)event.currentTarget.setPointerCapture(event.pointerId);
+  selectEquityChartPoint(event);
+}
 function moveEquityChartSelection(event){
-  if(event.pointerType==='mouse')selectEquityChartPoint(event);
+  if(event.pointerType==='mouse'||event.pointerId===_equityChartPointerId)selectEquityChartPoint(event);
+}
+function stopEquityChartSelection(event){
+  if(event.pointerId!==_equityChartPointerId)return;
+  selectEquityChartPoint(event);
+  _equityChartPointerId=null;
 }
 function keyEquityChartSelection(event){
   if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
@@ -12468,7 +12479,7 @@ function renderPerformanceCharts(closed){
     <circle class="stats-chart-dot" id="st-equity-selected-dot" cx="${x(points.length-1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="5"/>
     <text class="stats-chart-label" x="${left}" y="${height-7}">${firstDate}</text>
     <text class="stats-chart-label" x="${width-right}" y="${height-7}" text-anchor="end">${lastDate}</text>
-    <rect class="stats-chart-hitarea" x="${left}" y="${top}" width="${width-left-right}" height="${height-top-bottom}" onclick="selectEquityChartPoint(event)" onpointermove="moveEquityChartSelection(event)"/>
+    <rect class="stats-chart-hitarea" x="${left}" y="${top}" width="${width-left-right}" height="${height-top-bottom}" onpointerdown="startEquityChartSelection(event)" onpointermove="moveEquityChartSelection(event)" onpointerup="stopEquityChartSelection(event)" onpointercancel="stopEquityChartSelection(event)"/>
   </svg></div>`;
   updateEquityChartSelection(_equityChartPoints.length-1);
 
