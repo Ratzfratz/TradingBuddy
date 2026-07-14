@@ -6154,6 +6154,12 @@ body.tb-compact-small{
 .stats-chart-tab[aria-selected="true"]{color:var(--blue);background:var(--card);border-color:var(--blue-border);box-shadow:0 2px 8px rgba(0,0,0,.16)}
 .stats-chart-panel[hidden]{display:none!important}
 .stats-chart-context{margin:-2px 0 8px;color:var(--muted);font-size:.64rem}
+.stats-chart-selection{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;margin:0 0 5px;padding:6px 9px;border-radius:8px;background:var(--input);color:var(--muted);font-size:.64rem}
+.stats-chart-selection strong{color:var(--text);font-size:.7rem}
+.stats-chart-selection-values{display:flex;align-items:center;gap:12px;white-space:nowrap}
+.stats-chart-crosshair{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4;pointer-events:none}
+.stats-chart-hitarea{fill:transparent;cursor:crosshair;touch-action:pan-y}
+.stats-chart-interactive:focus{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px}
 .stats-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:.75rem;color:var(--muted);font-weight:650}
 .stats-chart-head strong{font-size:.82rem;color:var(--text)}
 .stats-chart-host{min-height:116px;min-width:0}
@@ -6181,6 +6187,8 @@ body.tb-compact-small{
 @media (max-width:899px){
   .stats-chart-section{gap:9px;padding:14px 12px!important}
   .stats-chart-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats-chart-selection{align-items:flex-start;flex-direction:column;gap:2px}
+  .stats-chart-selection-values{width:100%;justify-content:space-between;gap:6px}
   .stats-chart-block+.stats-chart-block{padding-top:8px}
   .stats-chart-head{margin-bottom:5px;font-size:.7rem}
   .stats-chart-head strong{font-size:.76rem}
@@ -6528,6 +6536,7 @@ body.tb-compact-small{
     <div class="stats-chart-block stats-chart-panel" id="st-chart-panel-equity" role="tabpanel">
       <div class="stats-chart-head"><span>Entwicklung des Gesamt-P&amp;L</span><strong id="st-equity-chart-value">—</strong></div>
       <div class="stats-chart-context">Kumuliertes Ergebnis aller abgeschlossenen Trades</div>
+      <div class="stats-chart-selection" id="st-equity-selection" aria-live="polite"></div>
       <div class="stats-chart-host" id="st-equity-chart"></div>
     </div>
     <div class="stats-chart-block stats-chart-panel" id="st-chart-panel-assets" role="tabpanel" hidden>
@@ -12371,6 +12380,41 @@ function showStatsChart(button,panelId){
   section.querySelectorAll('.stats-chart-panel').forEach(panel=>panel.hidden=panel.id!==panelId);
 }
 
+let _equityChartPoints=[];
+let _equityChartSelectedIndex=0;
+function formatChartDate(value){
+  if(!value)return 'Datum unbekannt';
+  const date=new Date(value+'T12:00:00');
+  return Number.isNaN(date.getTime())?'Datum unbekannt':date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function updateEquityChartSelection(index){
+  if(!_equityChartPoints.length)return;
+  _equityChartSelectedIndex=Math.max(0,Math.min(_equityChartPoints.length-1,index));
+  const point=_equityChartPoints[_equityChartSelectedIndex];
+  const selection=$('st-equity-selection');
+  if(selection)selection.innerHTML=`<strong>${formatChartDate(point.date)} · Trade ${point.tradeNumber}</strong><span class="stats-chart-selection-values"><span>${fmtEur(point.value)}</span><span>${point.percent>=0?'+':''}${point.percent.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})} %</span></span>`;
+  const line=$('st-equity-crosshair'),dot=$('st-equity-selected-dot');
+  if(line){line.setAttribute('x1',point.x);line.setAttribute('x2',point.x);}
+  if(dot){dot.setAttribute('cx',point.x);dot.setAttribute('cy',point.y);}
+}
+function selectEquityChartPoint(event){
+  if(!_equityChartPoints.length)return;
+  const svg=event.currentTarget.closest('svg')||event.currentTarget;
+  const rect=svg.getBoundingClientRect();
+  const viewX=(event.clientX-rect.left)/rect.width*640;
+  let nearest=0,distance=Infinity;
+  _equityChartPoints.forEach((point,index)=>{const next=Math.abs(point.x-viewX);if(next<distance){distance=next;nearest=index;}});
+  updateEquityChartSelection(nearest);
+}
+function moveEquityChartSelection(event){
+  if(event.pointerType==='mouse')selectEquityChartPoint(event);
+}
+function keyEquityChartSelection(event){
+  if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
+  event.preventDefault();
+  updateEquityChartSelection(_equityChartSelectedIndex+(event.key==='ArrowRight'?1:-1));
+}
+
 function renderPerformanceCharts(closed){
   const equityHost=$('st-equity-chart');
   const assetHost=$('st-asset-chart');
@@ -12394,8 +12438,11 @@ function renderPerformanceCharts(closed){
     return;
   }
 
-  let running=0;
-  const rawPoints=ordered.map((trade,index)=>({index,value:(running+=Number(trade.pnl||0))}));
+  let running=0,runningCapital=0;
+  const rawPoints=ordered.map((trade,index)=>{
+    running+=Number(trade.pnl||0);runningCapital+=Math.max(0,Number(trade.capital||0));
+    return {index,value:running,percent:runningCapital?running/runningCapital*100:0,date:trade.exitDate||trade.entryDate||'',tradeNumber:index+1};
+  });
   const step=Math.max(1,Math.ceil(rawPoints.length/120));
   const points=rawPoints.filter((_,index)=>index%step===0||index===rawPoints.length-1);
   const width=640,height=190,left=8,right=12,top=12,bottom=28;
@@ -12410,14 +12457,20 @@ function renderPerformanceCharts(closed){
   const last=points[points.length-1];
   const total=rawPoints[rawPoints.length-1].value;
   if(totalEl){totalEl.textContent=fmtEur(total);totalEl.style.color=total>=0?'var(--green)':'var(--red)';}
-  if(equityHost)equityHost.innerHTML=`<div class="equity-chart-layout"><div class="equity-axis-labels" aria-hidden="true"><span><small>Höchster Stand</small>${fmtEur(max)}</span><span><small>Tiefster Stand</small>${fmtEur(min)}</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Kumuliertes P und L über ${ordered.length} Trades, Endstand ${fmtEur(total)}">
+  _equityChartPoints=points.map((point,index)=>Object.assign({},point,{x:Number(x(index).toFixed(1)),y:Number(y(point.value).toFixed(1))}));
+  const firstDate=formatChartDate(ordered[0].exitDate||ordered[0].entryDate||'');
+  const lastDate=formatChartDate(ordered[ordered.length-1].exitDate||ordered[ordered.length-1].entryDate||'');
+  if(equityHost)equityHost.innerHTML=`<div class="equity-chart-layout"><div class="equity-axis-labels" aria-hidden="true"><span><small>Höchster Stand</small>${fmtEur(max)}</span><span><small>Tiefster Stand</small>${fmtEur(min)}</span></div><svg class="stats-chart-interactive" viewBox="0 0 ${width} ${height}" role="img" tabindex="0" aria-label="Kumuliertes P und L vom ${firstDate} bis ${lastDate}. Mit Pfeiltasten einzelne Werte auswählen." onkeydown="keyEquityChartSelection(event)">
     <line class="stats-chart-grid" x1="${left}" y1="${top}" x2="${left}" y2="${height-bottom}"/>
     <line class="stats-chart-zero" x1="${left}" y1="${baseY}" x2="${width-right}" y2="${baseY}"/>
     <path class="stats-chart-area" d="${area}"/><path class="stats-chart-line" d="${line}"/>
-    <circle class="stats-chart-dot" cx="${x(points.length-1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="4"/>
-    <text class="stats-chart-label" x="${left}" y="${height-7}">Erster Trade</text>
-    <text class="stats-chart-label" x="${width-right}" y="${height-7}" text-anchor="end">Aktueller Stand · ${ordered.length} Trades</text>
+    <line class="stats-chart-crosshair" id="st-equity-crosshair" x1="${x(points.length-1).toFixed(1)}" y1="${top}" x2="${x(points.length-1).toFixed(1)}" y2="${height-bottom}"/>
+    <circle class="stats-chart-dot" id="st-equity-selected-dot" cx="${x(points.length-1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="5"/>
+    <text class="stats-chart-label" x="${left}" y="${height-7}">${firstDate}</text>
+    <text class="stats-chart-label" x="${width-right}" y="${height-7}" text-anchor="end">${lastDate}</text>
+    <rect class="stats-chart-hitarea" x="${left}" y="${top}" width="${width-left-right}" height="${height-top-bottom}" onclick="selectEquityChartPoint(event)" onpointermove="moveEquityChartSelection(event)"/>
   </svg></div>`;
+  updateEquityChartSelection(_equityChartPoints.length-1);
 
   const labels={stock:'Aktien',etf:'ETF',os:'Optionsscheine',ko:'Knock-outs',faktor:'Faktor',crypto:'Krypto'};
   const grouped={};
