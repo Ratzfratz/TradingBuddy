@@ -6163,11 +6163,11 @@ body.tb-compact-small{
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
 .stats-chart-more{margin:0;border-top:1px solid var(--bd)}
-.stats-chart-more>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0 2px;color:var(--blue);font-size:.72rem;font-weight:700;cursor:pointer;list-style:none}
-.stats-chart-more>summary::-webkit-details-marker{display:none}
-.stats-chart-more>summary::after{content:'›';font-size:1rem;line-height:1;transform:rotate(90deg);transition:transform .15s ease}
-.stats-chart-more[open]>summary::after{transform:rotate(-90deg)}
-.stats-chart-more>.stats-chart-block{margin-top:10px}
+.stats-chart-more-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0 2px;border:0;background:transparent;color:var(--blue);font:700 .72rem var(--f);cursor:pointer;text-align:left}
+.stats-chart-more-toggle::after{content:'›';font-size:1rem;line-height:1;transform:rotate(90deg);transition:transform .15s ease}
+.stats-chart-more-toggle[aria-expanded="true"]::after{transform:rotate(-90deg)}
+.stats-chart-more-content[hidden]{display:none!important}
+.stats-chart-more-content>.stats-chart-block{margin-top:10px}
 .calc-inline-actions{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 24px}
 .calc-desktop-submit{display:none}
 @media (min-width:900px){
@@ -6181,7 +6181,7 @@ body.tb-compact-small{
   .stats-chart-head{margin-bottom:5px;font-size:.7rem}
   .stats-chart-head strong{font-size:.76rem}
   .stats-chart-host{min-height:0}
-  .stats-chart-more>.stats-chart-block+.stats-chart-block{margin-top:9px}
+  .stats-chart-more-content>.stats-chart-block+.stats-chart-block{margin-top:9px}
 }
 @media (min-width:1100px){
   .bottom-stack .calc-dock.show{display:none!important}
@@ -6522,8 +6522,9 @@ body.tb-compact-small{
       <div class="stats-chart-head"><span>P&amp;L nach Produkttyp</span><span id="st-asset-chart-count"></span></div>
       <div class="stats-chart-host" id="st-asset-chart"></div>
     </div>
-    <details class="stats-chart-more">
-      <summary>Weitere Diagramme</summary>
+    <div class="stats-chart-more">
+      <button type="button" class="stats-chart-more-toggle" aria-expanded="false" onclick="toggleMoreStatsCharts(this)">Weitere Diagramme</button>
+      <div class="stats-chart-more-content" hidden>
     <div class="stats-chart-block">
       <div class="stats-chart-head"><span>Rendite-Verteilung</span><span id="st-return-chart-count"></span></div>
       <div class="stats-chart-host" id="st-return-chart"></div>
@@ -6532,7 +6533,8 @@ body.tb-compact-small{
       <div class="stats-chart-head"><span>Ergebnis nach Haltedauer</span><span id="st-hold-chart-count"></span></div>
       <div class="stats-chart-host" id="st-hold-chart"></div>
     </div>
-    </details>
+      </div>
+    </div>
   </div>
 
   <details class="sec stats-calendar-section" id="st-calendar-section">
@@ -12352,6 +12354,14 @@ function renderJournalInsights(closed) {
   renderTagAnalysis('result','st-result-tag-analysis');
 }
 
+function toggleMoreStatsCharts(button){
+  const content=button&&button.nextElementSibling;
+  if(!content)return;
+  const open=button.getAttribute('aria-expanded')!=='true';
+  button.setAttribute('aria-expanded',open?'true':'false');
+  content.hidden=!open;
+}
+
 function renderPerformanceCharts(closed){
   const equityHost=$('st-equity-chart');
   const assetHost=$('st-asset-chart');
@@ -12379,7 +12389,7 @@ function renderPerformanceCharts(closed){
   const rawPoints=ordered.map((trade,index)=>({index,value:(running+=Number(trade.pnl||0))}));
   const step=Math.max(1,Math.ceil(rawPoints.length/120));
   const points=rawPoints.filter((_,index)=>index%step===0||index===rawPoints.length-1);
-  const width=640,height=190,left=48,right=12,top=12,bottom=28;
+  const width=640,height=190,left=112,right=12,top=12,bottom=28;
   const values=[0,...points.map(point=>point.value)];
   const min=Math.min(...values),max=Math.max(...values);
   const span=Math.max(1,max-min);
