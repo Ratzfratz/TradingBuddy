@@ -6144,6 +6144,29 @@ body.tb-compact-small{
   }
   #page-tagebuch .tc-actions{gap:4px!important}
 }
+.stats-chart-section{display:flex;flex-direction:column;gap:12px}
+.stats-chart-section>.sec-title{margin-bottom:0}
+.stats-chart-block{min-width:0}
+.stats-chart-block+.stats-chart-block{padding-top:11px;border-top:1px solid var(--bd)}
+.stats-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;font-size:.66rem;color:var(--muted);font-weight:650}
+.stats-chart-head strong{font-size:.72rem;color:var(--text)}
+.stats-chart-host{min-height:116px;min-width:0}
+.stats-chart-host svg{display:block;width:100%;height:auto;overflow:visible}
+.stats-chart-grid{stroke:var(--bd);stroke-width:1}
+.stats-chart-zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
+.stats-chart-line{fill:none;stroke:var(--blue);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.stats-chart-area{fill:rgba(91,138,245,.09)}
+.stats-chart-dot{fill:var(--blue);stroke:var(--s1);stroke-width:2}
+.stats-chart-label{fill:var(--muted);font:600 10px var(--f)}
+.stats-chart-value{fill:var(--text);font:700 10px var(--f)}
+.stats-chart-bar-positive{fill:var(--green)}
+.stats-chart-bar-negative{fill:var(--red)}
+.stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
+@media (min-width:900px){
+  #view-stats>.stats-chart-section{grid-column:2;grid-row:2}
+  #view-stats>.sec:nth-child(2){grid-column:1;grid-row:2}
+  #view-stats>.stats-calendar-section{grid-column:1/-1!important}
+}
 </style>
 </head>
 <body>
@@ -6455,6 +6478,18 @@ body.tb-compact-small{
         <div class="tax-row" id="st-strat-row" style="display:none"><span class="tax-row-label">Beste Strategie</span><span class="tax-row-value c-green" id="st-best-strat">—</span></div>
       </div>
     </details>
+  </div>
+
+  <div class="sec stats-chart-section" id="st-chart-section">
+    <div class="sec-title">Performance-Diagramme</div>
+    <div class="stats-chart-block">
+      <div class="stats-chart-head"><span>Kumuliertes P&amp;L</span><strong id="st-equity-chart-value">—</strong></div>
+      <div class="stats-chart-host" id="st-equity-chart"></div>
+    </div>
+    <div class="stats-chart-block">
+      <div class="stats-chart-head"><span>P&amp;L nach Produkttyp</span><span id="st-asset-chart-count"></span></div>
+      <div class="stats-chart-host" id="st-asset-chart"></div>
+    </div>
   </div>
 
   <details class="sec stats-calendar-section" id="st-calendar-section">
@@ -12274,6 +12309,71 @@ function renderJournalInsights(closed) {
   renderTagAnalysis('result','st-result-tag-analysis');
 }
 
+function renderPerformanceCharts(closed){
+  const equityHost=$('st-equity-chart');
+  const assetHost=$('st-asset-chart');
+  const totalEl=$('st-equity-chart-value');
+  const countEl=$('st-asset-chart-count');
+  const ordered=(Array.isArray(closed)?closed:[]).slice().sort((a,b)=>(a.exitDate||a.entryDate||'').localeCompare(b.exitDate||b.entryDate||''));
+  const empty='<div class="stats-chart-empty">Noch keine abgeschlossenen Trades in diesem Zeitraum.</div>';
+  if(!ordered.length){
+    if(equityHost)equityHost.innerHTML=empty;
+    if(assetHost)assetHost.innerHTML=empty;
+    if(totalEl)totalEl.textContent='—';
+    if(countEl)countEl.textContent='';
+    return;
+  }
+
+  let running=0;
+  const rawPoints=ordered.map((trade,index)=>({index,value:(running+=Number(trade.pnl||0))}));
+  const step=Math.max(1,Math.ceil(rawPoints.length/120));
+  const points=rawPoints.filter((_,index)=>index%step===0||index===rawPoints.length-1);
+  const width=640,height=190,left=48,right=12,top=12,bottom=28;
+  const values=[0,...points.map(point=>point.value)];
+  const min=Math.min(...values),max=Math.max(...values);
+  const span=Math.max(1,max-min);
+  const x=index=>left+(width-left-right)*(points.length===1?1:index/(points.length-1));
+  const y=value=>top+(height-top-bottom)*(max-value)/span;
+  const line=points.map((point,index)=>`${index?'L':'M'}${x(index).toFixed(1)},${y(point.value).toFixed(1)}`).join(' ');
+  const baseY=y(0).toFixed(1);
+  const area=`${line} L${x(points.length-1).toFixed(1)},${baseY} L${x(0).toFixed(1)},${baseY} Z`;
+  const last=points[points.length-1];
+  const total=rawPoints[rawPoints.length-1].value;
+  if(totalEl){totalEl.textContent=fmtEur(total);totalEl.style.color=total>=0?'var(--green)':'var(--red)';}
+  if(equityHost)equityHost.innerHTML=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Kumuliertes P und L über ${ordered.length} Trades, Endstand ${fmtEur(total)}">
+    <line class="stats-chart-grid" x1="${left}" y1="${top}" x2="${left}" y2="${height-bottom}"/>
+    <line class="stats-chart-zero" x1="${left}" y1="${baseY}" x2="${width-right}" y2="${baseY}"/>
+    <path class="stats-chart-area" d="${area}"/><path class="stats-chart-line" d="${line}"/>
+    <circle class="stats-chart-dot" cx="${x(points.length-1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="4"/>
+    <text class="stats-chart-label" x="${left-7}" y="${top+4}" text-anchor="end">${fmtEur(max)}</text>
+    <text class="stats-chart-label" x="${left-7}" y="${height-bottom+4}" text-anchor="end">${fmtEur(min)}</text>
+    <text class="stats-chart-label" x="${left}" y="${height-7}">1</text>
+    <text class="stats-chart-label" x="${width-right}" y="${height-7}" text-anchor="end">${ordered.length} Trades</text>
+  </svg>`;
+
+  const labels={stock:'Aktien',etf:'ETF',os:'Optionsscheine',ko:'Knock-outs',faktor:'Faktor',crypto:'Krypto'};
+  const grouped={};
+  ordered.forEach(trade=>{
+    const key=normalizedAssetType(trade)||'other';
+    if(!grouped[key])grouped[key]={pnl:0,count:0};
+    grouped[key].pnl+=Number(trade.pnl||0);grouped[key].count++;
+  });
+  const assets=Object.entries(grouped).sort((a,b)=>Math.abs(b[1].pnl)-Math.abs(a[1].pnl)).slice(0,6);
+  const maxAbs=Math.max(1,...assets.map(([,data])=>Math.abs(data.pnl)));
+  const barWidth=240,rowHeight=29,assetHeight=assets.length*rowHeight+18,zeroX=370;
+  if(countEl)countEl.textContent=assets.length+' Kategorien';
+  if(assetHost)assetHost.innerHTML=`<svg viewBox="0 0 640 ${assetHeight}" role="img" aria-label="P und L nach Produkttyp">
+    <line class="stats-chart-zero" x1="${zeroX}" y1="3" x2="${zeroX}" y2="${assetHeight-12}"/>
+    ${assets.map(([key,data],index)=>{
+      const length=Math.max(2,Math.abs(data.pnl)/maxAbs*barWidth);
+      const positive=data.pnl>=0;
+      const bx=positive?zeroX:zeroX-length;
+      const by=index*rowHeight+5;
+      return `<text class="stats-chart-label" x="4" y="${by+12}">${mergeEscapeHtml(labels[key]||'Sonstige')} · ${data.count}</text><rect class="${positive?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${bx.toFixed(1)}" y="${by}" width="${length.toFixed(1)}" height="15" rx="3"/><text class="stats-chart-value" x="${positive?Math.min(628,bx+length+7):Math.max(4,bx-7)}" y="${by+12}" text-anchor="${positive?'start':'end'}">${fmtEur(data.pnl)}</text>`;
+    }).join('')}
+  </svg>`;
+}
+
 function renderStats() {
   loadTrades();
   renderStatsTagFilters();
@@ -12339,6 +12439,7 @@ function renderStats() {
   const wins   = closed.filter(t => t.outcome === 'win');
   const losses = closed.filter(t => t.outcome === 'loss');
   const filtList = _filterByPeriod(list, _perfPeriod, _statsYear);
+  renderPerformanceCharts(closed);
   renderJournalInsights(closed);
 
   const winValues  = wins.map(t => Number(t.pnl || 0));
