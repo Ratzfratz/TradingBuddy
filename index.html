@@ -6148,8 +6148,8 @@ body.tb-compact-small{
 .stats-chart-section>.sec-title{margin-bottom:0}
 .stats-chart-block{min-width:0}
 .stats-chart-block+.stats-chart-block{padding-top:11px;border-top:1px solid var(--bd)}
-.stats-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;font-size:.66rem;color:var(--muted);font-weight:650}
-.stats-chart-head strong{font-size:.72rem;color:var(--text)}
+.stats-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:.75rem;color:var(--muted);font-weight:650}
+.stats-chart-head strong{font-size:.82rem;color:var(--text)}
 .stats-chart-host{min-height:116px;min-width:0}
 .stats-chart-host svg{display:block;width:100%;height:auto;overflow:visible}
 .stats-chart-grid{stroke:var(--bd);stroke-width:1}
@@ -6157,8 +6157,8 @@ body.tb-compact-small{
 .stats-chart-line{fill:none;stroke:var(--blue);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .stats-chart-area{fill:rgba(91,138,245,.09)}
 .stats-chart-dot{fill:var(--blue);stroke:var(--s1);stroke-width:2}
-.stats-chart-label{fill:var(--muted);font:600 10px var(--f)}
-.stats-chart-value{fill:var(--text);font:700 10px var(--f)}
+.stats-chart-label{fill:var(--muted);font:600 17px var(--f)}
+.stats-chart-value{fill:var(--text);font:700 17px var(--f)}
 .stats-chart-bar-positive{fill:var(--green)}
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
@@ -6489,6 +6489,14 @@ body.tb-compact-small{
     <div class="stats-chart-block">
       <div class="stats-chart-head"><span>P&amp;L nach Produkttyp</span><span id="st-asset-chart-count"></span></div>
       <div class="stats-chart-host" id="st-asset-chart"></div>
+    </div>
+    <div class="stats-chart-block">
+      <div class="stats-chart-head"><span>Rendite-Verteilung</span><span id="st-return-chart-count"></span></div>
+      <div class="stats-chart-host" id="st-return-chart"></div>
+    </div>
+    <div class="stats-chart-block">
+      <div class="stats-chart-head"><span>Ergebnis nach Haltedauer</span><span id="st-hold-chart-count"></span></div>
+      <div class="stats-chart-host" id="st-hold-chart"></div>
     </div>
   </div>
 
@@ -12312,15 +12320,23 @@ function renderJournalInsights(closed) {
 function renderPerformanceCharts(closed){
   const equityHost=$('st-equity-chart');
   const assetHost=$('st-asset-chart');
+  const returnHost=$('st-return-chart');
+  const holdHost=$('st-hold-chart');
   const totalEl=$('st-equity-chart-value');
   const countEl=$('st-asset-chart-count');
+  const returnCountEl=$('st-return-chart-count');
+  const holdCountEl=$('st-hold-chart-count');
   const ordered=(Array.isArray(closed)?closed:[]).slice().sort((a,b)=>(a.exitDate||a.entryDate||'').localeCompare(b.exitDate||b.entryDate||''));
   const empty='<div class="stats-chart-empty">Noch keine abgeschlossenen Trades in diesem Zeitraum.</div>';
   if(!ordered.length){
     if(equityHost)equityHost.innerHTML=empty;
     if(assetHost)assetHost.innerHTML=empty;
+    if(returnHost)returnHost.innerHTML=empty;
+    if(holdHost)holdHost.innerHTML=empty;
     if(totalEl)totalEl.textContent='—';
     if(countEl)countEl.textContent='';
+    if(returnCountEl)returnCountEl.textContent='';
+    if(holdCountEl)holdCountEl.textContent='';
     return;
   }
 
@@ -12372,6 +12388,64 @@ function renderPerformanceCharts(closed){
       return `<text class="stats-chart-label" x="4" y="${by+12}">${mergeEscapeHtml(labels[key]||'Sonstige')} · ${data.count}</text><rect class="${positive?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${bx.toFixed(1)}" y="${by}" width="${length.toFixed(1)}" height="15" rx="3"/><text class="stats-chart-value" x="${positive?Math.min(628,bx+length+7):Math.max(4,bx-7)}" y="${by+12}" text-anchor="${positive?'start':'end'}">${fmtEur(data.pnl)}</text>`;
     }).join('')}
   </svg>`;
+
+  const returnBins=[
+    {label:'< −20%',test:value=>value<-20,kind:'negative'},
+    {label:'−20 bis −5%',test:value=>value>=-20&&value<-5,kind:'negative'},
+    {label:'−5 bis 0%',test:value=>value>=-5&&value<0,kind:'negative'},
+    {label:'0 bis 5%',test:value=>value>=0&&value<5,kind:'positive'},
+    {label:'5 bis 20%',test:value=>value>=5&&value<20,kind:'positive'},
+    {label:'> 20%',test:value=>value>=20,kind:'positive'}
+  ].map(bin=>Object.assign(bin,{count:0}));
+  let returnSamples=0;
+  ordered.forEach(trade=>{
+    const value=Number(trade.ret);
+    if(!Number.isFinite(value))return;
+    const bin=returnBins.find(item=>item.test(value));
+    if(bin){bin.count++;returnSamples++;}
+  });
+  if(returnCountEl)returnCountEl.textContent=returnSamples+' Trades';
+  if(returnHost){
+    const maxCount=Math.max(1,...returnBins.map(bin=>bin.count));
+    const chartW=640,chartH=220,chartLeft=36,chartRight=10,chartTop=20,chartBottom=52;
+    const slot=(chartW-chartLeft-chartRight)/returnBins.length;
+    returnHost.innerHTML=returnSamples?`<svg viewBox="0 0 ${chartW} ${chartH}" role="img" aria-label="Verteilung der Renditen in sechs Klassen">
+      <line class="stats-chart-grid" x1="${chartLeft}" y1="${chartH-chartBottom}" x2="${chartW-chartRight}" y2="${chartH-chartBottom}"/>
+      ${returnBins.map((bin,index)=>{
+        const h=bin.count/maxCount*(chartH-chartTop-chartBottom);
+        const x=chartLeft+index*slot+10,y=chartH-chartBottom-h;
+        return `<rect class="${bin.kind==='positive'?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(18,slot-20).toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(x+(slot-20)/2).toFixed(1)}" y="${Math.max(16,y-6).toFixed(1)}" text-anchor="middle">${bin.count}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-25}" text-anchor="middle">${bin.label}</text>`;
+      }).join('')}
+    </svg>`:empty;
+  }
+
+  const holdBins=[
+    {label:'0 Tage',min:0,max:0,total:0,count:0},
+    {label:'1–3 Tage',min:1,max:3,total:0,count:0},
+    {label:'4–7 Tage',min:4,max:7,total:0,count:0},
+    {label:'8–30 Tage',min:8,max:30,total:0,count:0},
+    {label:'> 30 Tage',min:31,max:Infinity,total:0,count:0}
+  ];
+  ordered.forEach(trade=>{
+    if(!trade.entryDate||!trade.exitDate)return;
+    const days=Math.max(0,Math.round((new Date(trade.exitDate)-new Date(trade.entryDate))/86400000));
+    const bin=holdBins.find(item=>days>=item.min&&days<=item.max);
+    if(bin){bin.total+=Number(trade.pnl||0);bin.count++;}
+  });
+  const holdSamples=holdBins.reduce((sum,bin)=>sum+bin.count,0);
+  if(holdCountEl)holdCountEl.textContent=holdSamples+' Trades';
+  if(holdHost){
+    const avgs=holdBins.map(bin=>bin.count?bin.total/bin.count:0);
+    const maxAvg=Math.max(1,...avgs.map(Math.abs));
+    const chartW=640,chartH=230,zeroY=104,chartLeft=46,chartRight=12,slot=(chartW-chartLeft-chartRight)/holdBins.length,maxBar=75;
+    holdHost.innerHTML=holdSamples?`<svg viewBox="0 0 ${chartW} ${chartH}" role="img" aria-label="Durchschnittliches P und L nach Haltedauer">
+      <line class="stats-chart-zero" x1="${chartLeft}" y1="${zeroY}" x2="${chartW-chartRight}" y2="${zeroY}"/>
+      ${holdBins.map((bin,index)=>{
+        const avg=avgs[index],h=Math.abs(avg)/maxAvg*maxBar,x=chartLeft+index*slot+13,y=avg>=0?zeroY-h:zeroY;
+        return `<rect class="${avg>=0?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(20,slot-26).toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${avg>=0?Math.max(17,y-7):Math.min(200,y+h+19)}" text-anchor="middle">${bin.count?fmtEur(avg):'—'}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-31}" text-anchor="middle">${bin.label}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-10}" text-anchor="middle">${bin.count} Trades</text>`;
+      }).join('')}
+    </svg>`:empty;
+  }
 }
 
 function renderStats() {
@@ -15381,8 +15455,11 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 
   function syncSeparatorPosition(){
-    // Wird in setup() durch schnellere direkte Variante überschrieben
-    document.documentElement.style.setProperty('--jf-panel-height',(headHeight+currentHeight)+'px');
+    // Die Seite kann beim ersten Messen noch ausgeblendet sein. In diesem Fall
+    // darf eine Höhe von 0 den reservierten Platz unter dem Filter nicht löschen.
+    var visibleHeadHeight=head?head.getBoundingClientRect().height:0;
+    if(visibleHeadHeight>0) headHeight=visibleHeadHeight;
+    document.documentElement.style.setProperty('--jf-panel-height',(Math.max(46,headHeight||0)+currentHeight)+'px');
   }
 
   function syncDuringChromeTransition(){
@@ -15893,6 +15970,7 @@ document.addEventListener('DOMContentLoaded',function(){
     document.addEventListener('pagechange',function(ev){
       cancelAnimation(); cancelDeferredFilterOpen(); clearTimeout(scrollEndTimer);
       if(ev.detail==='tagebuch'){
+        headHeight=Math.max(46,head.getBoundingClientRect().height||headHeight||0);
         lastScrollY=window.scrollY||0; readExpandedHeight();
         if(compactJournalMode()) closeFilter(true);
         else applyHeight(frozenHeight==null?currentHeight:frozenHeight);
