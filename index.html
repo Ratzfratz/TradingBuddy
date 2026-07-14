@@ -17439,10 +17439,28 @@ async function _awIgnoreEquivalentSectionConflicts(decision,tradeDoc=null,settin
   return decision;
 }
 
+function _awPreferClearlyNewerSection(decision,tradeDoc=null,settingsDoc=null){
+  const clearGap=60000;
+  if(decision.tradeLocal&&decision.tradeCloud){
+    const localTs=_awLocalMs('tb_local_saved_at');
+    const cloudTs=_awDocMs(tradeDoc);
+    if(localTs>cloudTs+clearGap)decision.tradeCloud=false;
+    else if(cloudTs>localTs+clearGap)decision.tradeLocal=false;
+  }
+  if(decision.settingsLocal&&decision.settingsCloud){
+    const localTs=_awLocalMs('tb_settings_saved_at');
+    const cloudTs=_awDocMs(settingsDoc);
+    if(localTs>cloudTs+clearGap)decision.settingsCloud=false;
+    else if(cloudTs>localTs+clearGap)decision.settingsLocal=false;
+  }
+  return decision;
+}
+
 async function _awHandleSyncDecision(tradeDoc=null,settingsDoc=null,source='auto'){
   if(!_awUser||!_awDocId||!_awEncKey)return false;
   const sectionDecision=_awResolveSectionSyncDecision(tradeDoc,settingsDoc);
   await _awIgnoreEquivalentSectionConflicts(sectionDecision,tradeDoc,settingsDoc);
+  _awPreferClearlyNewerSection(sectionDecision,tradeDoc,settingsDoc);
   if((sectionDecision.tradeLocal&&sectionDecision.tradeCloud)||(sectionDecision.settingsLocal&&sectionDecision.settingsCloud)){
     _awShowConflictChoice(tradeDoc,settingsDoc,source);
     return true;
