@@ -6148,6 +6148,12 @@ body.tb-compact-small{
 .stats-chart-section>.sec-title{margin-bottom:0}
 .stats-chart-block{min-width:0}
 .stats-chart-block+.stats-chart-block{padding-top:11px;border-top:1px solid var(--bd)}
+.stats-chart-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:4px;background:var(--input);border:1px solid var(--bd);border-radius:12px}
+.stats-chart-tab{min-width:0;padding:9px 8px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);font:700 .68rem var(--f);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.stats-chart-tab:hover{color:var(--text);background:rgba(255,255,255,.035)}
+.stats-chart-tab[aria-selected="true"]{color:var(--blue);background:var(--card);border-color:var(--blue-border);box-shadow:0 2px 8px rgba(0,0,0,.16)}
+.stats-chart-panel[hidden]{display:none!important}
+.stats-chart-context{margin:-2px 0 8px;color:var(--muted);font-size:.64rem}
 .stats-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:.75rem;color:var(--muted);font-weight:650}
 .stats-chart-head strong{font-size:.82rem;color:var(--text)}
 .stats-chart-host{min-height:116px;min-width:0}
@@ -6162,16 +6168,9 @@ body.tb-compact-small{
 .stats-chart-bar-positive{fill:var(--green)}
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
-.stats-chart-more{margin:0;border-top:1px solid var(--bd)}
-.stats-chart-more-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0 2px;border:0;background:transparent;color:var(--blue);font:700 .72rem var(--f);cursor:pointer;text-align:left}
-.stats-chart-more-toggle::after{content:'›';font-size:1rem;line-height:1;transform:rotate(90deg);transition:transform .15s ease}
-.stats-chart-more-toggle[aria-expanded="true"]::after{transform:rotate(-90deg)}
-.stats-chart-more-content[hidden]{display:none!important}
-.stats-chart-more-content:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-#view-stats>.stats-chart-more-content{grid-column:1/-1}
-.stats-chart-more-content>.stats-chart-block{margin-top:0;min-width:0}
 .equity-chart-layout{display:grid;grid-template-columns:92px minmax(0,1fr);align-items:stretch;min-width:0}
-.equity-axis-labels{display:flex;flex-direction:column;justify-content:space-between;padding:3px 8px 25px 0;color:var(--muted);font-size:.68rem;font-weight:650;text-align:right;white-space:nowrap}
+.equity-axis-labels{display:flex;flex-direction:column;justify-content:space-between;padding:3px 8px 30px 0;color:var(--muted);font-size:.65rem;font-weight:650;text-align:right;white-space:nowrap}
+.equity-axis-labels small{display:block;font-size:.55rem;font-weight:600;letter-spacing:.02em;opacity:.78}
 .calc-inline-actions{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 24px}
 .calc-desktop-submit{display:none}
 @media (min-width:900px){
@@ -6181,12 +6180,11 @@ body.tb-compact-small{
 }
 @media (max-width:899px){
   .stats-chart-section{gap:9px;padding:14px 12px!important}
+  .stats-chart-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stats-chart-block+.stats-chart-block{padding-top:8px}
   .stats-chart-head{margin-bottom:5px;font-size:.7rem}
   .stats-chart-head strong{font-size:.76rem}
   .stats-chart-host{min-height:0}
-  .stats-chart-more-content>.stats-chart-block+.stats-chart-block{margin-top:9px}
-  .stats-chart-more-content:not([hidden]){grid-template-columns:1fr;gap:9px}
   .equity-chart-layout{grid-template-columns:78px minmax(0,1fr)}
   .equity-axis-labels{font-size:.64rem;padding-right:6px}
 }
@@ -6521,26 +6519,30 @@ body.tb-compact-small{
 
   <div class="sec stats-chart-section" id="st-chart-section">
     <div class="sec-title">Performance-Diagramme</div>
-    <div class="stats-chart-block">
-      <div class="stats-chart-head"><span>Kumuliertes P&amp;L</span><strong id="st-equity-chart-value">—</strong></div>
+    <div class="stats-chart-tabs" role="tablist" aria-label="Diagramm auswählen">
+      <button type="button" class="stats-chart-tab" role="tab" aria-selected="true" aria-controls="st-chart-panel-equity" onclick="showStatsChart(this,'st-chart-panel-equity')">Verlauf</button>
+      <button type="button" class="stats-chart-tab" role="tab" aria-selected="false" aria-controls="st-chart-panel-assets" onclick="showStatsChart(this,'st-chart-panel-assets')">Produkttypen</button>
+      <button type="button" class="stats-chart-tab" role="tab" aria-selected="false" aria-controls="st-chart-panel-returns" onclick="showStatsChart(this,'st-chart-panel-returns')">Rendite</button>
+      <button type="button" class="stats-chart-tab" role="tab" aria-selected="false" aria-controls="st-chart-panel-hold" onclick="showStatsChart(this,'st-chart-panel-hold')">Haltedauer</button>
+    </div>
+    <div class="stats-chart-block stats-chart-panel" id="st-chart-panel-equity" role="tabpanel">
+      <div class="stats-chart-head"><span>Entwicklung des Gesamt-P&amp;L</span><strong id="st-equity-chart-value">—</strong></div>
+      <div class="stats-chart-context">Kumuliertes Ergebnis aller abgeschlossenen Trades</div>
       <div class="stats-chart-host" id="st-equity-chart"></div>
     </div>
-    <div class="stats-chart-block">
-      <div class="stats-chart-head"><span>P&amp;L nach Produkttyp</span><span id="st-asset-chart-count"></span></div>
+    <div class="stats-chart-block stats-chart-panel" id="st-chart-panel-assets" role="tabpanel" hidden>
+      <div class="stats-chart-head"><span>Gesamt-P&amp;L nach Produkttyp</span><span id="st-asset-chart-count"></span></div>
+      <div class="stats-chart-context">Summe in Euro · Anzahl Trades je Produkttyp</div>
       <div class="stats-chart-host" id="st-asset-chart"></div>
     </div>
-    <div class="stats-chart-more">
-      <button type="button" class="stats-chart-more-toggle" aria-expanded="false" aria-controls="st-more-charts" onclick="toggleMoreStatsCharts(this)">Weitere Diagramme</button>
-    </div>
-  </div>
-
-  <div class="sec stats-chart-more-content" id="st-more-charts" hidden>
-    <div class="stats-chart-block">
-      <div class="stats-chart-head"><span>Rendite-Verteilung</span><span id="st-return-chart-count"></span></div>
+    <div class="stats-chart-block stats-chart-panel" id="st-chart-panel-returns" role="tabpanel" hidden>
+      <div class="stats-chart-head"><span>Trades nach Renditeklasse</span><span id="st-return-chart-count"></span></div>
+      <div class="stats-chart-context">Balkenhöhe = Anzahl abgeschlossener Trades</div>
       <div class="stats-chart-host" id="st-return-chart"></div>
     </div>
-    <div class="stats-chart-block">
-      <div class="stats-chart-head"><span>Ergebnis nach Haltedauer</span><span id="st-hold-chart-count"></span></div>
+    <div class="stats-chart-block stats-chart-panel" id="st-chart-panel-hold" role="tabpanel" hidden>
+      <div class="stats-chart-head"><span>Ø P&amp;L je Trade nach Haltedauer</span><span id="st-hold-chart-count"></span></div>
+      <div class="stats-chart-context">Durchschnittliches Ergebnis in Euro</div>
       <div class="stats-chart-host" id="st-hold-chart"></div>
     </div>
   </div>
@@ -12362,12 +12364,11 @@ function renderJournalInsights(closed) {
   renderTagAnalysis('result','st-result-tag-analysis');
 }
 
-function toggleMoreStatsCharts(button){
-  const content=button&&document.getElementById(button.getAttribute('aria-controls')||'st-more-charts');
-  if(!content)return;
-  const open=button.getAttribute('aria-expanded')!=='true';
-  button.setAttribute('aria-expanded',open?'true':'false');
-  content.hidden=!open;
+function showStatsChart(button,panelId){
+  const section=button&&button.closest('.stats-chart-section');
+  if(!section)return;
+  section.querySelectorAll('.stats-chart-tab').forEach(tab=>tab.setAttribute('aria-selected',tab===button?'true':'false'));
+  section.querySelectorAll('.stats-chart-panel').forEach(panel=>panel.hidden=panel.id!==panelId);
 }
 
 function renderPerformanceCharts(closed){
@@ -12409,13 +12410,13 @@ function renderPerformanceCharts(closed){
   const last=points[points.length-1];
   const total=rawPoints[rawPoints.length-1].value;
   if(totalEl){totalEl.textContent=fmtEur(total);totalEl.style.color=total>=0?'var(--green)':'var(--red)';}
-  if(equityHost)equityHost.innerHTML=`<div class="equity-chart-layout"><div class="equity-axis-labels" aria-hidden="true"><span>${fmtEur(max)}</span><span>${fmtEur(min)}</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Kumuliertes P und L über ${ordered.length} Trades, Endstand ${fmtEur(total)}">
+  if(equityHost)equityHost.innerHTML=`<div class="equity-chart-layout"><div class="equity-axis-labels" aria-hidden="true"><span><small>Höchster Stand</small>${fmtEur(max)}</span><span><small>Tiefster Stand</small>${fmtEur(min)}</span></div><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Kumuliertes P und L über ${ordered.length} Trades, Endstand ${fmtEur(total)}">
     <line class="stats-chart-grid" x1="${left}" y1="${top}" x2="${left}" y2="${height-bottom}"/>
     <line class="stats-chart-zero" x1="${left}" y1="${baseY}" x2="${width-right}" y2="${baseY}"/>
     <path class="stats-chart-area" d="${area}"/><path class="stats-chart-line" d="${line}"/>
     <circle class="stats-chart-dot" cx="${x(points.length-1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="4"/>
-    <text class="stats-chart-label" x="${left}" y="${height-7}">1</text>
-    <text class="stats-chart-label" x="${width-right}" y="${height-7}" text-anchor="end">${ordered.length} Trades</text>
+    <text class="stats-chart-label" x="${left}" y="${height-7}">Erster Trade</text>
+    <text class="stats-chart-label" x="${width-right}" y="${height-7}" text-anchor="end">Aktueller Stand · ${ordered.length} Trades</text>
   </svg></div>`;
 
   const labels={stock:'Aktien',etf:'ETF',os:'Optionsscheine',ko:'Knock-outs',faktor:'Faktor',crypto:'Krypto'};
@@ -12439,12 +12440,12 @@ function renderPerformanceCharts(closed){
   </svg>`;
 
   const returnBins=[
-    {label:'< −20%',test:value=>value<-20,kind:'negative'},
+    {label:'unter −20%',test:value=>value<-20,kind:'negative'},
     {label:'−20 bis −5%',test:value=>value>=-20&&value<-5,kind:'negative'},
     {label:'−5 bis 0%',test:value=>value>=-5&&value<0,kind:'negative'},
-    {label:'0 bis 5%',test:value=>value>=0&&value<5,kind:'positive'},
-    {label:'5 bis 20%',test:value=>value>=5&&value<20,kind:'positive'},
-    {label:'> 20%',test:value=>value>=20,kind:'positive'}
+    {label:'0 bis +5%',test:value=>value>=0&&value<5,kind:'positive'},
+    {label:'+5 bis +20%',test:value=>value>=5&&value<20,kind:'positive'},
+    {label:'über +20%',test:value=>value>=20,kind:'positive'}
   ].map(bin=>Object.assign(bin,{count:0}));
   let returnSamples=0;
   ordered.forEach(trade=>{
@@ -12469,11 +12470,11 @@ function renderPerformanceCharts(closed){
   }
 
   const holdBins=[
-    {label:'0 Tage',min:0,max:0,total:0,count:0},
+    {label:'Intraday',min:0,max:0,total:0,count:0},
     {label:'1–3 Tage',min:1,max:3,total:0,count:0},
     {label:'4–7 Tage',min:4,max:7,total:0,count:0},
     {label:'8–30 Tage',min:8,max:30,total:0,count:0},
-    {label:'> 30 Tage',min:31,max:Infinity,total:0,count:0}
+    {label:'Über 30 Tage',min:31,max:Infinity,total:0,count:0}
   ];
   ordered.forEach(trade=>{
     if(!trade.entryDate||!trade.exitDate)return;
