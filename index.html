@@ -6175,7 +6175,10 @@ body.tb-compact-small{
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
 .equity-chart-layout{display:grid;grid-template-columns:92px minmax(0,1fr);align-items:stretch;min-width:0}
-.equity-axis-labels{display:flex;flex-direction:column;justify-content:space-between;padding:3px 8px 34px 0;color:var(--muted);font-size:.65rem;font-weight:650;text-align:right;white-space:nowrap}
+.equity-axis-labels{position:relative;color:var(--muted);font-size:.65rem;font-weight:650;text-align:right;white-space:nowrap}
+.equity-axis-labels>span{position:absolute;right:8px}
+.equity-axis-labels>span:first-child{top:3.53%;transform:translateY(-50%)}
+.equity-axis-labels>span:last-child{bottom:9.41%;transform:translateY(50%)}
 .equity-axis-labels small{display:block;font-size:.55rem;font-weight:600;letter-spacing:.02em;opacity:.78}
 .calc-inline-actions{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 24px}
 .calc-desktop-submit{display:none}
@@ -6194,7 +6197,8 @@ body.tb-compact-small{
   .stats-chart-head strong{font-size:.76rem}
   .stats-chart-host{min-height:0}
   .equity-chart-layout{grid-template-columns:78px minmax(0,1fr)}
-  .equity-axis-labels{font-size:.64rem;padding-right:6px}
+  .equity-axis-labels{font-size:.64rem}
+  .equity-axis-labels>span{right:6px}
 }
 @media (min-width:1100px){
   .bottom-stack .calc-dock.show{display:none!important}
@@ -12456,7 +12460,7 @@ function renderPerformanceCharts(closed){
   });
   const step=Math.max(1,Math.ceil(rawPoints.length/120));
   const points=rawPoints.filter((_,index)=>index%step===0||index===rawPoints.length-1);
-  const width=640,height=250,left=8,right=12,top=12,bottom=32;
+  const width=640,height=340,left=8,right=12,top=12,bottom=32;
   const values=[0,...points.map(point=>point.value)];
   const min=Math.min(...values),max=Math.max(...values);
   const span=Math.max(1,max-min);
@@ -13472,8 +13476,7 @@ function installSafeSheetInteraction(prefix, closeFn){
   });
   backdrop.addEventListener('pointercancel',function(){tapMoved=true;});
 
-  // Sheet nur über eine bewusst im oberen Griffbereich gestartete Abwärtsgeste schließen.
-  // Ein Scrollvorgang, der erst später den Seitenanfang erreicht, kann dadurch nicht schließen.
+  // Eine klare Abwärtsgeste darf überall im Sheet beginnen.
   let startX=0,startY=0,lastY=0,dragY=0,dragArmed=false,dragging=false;
   const resetDrag=function(){
     dragArmed=false;dragging=false;dragY=0;
@@ -13485,11 +13488,11 @@ function installSafeSheetInteraction(prefix, closeFn){
   sheet.addEventListener('touchstart',function(e){
     if(e.touches.length!==1)return;
     const t=e.touches[0];
-    const rect=sheet.getBoundingClientRect();
     startX=t.clientX;startY=t.clientY;lastY=t.clientY;dragY=0;dragging=false;
-    const inHandleZone=(t.clientY-rect.top)<=96;
-    const fromStickyHead=!!(e.target&&e.target.closest&&e.target.closest('.overlay-sticky-head'));
-    dragArmed=inHandleZone && (body.scrollTop<=1 || fromStickyHead);
+    dragArmed=body.scrollTop<=16;
+    const nested=e.target&&e.target.closest?e.target.closest('.merge-list'):null;
+    if(nested&&nested.scrollTop>16)dragArmed=false;
+    if(dragArmed)body.scrollTop=0;
   },{passive:true});
 
   sheet.addEventListener('touchmove',function(e){
@@ -13518,15 +13521,14 @@ function installSafeSheetInteraction(prefix, closeFn){
 
     e.preventDefault();
     dragY=Math.max(0,totalY);
-    const eased=dragY<=180?dragY:180+(dragY-180)*.35;
     sheet.style.transition='none';
-    sheet.style.transform='translateY('+eased+'px)';
-    backdrop.style.opacity=String(Math.max(0.25,1-eased/360));
+    sheet.style.transform='translateY('+dragY+'px)';
+    backdrop.style.opacity=String(Math.max(0.18,1-dragY/360));
   },{passive:false});
 
   sheet.addEventListener('touchend',function(){
     if(!dragArmed&&!dragging)return;
-    const shouldClose=dragging&&dragY>=110;
+    const shouldClose=dragging&&dragY>=90;
     dragArmed=false;dragging=false;
     if(shouldClose){
       closeFn();
@@ -13541,19 +13543,21 @@ function installSafeSheetInteraction(prefix, closeFn){
   sheet.addEventListener('touchcancel',resetDrag,{passive:true});
 }
 
-// Trade-bearbeiten-Overlay: Titelzeile bleibt greifbar und kann jederzeit nach unten gezogen werden.
+// Trade-bearbeiten-Overlay: Abwärtsgeste kann überall im Overlay beginnen.
 (function(){
   var modal=document.getElementById('modal');
   var overlay=document.getElementById('modal-overlay');
-  var head=modal&&modal.querySelector('.modal-title');
-  if(!modal||!overlay||!head)return;
-  var startY=0,startX=0,dragY=0,dragging=false;
-  head.addEventListener('touchstart',function(e){
+  if(!modal||!overlay)return;
+  var startY=0,startX=0,dragY=0,dragging=false,dragArmed=false;
+  modal.addEventListener('touchstart',function(e){
     if(e.touches.length!==1)return;
     startY=e.touches[0].clientY;startX=e.touches[0].clientX;dragY=0;dragging=false;
+    dragArmed=modal.scrollTop<=16;
+    if(dragArmed)modal.scrollTop=0;
   },{passive:true});
-  head.addEventListener('touchmove',function(e){
+  modal.addEventListener('touchmove',function(e){
     if(e.touches.length!==1)return;
+    if(!dragArmed)return;
     var dy=e.touches[0].clientY-startY;
     var dx=Math.abs(e.touches[0].clientX-startX);
     if(dy<0||dx>Math.max(24,dy*.8))return;
@@ -13563,14 +13567,15 @@ function installSafeSheetInteraction(prefix, closeFn){
     modal.style.transition='none';modal.style.transform='translateY('+dy+'px)';
     overlay.style.background='rgba(0,0,0,'+Math.max(.18,.7-dy/420)+')';
   },{passive:false});
-  head.addEventListener('touchend',function(){
+  modal.addEventListener('touchend',function(){
+    if(!dragArmed){dragging=false;dragY=0;return;}
     if(dragging&&dragY>=90){
       modal.style.transform='';modal.style.transition='';overlay.style.background='';closeModalDirect();
     }else if(dragging){
       modal.style.transition='transform .2s ease';modal.style.transform='translateY(0)';overlay.style.background='';
       setTimeout(function(){modal.style.transition='';modal.style.transform='';},210);
     }
-    dragging=false;dragY=0;
+    dragArmed=false;dragging=false;dragY=0;
   },{passive:true});
 })();
 
@@ -15127,7 +15132,7 @@ function _installSettingsDrag(){
   bd.addEventListener('pointerup',function(e){if(!tapMoved&&Math.abs(e.clientX-tapX)<=8&&Math.abs(e.clientY-tapY)<=8)closeSettings();});
   bd.addEventListener('pointercancel',function(){tapMoved=true;});
 
-  // Sheet: Runterziehen im oberen Griffbereich → schließen
+  // Sheet: Eine klare Abwärtsgeste kann überall beginnen.
   var startX=0,startY=0,lastY=0,dragY=0,dragArmed=false,dragging=false;
   var resetDrag=function(){
     dragArmed=false;dragging=false;dragY=0;
@@ -15138,12 +15143,12 @@ function _installSettingsDrag(){
   sh.addEventListener('touchstart',function(e){
     if(e.touches.length!==1)return;
     var t=e.touches[0];
-    var rect=sh.getBoundingClientRect();
     startX=t.clientX;startY=t.clientY;lastY=t.clientY;dragY=0;dragging=false;
-    var inHandleZone=(t.clientY-rect.top)<=96;
     var body=getActiveScrollEl();
-    var fromStickyHead=!!(e.target&&e.target.closest&&e.target.closest('.overlay-sticky-head'));
-    dragArmed=inHandleZone&&(!body||body.scrollTop<=1||fromStickyHead);
+    dragArmed=!body||body.scrollTop<=16;
+    var nested=e.target&&e.target.closest?e.target.closest('.merge-list'):null;
+    if(nested&&nested.scrollTop>16)dragArmed=false;
+    if(dragArmed&&body)body.scrollTop=0;
   },{passive:true});
 
   sh.addEventListener('touchmove',function(e){
@@ -15174,14 +15179,13 @@ function _installSettingsDrag(){
 
     e.preventDefault();
     dragY=Math.max(0,totalY);
-    var eased=dragY<=180?dragY:180+(dragY-180)*.35;
-    sh.style.transition='none';sh.style.transform='translateY('+eased+'px)';
-    bd.style.opacity=String(Math.max(0.25,1-eased/360));
+    sh.style.transition='none';sh.style.transform='translateY('+dragY+'px)';
+    bd.style.opacity=String(Math.max(0.18,1-dragY/360));
   },{passive:false});
 
   sh.addEventListener('touchend',function(){
     if(!dragArmed&&!dragging)return;
-    var shouldClose=dragging&&dragY>=110;
+    var shouldClose=dragging&&dragY>=90;
     dragArmed=false;dragging=false;
     if(shouldClose){
       closeSettings();
