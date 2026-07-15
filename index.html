@@ -6724,6 +6724,18 @@ body.tb-compact-small{
 </div>
 
 <div class="page" id="page-statistik">
+<div class="stats-layout-toolbar" id="stats-layout-toolbar">
+  <button type="button" class="stats-layout-edit-toggle" id="stats-layout-edit-toggle" onclick="toggleStatsLayoutEditing()"><span>Layout anpassen</span></button>
+  <div class="stats-layout-toolbar-panel">
+    <div class="stats-layout-toolbar-controls">
+      <label><span>Inhaltsbreite</span><select class="inp" id="stats-layout-width-direct" onchange="updateStatsLayoutOption('width',this.value)"><option value="compact">Kompakt</option><option value="standard">Standard</option><option value="wide">Breit</option><option value="full">Fast volle Breite</option></select></label>
+      <label><span>Spalten</span><select class="inp" id="stats-layout-columns-direct" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
+      <button type="button" class="s-btn" onclick="resetStatsLayout()">Standardlayout</button>
+    </div>
+    <div class="stats-layout-hint">Karten direkt ziehen. Mit dem Griff am rechten Rand die Kartenbreite ändern.</div>
+    <div id="stats-layout-module-list-direct" class="stats-layout-module-list"></div>
+  </div>
+</div>
 <div id="view-stats">
 
   <!-- Hero: Gesamt P&L + optionale Depot-Performance in einer Karte -->
@@ -19762,9 +19774,18 @@ function awTogglePw(){
 .stats-layout-module-size{width:112px;min-height:32px!important;padding:5px 26px 5px 8px!important;font-size:.64rem!important}
 .stats-layout-visible{display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--muted);white-space:nowrap}.stats-layout-visible input{accent-color:var(--green)}
 .stats-layout-reset{width:100%;justify-content:center}
-@media (max-width:899px){.settings-card-statslayout{display:none!important}}
+.settings-card-statslayout{display:none!important}
+.stats-layout-toolbar{display:none}
 @media (max-width:719px){.stats-layout-settings-head{grid-template-columns:1fr}.stats-layout-module-row{grid-template-columns:24px minmax(90px,1fr) auto}.stats-layout-visible{grid-column:2/-1}.stats-layout-module-size{width:104px}}
 @media (min-width:900px){
+  .stats-layout-toolbar{display:flex;flex-direction:column;align-items:flex-end;margin:0 0 12px}
+  .stats-layout-edit-toggle{min-height:40px;padding:0 15px;border:1px solid var(--bd);border-radius:10px;background:color-mix(in srgb,var(--s1) 78%,transparent);color:var(--muted);font:700 .7rem var(--f);cursor:pointer;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+  .stats-layout-edit-toggle:hover,.stats-layout-edit-toggle.on{color:var(--blue);border-color:rgba(91,138,245,.45);background:rgba(91,138,245,.1)}
+  .stats-layout-toolbar-panel{display:none;width:100%;margin-top:8px;padding:12px;border:1px solid var(--bd);border-radius:12px;background:color-mix(in srgb,var(--s1) 88%,transparent);box-shadow:var(--shadow);backdrop-filter:blur(12px)}
+  body.stats-layout-editing .stats-layout-toolbar-panel{display:block}
+  .stats-layout-toolbar-controls{display:grid;grid-template-columns:minmax(160px,1fr) minmax(140px,1fr) auto;gap:10px;align-items:end;margin-bottom:8px}
+  .stats-layout-toolbar-controls label>span{display:block;margin-bottom:5px;font-size:.58rem;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+  .stats-layout-toolbar-controls .s-btn{min-height:40px}
   #page-statistik{width:100%;margin-left:auto;margin-right:auto;transition:max-width .22s ease}
   body[data-stats-layout-width="compact"] #page-statistik{max-width:760px}
   body[data-stats-layout-width="standard"] #page-statistik{max-width:920px}
@@ -19772,6 +19793,11 @@ function awTogglePw(){
   body[data-stats-layout-width="full"] #page-statistik{max-width:100%}
   #view-stats{display:grid!important;grid-template-columns:repeat(var(--stats-layout-cols,2),minmax(0,1fr))!important;gap:16px!important;align-items:start!important}
   #view-stats>[data-stats-module]{grid-column:span var(--stats-module-span,1)!important;grid-row:auto!important;height:auto!important;margin:0!important;min-width:0}
+  body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
+  body.stats-layout-editing #view-stats>[data-stats-module].stats-card-dragging{opacity:.45;cursor:grabbing}
+  .stats-card-resize-handle{display:none;position:absolute;z-index:8;top:20%;right:-7px;width:14px;height:60%;cursor:ew-resize;touch-action:none}
+  .stats-card-resize-handle::before{content:'';position:absolute;top:50%;left:5px;width:4px;height:42px;max-height:70%;transform:translateY(-50%);border-radius:4px;background:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--s1) 85%,transparent)}
+  body.stats-layout-editing .stats-card-resize-handle{display:block}
   #view-stats>[data-stats-module].stats-module-hidden{display:none!important}
   body[data-stats-layout-columns="1"]{--stats-layout-cols:1}
   body[data-stats-layout-columns="2"]{--stats-layout-cols:2}
@@ -19810,7 +19836,16 @@ function awTogglePw(){
   }
   function load(){try{state=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch(e){state=defaults();}}
   function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
-  function bindElements(){MODULES.forEach(m=>{if(moduleElements[m.key])return;const found=document.querySelector(m.selector);moduleElements[m.key]=m.parent&&found?found.closest('.sec'):found;});}
+  function bindElements(){MODULES.forEach(m=>{if(moduleElements[m.key])return;const found=document.querySelector(m.selector),el=m.parent&&found?found.closest('.sec'):found;moduleElements[m.key]=el;if(el)prepareCard(el,m.key);});}
+  function prepareCard(el,key){
+    if(el.dataset.statsPrepared)return;el.dataset.statsPrepared='1';
+    const handle=document.createElement('span');handle.className='stats-card-resize-handle';handle.title='Breite ziehen';el.appendChild(handle);
+    el.addEventListener('dragstart',e=>{if(!document.body.classList.contains('stats-layout-editing')||e.target===handle){e.preventDefault();return;}draggedKey=key;el.classList.add('stats-card-dragging');e.dataTransfer.effectAllowed='move';});
+    el.addEventListener('dragend',()=>{el.classList.remove('stats-card-dragging');draggedKey='';});
+    el.addEventListener('dragover',e=>{if(document.body.classList.contains('stats-layout-editing'))e.preventDefault();});
+    el.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===key)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(key);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
+    handle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();handle.setPointerCapture(e.pointerId);const host=document.getElementById('view-stats'),style=getComputedStyle(host),cols=Math.max(1,style.gridTemplateColumns.split(' ').length),gap=parseFloat(style.columnGap)||0,colWidth=(host.clientWidth-gap*(cols-1))/cols,startX=e.clientX,startSpan=state.modules[key].span;const move=ev=>{const next=Math.max(1,Math.min(3,startSpan+Math.round((ev.clientX-startX)/Math.max(1,colWidth))));if(next!==state.modules[key].span){state.modules[key].span=next;apply();renderStatsLayoutEditor();}};const up=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);save();};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);});
+  }
   function elementFor(key){return moduleElements[key]||null;}
   function apply(){
     document.body.dataset.statsLayoutWidth=state.width;
@@ -19818,12 +19853,12 @@ function awTogglePw(){
     const host=document.getElementById('view-stats');if(!host)return;bindElements();
     const desktop=window.matchMedia('(min-width:900px)').matches;
     const activeOrder=desktop?state.order:MODULES.map(m=>m.key);
-    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;el.dataset.statsModule=key;el.style.setProperty('--stats-module-span',state.modules[key].span);el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});
+    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;el.dataset.statsModule=key;el.draggable=desktop&&document.body.classList.contains('stats-layout-editing');el.style.setProperty('--stats-module-span',state.modules[key].span);el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});
   }
   function sizeLabel(n){return n===1?'1 Spalte':n===2?'2 Spalten':'Volle Reihe';}
   window.renderStatsLayoutEditor=function(){
-    const list=document.getElementById('stats-layout-module-list');if(!list)return;
-    const w=document.getElementById('stats-layout-width'),c=document.getElementById('stats-layout-columns');if(w)w.value=state.width;if(c)c.value=state.columns;
+    const list=document.getElementById('stats-layout-module-list-direct')||document.getElementById('stats-layout-module-list');if(!list)return;
+    ['stats-layout-width','stats-layout-width-direct'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=state.width;});['stats-layout-columns','stats-layout-columns-direct'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=state.columns;});
     list.innerHTML=state.order.map(key=>{const m=MODULES.find(x=>x.key===key),cfg=state.modules[key];return `<div class="stats-layout-module-row" draggable="true" data-layout-key="${key}"><span class="stats-layout-drag" title="Ziehen">⋮⋮</span><span class="stats-layout-module-name">${m.name}</span><select class="inp stats-layout-module-size" aria-label="Breite von ${m.name}" onchange="setStatsModuleSpan('${key}',this.value)">${[1,2,3].map(n=>`<option value="${n}"${cfg.span===n?' selected':''}>${sizeLabel(n)}</option>`).join('')}</select><label class="stats-layout-visible"><input type="checkbox" ${cfg.visible?'checked':''} onchange="setStatsModuleVisible('${key}',this.checked)"> Anzeigen</label></div>`;}).join('');
     list.querySelectorAll('.stats-layout-module-row').forEach(row=>{
       row.addEventListener('dragstart',e=>{draggedKey=row.dataset.layoutKey;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
@@ -19832,6 +19867,7 @@ function awTogglePw(){
       row.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===row.dataset.layoutKey)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(row.dataset.layoutKey);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
     });
   };
+  window.toggleStatsLayoutEditing=function(){const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
   window.updateStatsLayoutOption=function(key,value){if(key==='width')state.width=value;if(key==='columns')state.columns=value;save();apply();};
   window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=Number(value)||1;save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
