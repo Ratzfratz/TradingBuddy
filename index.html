@@ -14574,6 +14574,50 @@ function updateWknLinks(val){
 // Also save WKN to persistSave
 const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
 </script>
+<style id="settings-large-display-layout">
+@media (min-width:900px) and (min-height:650px){
+  #settings-sh{
+    width:min(94vw,980px)!important;
+    max-width:980px!important;
+    height:85vh!important;
+    max-height:860px!important;
+    bottom:7.5vh!important;
+    border:1px solid var(--bd)!important;
+    border-radius:18px!important;
+    box-shadow:0 24px 70px rgba(0,0,0,.42);
+  }
+  #settings-bar{visibility:hidden;margin:5px auto 0!important}
+  #settings-page-main{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-areas:
+      "header header"
+      "appearance appearance"
+      "depot data"
+      "tax account"
+      "info info";
+    gap:12px;
+    align-content:start;
+    padding:8px 18px 24px!important;
+  }
+  #settings-header{grid-area:header;margin-bottom:0!important}
+  #settings-page-main>.settings-card{margin:0!important;align-self:start;min-width:0}
+  .settings-card-appearance{grid-area:appearance}
+  .settings-card-depot{grid-area:depot}
+  .settings-card-tax{grid-area:tax}
+  .settings-card-data{grid-area:data}
+  .settings-card-account{grid-area:account}
+  .settings-card-info{grid-area:info}
+  .settings-card-info .settings-info-card{
+    display:grid;
+    grid-template-columns:180px minmax(0,1fr);
+    align-items:stretch;
+  }
+  .settings-card-info .settings-info-divider{display:none}
+  .settings-card-info .settings-info-row{border-left:1px solid var(--bd)}
+  .settings-card-info .settings-info-disclaimer{grid-column:1/-1}
+}
+</style>
 <div id="settings-ov" style="overscroll-behavior:contain;position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:1900;display:none;">
   <div id="settings-bd" style="position:absolute;top:0;right:0;bottom:0;left:0;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)"></div>
   <div id="settings-sh" style="position:absolute;left:0;right:0;bottom:0;max-width:460px;margin:0 auto;max-height:85vh;background:var(--bg);border-radius:18px 18px 0 0;border-top:1px solid var(--bd);border-left:1px solid var(--bd);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;transform:translateY(100%);will-change:transform;">
@@ -14586,7 +14630,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <button class="overlay-head-btn overlay-head-right" onclick="closeSettings()">&#x2715;</button>
   </div>
 
-  <div class="sec" style="margin-bottom:12px">
+  <div class="sec settings-card settings-card-appearance" style="margin-bottom:12px">
     <div class="sec-title">Erscheinungsbild</div>
     <div class="theme-selector" role="group" aria-label="Farbschema" style="width:100%">
       <button class="theme-choice active" data-theme-choice="dark" onclick="setTheme('dark')">
@@ -14616,7 +14660,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     </div>
   </div>
 
-    <div class="sec" style="margin-bottom:12px">
+    <div class="sec settings-card settings-card-depot" style="margin-bottom:12px">
     <div class="sec-title">Depot</div>
     <div class="field settings-money-field" style="margin:0">
       <label>Eingezahltes Kapital € <span style="color:var(--muted);font-weight:400">(optional)</span></label>
@@ -14625,7 +14669,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     </div>
   </div>
 
-  <div class="sec" style="margin-bottom:12px" id="tax-settings-card">
+  <div class="sec settings-card settings-card-tax" style="margin-bottom:12px" id="tax-settings-card">
     <div class="sec-title">Steuern</div>
 
     <div class="field settings-money-field" style="margin-bottom:10px">
@@ -14681,7 +14725,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <div class="tax-note warn" style="margin-top:8px">ETF: pauschal 30 % Teilfreistellung, keine Vorabpauschale.</div>
   </div>
 
-  <div class="sec" style="margin-bottom:12px">
+  <div class="sec settings-card settings-card-data" style="margin-bottom:12px">
     <div class="sec-title">Daten</div>
     <input type="file" id="zero-csv-input" accept="*/*" style="display:none" onchange="handleZeroCsv(event)">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -14702,7 +14746,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   </div>
 
   <!-- ── Konto (Cloud Sync + Backup) ─────────────────────────────────── -->
-  <div class="sec" style="margin-bottom:12px" id="cloud-sync-card">
+  <div class="sec settings-card settings-card-account" style="margin-bottom:12px" id="cloud-sync-card">
     <div class="sec-title">Konto &amp; Backup</div>
 
     <!-- Cloud Sync Block -->
@@ -14870,7 +14914,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   </div>
 
   <!-- ── Info ──────────────────────────────────────────────────────────── -->
-  <div class="sec">
+  <div class="sec settings-card settings-card-info">
     <div class="sec-title">Info</div>
     <div class="settings-info-card">
       <div class="settings-info-top" style="flex-direction:column;align-items:center;padding:18px 14px 14px;gap:10px">
