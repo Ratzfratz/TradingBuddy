@@ -9057,10 +9057,14 @@ function loadTrades() {
 function saveTrades() {
   try {
     trades = dedupeTradesList(trades).map((trade, index) => normalizeTrade(trade, index));
-    localStorage.setItem(STORE_KEY, JSON.stringify(trades));
-    localStorage.setItem('tb_local_saved_at', String(Date.now()));
+    const serialized=JSON.stringify(trades);
+    const changed=localStorage.getItem(STORE_KEY)!==serialized;
+    if(changed){
+      localStorage.setItem(STORE_KEY,serialized);
+      localStorage.setItem('tb_local_saved_at',String(Date.now()));
+    }
     _tradesCacheValid = true; // 'trades' ist bereits aktuell normalisiert
-    if (typeof _awSchedulePush === 'function') _awSchedulePush();
+    if (changed && typeof _awSchedulePush === 'function') _awSchedulePush();
     return true;
   } catch (error) {
     console.error('Trades konnten nicht gespeichert werden:', error);
@@ -18696,7 +18700,9 @@ function _awUpdateUI(){
 (function(){
   const original=localStorage.setItem.bind(localStorage);
   localStorage.setItem=function(key,value){
-    original(key,value);
+    const nextValue=String(value);
+    if(localStorage.getItem(key)===nextValue)return;
+    original(key,nextValue);
     if(_awApplying||AW_EXCL.has(key))return;
     if(AW_SYNC_KEYS.has(key))original('tb_settings_saved_at',String(Date.now()));
     if(key===STORE_KEY||AW_SYNC_KEYS.has(key))_awSchedulePush();
