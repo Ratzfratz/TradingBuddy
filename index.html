@@ -5832,6 +5832,20 @@ body.tb-compact-small{
   }
 }
 
+@media (max-width:719px){
+  body.page-tagebuch .journal-filter-panel,
+  body.page-tagebuch #journal-glass-layer{
+    width:100%!important;
+    max-width:none!important;
+  }
+  .journal-filter-head,
+  .journal-filter-body-inner{
+    width:min(100%,460px);
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+
 @media (min-width:900px){
   .calc-workspace{
     display:grid;
@@ -5973,10 +5987,13 @@ body.tb-compact-small{
   }
   .bottom-stack .bnav{
     order:1;
-    border:0;
+    border:0!important;
+    border-top:0!important;
     padding:0;
     background:transparent;
   }
+  .bottom-stack .bnav::before,
+  .bottom-stack .bnav-w::before{display:none!important;content:none!important}
   .bottom-stack .calc-dock{
     order:2;
     margin-top:auto;
@@ -6413,7 +6430,7 @@ body.tb-compact-small{
     align-items:center;
     gap:9px;
     padding-bottom:12px;
-    border-bottom:0;
+    border-bottom:1px solid var(--bd);
   }
   .sidebar-brand img{width:36px;height:36px;object-fit:contain;flex:0 0 36px}
   .sidebar-brand-name{font-size:.9rem;font-weight:700;line-height:1.05;color:var(--text);white-space:nowrap}
@@ -14849,6 +14866,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     grid-template-areas:
       "header header"
       "appearance appearance"
+      "statslayout statslayout"
       "depot data"
       "tax account"
       "info info";
@@ -14859,6 +14877,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #settings-header{grid-area:header;margin-bottom:0!important}
   #settings-page-main>.settings-card{margin:0!important;align-self:start;min-width:0}
   .settings-card-appearance{grid-area:appearance}
+  .settings-card-statslayout{grid-area:statslayout}
   .settings-card-depot{grid-area:depot}
   .settings-card-tax{grid-area:tax}
   .settings-card-data{grid-area:data}
@@ -14915,6 +14934,17 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         <span class="theme-choice-name">Kontrast Hell</span>
       </button>
     </div>
+  </div>
+
+  <div class="sec settings-card settings-card-statslayout" style="margin-bottom:12px">
+    <div class="sec-title">Statistik-Layout</div>
+    <div class="stats-layout-settings-head">
+      <label class="field"><span>Inhaltsbreite</span><select class="inp" id="stats-layout-width" onchange="updateStatsLayoutOption('width',this.value)"><option value="compact">Kompakt</option><option value="standard">Standard</option><option value="wide">Breit</option><option value="full">Fast volle Breite</option></select></label>
+      <label class="field"><span>Spalten</span><select class="inp" id="stats-layout-columns" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
+    </div>
+    <div class="stats-layout-hint">Module ziehen, ausblenden oder ihre Breite festlegen. Gilt nur auf diesem Gerät ab Desktopgröße.</div>
+    <div id="stats-layout-module-list" class="stats-layout-module-list"></div>
+    <button type="button" class="s-btn stats-layout-reset" onclick="resetStatsLayout()">Standardlayout wiederherstellen</button>
   </div>
 
     <div class="sec settings-card settings-card-depot" style="margin-bottom:12px">
@@ -15384,6 +15414,7 @@ function openSettings(section){
   if(mainPage)mainPage.scrollTop=0;
   if(roadmapPage)roadmapPage.scrollTop=0;
   try{if(typeof syncSettingsFromTax==='function')syncSettingsFromTax();}catch(e){console.warn('Settings sync:',e);}
+  try{if(typeof renderStatsLayoutEditor==='function')renderStatsLayoutEditor();}catch(e){console.warn('Stats layout:',e);}
   try{
     var sv=document.getElementById('s-version');
     if(sv&&typeof APP_VERSION!=='undefined')sv.textContent=APP_VERSION;
@@ -19715,6 +19746,99 @@ function awTogglePw(){
     // CompressionStream/DecompressionStream), die automatisch greifen,
     // sobald die jeweilige TBNative-Methode fehlt.
   };
+})();
+</script>
+
+<style id="stats-modular-layout-style">
+.stats-layout-settings-head{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+.stats-layout-settings-head .field{margin:0}.stats-layout-settings-head .field>span{display:block;margin-bottom:5px;font-size:.6rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.stats-layout-hint{font-size:.64rem;line-height:1.45;color:var(--muted);margin-bottom:10px}
+.stats-layout-module-list{display:grid;gap:6px;margin-bottom:10px}
+.stats-layout-module-row{display:grid;grid-template-columns:28px minmax(120px,1fr) auto auto;gap:8px;align-items:center;min-height:44px;padding:6px 8px;border:1px solid var(--bd);border-radius:9px;background:color-mix(in srgb,var(--s2) 72%,transparent);transition:border-color .15s,background .15s,opacity .15s}
+.stats-layout-module-row:hover{border-color:color-mix(in srgb,var(--blue) 42%,var(--bd));background:var(--s2)}
+.stats-layout-module-row.dragging{opacity:.45;border-color:var(--blue)}
+.stats-layout-drag{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1rem;cursor:grab;user-select:none}.stats-layout-drag:active{cursor:grabbing}
+.stats-layout-module-name{font-size:.7rem;font-weight:650;color:var(--text);min-width:0}
+.stats-layout-module-size{width:112px;min-height:32px!important;padding:5px 26px 5px 8px!important;font-size:.64rem!important}
+.stats-layout-visible{display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--muted);white-space:nowrap}.stats-layout-visible input{accent-color:var(--green)}
+.stats-layout-reset{width:100%;justify-content:center}
+@media (max-width:899px){.settings-card-statslayout{display:none!important}}
+@media (max-width:719px){.stats-layout-settings-head{grid-template-columns:1fr}.stats-layout-module-row{grid-template-columns:24px minmax(90px,1fr) auto}.stats-layout-visible{grid-column:2/-1}.stats-layout-module-size{width:104px}}
+@media (min-width:900px){
+  #page-statistik{width:100%;margin-left:auto;margin-right:auto;transition:max-width .22s ease}
+  body[data-stats-layout-width="compact"] #page-statistik{max-width:760px}
+  body[data-stats-layout-width="standard"] #page-statistik{max-width:920px}
+  body[data-stats-layout-width="wide"] #page-statistik{max-width:1092px}
+  body[data-stats-layout-width="full"] #page-statistik{max-width:100%}
+  #view-stats{display:grid!important;grid-template-columns:repeat(var(--stats-layout-cols,2),minmax(0,1fr))!important;gap:16px!important;align-items:start!important}
+  #view-stats>[data-stats-module]{grid-column:span var(--stats-module-span,1)!important;grid-row:auto!important;height:auto!important;margin:0!important;min-width:0}
+  #view-stats>[data-stats-module].stats-module-hidden{display:none!important}
+  body[data-stats-layout-columns="1"]{--stats-layout-cols:1}
+  body[data-stats-layout-columns="2"]{--stats-layout-cols:2}
+  body[data-stats-layout-columns="3"]{--stats-layout-cols:3}
+  body[data-stats-layout-columns="auto"]{--stats-layout-cols:2}
+}
+@media (min-width:1600px){body[data-stats-layout-columns="auto"]{--stats-layout-cols:3}}
+</style>
+<script>
+(function(){
+  'use strict';
+  const STORAGE_KEY='tb_stats_layout_v1';
+  const MODULES=[
+    {key:'hero',name:'Gesamt P&L',selector:'#view-stats > .sec:first-child',span:3},
+    {key:'overview',name:'Übersicht',selector:'#view-stats > .sec:nth-child(2)',span:1},
+    {key:'charts',name:'Performance-Diagramme',selector:'#st-chart-section',span:2},
+    {key:'calendar',name:'Tagesansicht',selector:'#st-calendar-section',span:3},
+    {key:'insights',name:'Idee & Ausführung',selector:'#st-journal-insights',span:3},
+    {key:'top',name:'Top Basiswerte',selector:'#st-tickers',parent:true,span:1},
+    {key:'worst',name:'Schlechteste Basiswerte',selector:'#st-worst-tickers',parent:true,span:1},
+    {key:'history',name:'P&L Verlauf',selector:'#st-monthly',parent:true,span:1},
+    {key:'tax',name:'Steuerübersicht',selector:'#tax-overview',parent:true,span:2}
+  ];
+  const defaults=()=>({width:'wide',columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span}]))});
+  let state=defaults();
+  let draggedKey='';
+  const moduleElements={};
+  function normalize(raw){
+    const d=defaults(),r=raw&&typeof raw==='object'?raw:{};
+    d.width=['compact','standard','wide','full'].includes(r.width)?r.width:d.width;
+    d.columns=['auto','1','2','3'].includes(String(r.columns))?String(r.columns):d.columns;
+    const order=Array.isArray(r.order)?r.order.filter(k=>MODULES.some(m=>m.key===k)):[];
+    d.order=[...new Set(order.concat(MODULES.map(m=>m.key)))];
+    MODULES.forEach(m=>{const x=r.modules&&r.modules[m.key];if(x){d.modules[m.key].visible=x.visible!==false;d.modules[m.key].span=[1,2,3].includes(Number(x.span))?Number(x.span):m.span;}});
+    return d;
+  }
+  function load(){try{state=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch(e){state=defaults();}}
+  function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
+  function bindElements(){MODULES.forEach(m=>{if(moduleElements[m.key])return;const found=document.querySelector(m.selector);moduleElements[m.key]=m.parent&&found?found.closest('.sec'):found;});}
+  function elementFor(key){return moduleElements[key]||null;}
+  function apply(){
+    document.body.dataset.statsLayoutWidth=state.width;
+    document.body.dataset.statsLayoutColumns=state.columns;
+    const host=document.getElementById('view-stats');if(!host)return;bindElements();
+    const desktop=window.matchMedia('(min-width:900px)').matches;
+    const activeOrder=desktop?state.order:MODULES.map(m=>m.key);
+    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;el.dataset.statsModule=key;el.style.setProperty('--stats-module-span',state.modules[key].span);el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});
+  }
+  function sizeLabel(n){return n===1?'1 Spalte':n===2?'2 Spalten':'Volle Reihe';}
+  window.renderStatsLayoutEditor=function(){
+    const list=document.getElementById('stats-layout-module-list');if(!list)return;
+    const w=document.getElementById('stats-layout-width'),c=document.getElementById('stats-layout-columns');if(w)w.value=state.width;if(c)c.value=state.columns;
+    list.innerHTML=state.order.map(key=>{const m=MODULES.find(x=>x.key===key),cfg=state.modules[key];return `<div class="stats-layout-module-row" draggable="true" data-layout-key="${key}"><span class="stats-layout-drag" title="Ziehen">⋮⋮</span><span class="stats-layout-module-name">${m.name}</span><select class="inp stats-layout-module-size" aria-label="Breite von ${m.name}" onchange="setStatsModuleSpan('${key}',this.value)">${[1,2,3].map(n=>`<option value="${n}"${cfg.span===n?' selected':''}>${sizeLabel(n)}</option>`).join('')}</select><label class="stats-layout-visible"><input type="checkbox" ${cfg.visible?'checked':''} onchange="setStatsModuleVisible('${key}',this.checked)"> Anzeigen</label></div>`;}).join('');
+    list.querySelectorAll('.stats-layout-module-row').forEach(row=>{
+      row.addEventListener('dragstart',e=>{draggedKey=row.dataset.layoutKey;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+      row.addEventListener('dragend',()=>{row.classList.remove('dragging');draggedKey='';});
+      row.addEventListener('dragover',e=>e.preventDefault());
+      row.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===row.dataset.layoutKey)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(row.dataset.layoutKey);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
+    });
+  };
+  window.updateStatsLayoutOption=function(key,value){if(key==='width')state.width=value;if(key==='columns')state.columns=value;save();apply();};
+  window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=Number(value)||1;save();apply();};
+  window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
+  window.resetStatsLayout=function(){state=defaults();save();apply();renderStatsLayoutEditor();};
+  load();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();renderStatsLayoutEditor();});else{apply();renderStatsLayoutEditor();}
+  window.addEventListener('resize',apply,{passive:true});
 })();
 </script>
 
