@@ -2238,28 +2238,6 @@ body.page-tagebuch.journal-chrome-hidden #journal-glass-layer{
 }
 body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bottom-stack,body.journal-chrome-no-transition .journal-filter-panel,body.journal-chrome-no-transition #journal-glass-layer,body.journal-chrome-no-transition .fab{transition:none !important;}
 
-@media (max-width:339px){
-  body.page-tagebuch header,
-  body.page-tagebuch .bottom-stack,
-  body.page-tagebuch .journal-filter-panel,
-  body.page-tagebuch #journal-glass-layer,
-  body.page-tagebuch .fab{
-    transition:none!important;
-  }
-  body.page-tagebuch.journal-chrome-hidden header{
-    transform:translateX(-50%) translateY(0) translateZ(0)!important;
-  }
-  body.page-tagebuch.journal-chrome-hidden .journal-filter-panel,
-  body.page-tagebuch.journal-chrome-hidden #journal-glass-layer{
-    transform:translate3d(-50%,0,0)!important;
-  }
-  body.page-tagebuch.journal-chrome-hidden .bottom-stack{
-    transform:translateX(-50%) translateY(0)!important;
-  }
-  body.page-tagebuch.journal-chrome-hidden .fab{
-    transform:none!important;
-  }
-}
 </style>
 
 
@@ -6053,17 +6031,19 @@ body.tb-compact-small{
     box-shadow:var(--app-chrome-shadow)!important;
   }
   .fab{
-    top:calc(var(--status-inset) + 11px);
-    right:max(76px,calc(50% - 484px));
-    bottom:auto;
-    width:132px;
-    height:40px;
-    border-radius:8px;
+    top:auto;
+    right:max(24px,calc(50% - 536px));
+    bottom:18px;
+    width:180px;
+    height:46px;
+    border-radius:9px;
     gap:8px;
     z-index:180;
+    box-shadow:0 4px 20px rgba(34,211,160,.2);
   }
-  .fab::after{content:'Neuer Trade';font-size:.72rem;font-weight:750;letter-spacing:.2px;color:var(--bg)}
-  body.page-tagebuch.journal-chrome-hidden .fab{transform:translateY(-70px)!important;opacity:0!important}
+  .fab:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(34,211,160,.3)}
+  .fab::after{content:'Neuer Trade';font-size:.78rem;font-weight:800;letter-spacing:.35px;color:var(--bg)}
+  body.page-tagebuch.journal-chrome-hidden .fab{transform:translateY(80px)!important;opacity:0!important}
   #trade-list{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -6359,7 +6339,7 @@ body.tb-compact-small{
 
 
 <div class="calc-inline-actions">
-  <button onclick="clearCalcForm()" class="calc-clear-big">↺ Felder löschen</button>
+  <button onclick="clearCalcForm()" class="calc-clear-big">&#8634; Felder löschen</button>
   <button class="calc-btn calc-desktop-submit" type="button" onclick="calc()">BERECHNEN →</button>
 </div>
 
@@ -13401,12 +13381,12 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="nt-clear-card" id="nt-clear-area">
-    <button class="nt-clear" type="button" onclick="resetForm(true)">↺ Felder löschen</button>
+    <button class="nt-clear" type="button" onclick="resetForm(true)">&#8634; Felder löschen</button>
   </div>
 
 </div>
     <div class="nt-actions">
-      <button class="nt-clear-action" type="button" onclick="resetForm(true)">â†º Felder lÃ¶schen</button>
+      <button class="nt-clear-action" type="button" onclick="resetForm(true)">&#8634; Felder l&ouml;schen</button>
       <button class="calc-btn" onclick="saveTrade()" id="save-btn">TRADE SPEICHERN</button>
     </div>
   </div>
@@ -14645,11 +14625,12 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info{grid-area:info}
   .settings-card-info .settings-info-card{
     display:grid;
-    grid-template-columns:180px minmax(0,1fr);
+    grid-template-columns:repeat(2,minmax(0,1fr));
     align-items:stretch;
   }
   .settings-card-info .settings-info-divider{display:none}
-  .settings-card-info .settings-info-row{border-left:1px solid var(--bd)}
+  .settings-card-info .settings-info-row{border-left:1px solid var(--bd);justify-content:center;position:relative}
+  .settings-card-info .settings-info-row>svg{position:absolute;right:18px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1}
 }
 </style>
@@ -15668,7 +15649,6 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 
   function setChromeHidden(hidden, instant){
-    if(compactJournalMode()) hidden = false;
     hidden = !!hidden;
     if(chromeHidden === hidden && document.body.classList.contains('journal-chrome-hidden') === hidden) return;
     chromeHidden = hidden;
@@ -15880,11 +15860,6 @@ document.addEventListener('DOMContentLoaded',function(){
     var y=window.scrollY||window.pageYOffset||0;
     if(overlayIsOpen()){ lastScrollY=y; return; }
     if(!onJournalPage()){ lastScrollY=y; return; }
-    if(compactJournalMode()){
-      if(chromeHidden || document.body.classList.contains('journal-chrome-hidden')) setChromeHidden(false,true);
-      lastScrollY=y;
-      return;
-    }
     var delta=y-lastScrollY; lastScrollY=y;
     if(performance.now()<ignoreScrollUntil||Math.abs(delta)<.15) return;
     if(dropdownIsOpen()) return;
