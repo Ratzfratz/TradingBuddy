@@ -5818,6 +5818,20 @@ body.tb-compact-small{
   .fab{right:max(20px,calc(50% - 390px))}
 }
 
+@media (min-width:720px) and (max-width:1099px){
+  body.page-tagebuch .journal-filter-panel,
+  body.page-tagebuch #journal-glass-layer{
+    width:100%!important;
+    max-width:none!important;
+  }
+  .journal-filter-head,
+  .journal-filter-body-inner{
+    width:min(100%,var(--tb-large-content));
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+
 @media (min-width:900px){
   .calc-workspace{
     display:grid;
@@ -5981,12 +5995,13 @@ body.tb-compact-small{
     justify-content:flex-start;
     gap:11px;
     padding:7px 10px;
+    border:1px solid transparent;
     border-radius:10px;
     font-size:.72rem;
     letter-spacing:.15px;
   }
-  .bni:hover{background:var(--s2)}
-  .bni.on{background:rgba(34,211,160,.09)}
+  .bni:hover{color:var(--text);background:var(--s2);border-color:var(--bd)}
+  .bni.on{background:rgba(34,211,160,.09);border-color:rgba(34,211,160,.2)}
   .bni-ic{width:34px;height:34px;flex:0 0 34px}
   .bni-ic svg{width:19px;height:19px}
   .calc-dock .calc-btn{
@@ -6398,7 +6413,7 @@ body.tb-compact-small{
     align-items:center;
     gap:9px;
     padding-bottom:12px;
-    border-bottom:1px solid var(--bd);
+    border-bottom:0;
   }
   .sidebar-brand img{width:36px;height:36px;object-fit:contain;flex:0 0 36px}
   .sidebar-brand-name{font-size:.9rem;font-weight:700;line-height:1.05;color:var(--text);white-space:nowrap}
@@ -6426,6 +6441,24 @@ body.tb-compact-small{
   .sidebar-settings:hover{color:var(--text);background:var(--s2);border-color:var(--bd)}
   .sidebar-settings-icon{display:flex;width:34px;height:34px;align-items:center;justify-content:center;flex:0 0 34px;border:1px solid var(--bd);border-radius:50%;background:var(--s3)}
   .sidebar-settings-icon svg{width:19px;height:19px}
+}
+
+/* WQHD/Ultrawide: mehr Arbeitsfläche, weiterhin mit ruhigem Außenrand. */
+@media (min-width:1440px){
+  :root{
+    --tb-large-content:1320px;
+    --tb-desktop-main:1092px;
+  }
+  .bottom-stack{left:calc(50% - 660px)}
+  .journal-filter-panel,
+  #journal-glass-layer{
+    left:calc(50% - 456px)!important;
+    width:var(--tb-desktop-main)!important;
+    max-width:var(--tb-desktop-main)!important;
+  }
+  .bottom-stack .calc-dock.show{left:calc(50% - 456px)}
+  .fab-card,
+  .calc-inline-actions{right:calc(50% - 620px)}
 }
 </style>
 </head>
