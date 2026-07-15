@@ -6725,9 +6725,7 @@ body.tb-compact-small{
 
 <div class="page" id="page-statistik">
 <div class="stats-layout-toolbar" id="stats-layout-toolbar">
-  <button type="button" class="stats-content-edit-toggle" id="stats-content-edit-toggle" onclick="toggleStatsContentEditing()"><span>Inhalt anpassen</span></button>
   <button type="button" class="stats-layout-edit-toggle" id="stats-layout-edit-toggle" onclick="toggleStatsLayoutEditing()"><span>Layout anpassen</span></button>
-  <div class="stats-content-panel" id="stats-content-panel"><div class="stats-content-panel-title">Karten anzeigen</div><div id="stats-layout-module-list-direct" class="stats-layout-module-list"></div></div>
   <div class="stats-layout-toolbar-panel">
     <div class="stats-layout-toolbar-controls">
       <label><span>Spalten</span><select class="inp" id="stats-layout-columns-direct" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
@@ -19778,7 +19776,6 @@ function awTogglePw(){
 .settings-card-statslayout .stats-layout-settings-head{grid-template-columns:1fr}
 .settings-card-statslayout .stats-layout-settings-head>label:nth-child(2),.settings-card-statslayout .stats-layout-hint,.settings-card-statslayout .stats-layout-module-list,.settings-card-statslayout .stats-layout-reset{display:none!important}
 .stats-layout-toolbar{display:none}
-.stats-content-edit-toggle,.stats-content-panel{display:none}
 .stats-layout-toolbar-panel{display:none!important}
 @media (max-width:719px){.stats-layout-settings-head{grid-template-columns:1fr}.stats-layout-module-row{grid-template-columns:24px minmax(90px,1fr) auto}.stats-layout-visible{grid-column:2/-1}.stats-layout-module-size{width:104px}}
 @media (min-width:900px){
@@ -19863,19 +19860,14 @@ function awTogglePw(){
     display:flex;
     align-items:center;
     justify-content:flex-start;
-    padding:7px 12px;
+    padding:7px 10px;
     border-color:transparent;
     border-radius:10px;
     background:transparent;
     box-shadow:none;
     backdrop-filter:none;
   }
-  body[data-stats-layout-width] .stats-content-edit-toggle{width:100%;min-height:48px;display:flex;align-items:center;justify-content:flex-start;margin-bottom:6px;padding:7px 12px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font:600 .7rem var(--f);cursor:pointer}
-  body[data-stats-layout-width] .stats-content-edit-toggle::before{content:'☷';display:grid;place-items:center;width:34px;height:34px;margin-right:11px;flex:0 0 34px;border:1px solid var(--bd);border-radius:50%;background:var(--s3);font-size:1rem}
-  body[data-stats-layout-width] .stats-content-edit-toggle:hover,body[data-stats-layout-width] .stats-content-edit-toggle.on{color:var(--text);background:var(--s2);border-color:var(--bd)}
-  body[data-stats-layout-width] .stats-content-panel{position:absolute;left:calc(100% + 12px);bottom:0;width:310px;max-height:min(620px,calc(100vh - 110px));overflow:auto;padding:12px;border:1px solid var(--bd);border-radius:12px;background:color-mix(in srgb,var(--s1) 94%,transparent);box-shadow:var(--shadow);backdrop-filter:blur(14px)}
-  body.stats-content-editing[data-stats-layout-width] .stats-content-panel{display:block}
-  .stats-content-panel-title{margin-bottom:9px;color:var(--text);font-size:.72rem;font-weight:750}
+  body[data-stats-layout-width] .stats-layout-edit-toggle span{white-space:nowrap;text-align:left}
   body[data-stats-layout-width] .stats-layout-edit-toggle::before{content:'↔';display:grid;place-items:center;width:34px;height:34px;margin-right:11px;flex:0 0 34px;border:1px solid var(--bd);border-radius:50%;background:var(--s3);font-size:1rem}
   body[data-stats-layout-width] .stats-layout-edit-toggle:hover,body[data-stats-layout-width] .stats-layout-edit-toggle.on{background:var(--s2);border-color:var(--bd)}
 }
@@ -19951,8 +19943,7 @@ function awTogglePw(){
       row.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===row.dataset.layoutKey)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(row.dataset.layoutKey);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
     });
   };
-  window.toggleStatsLayoutEditing=function(){document.body.classList.remove('stats-content-editing');const contentBtn=document.getElementById('stats-content-edit-toggle');if(contentBtn){contentBtn.classList.remove('on');contentBtn.querySelector('span').textContent='Inhalt anpassen';}const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
-  window.toggleStatsContentEditing=function(){document.body.classList.remove('stats-layout-editing');const layoutBtn=document.getElementById('stats-layout-edit-toggle');if(layoutBtn){layoutBtn.classList.remove('on');layoutBtn.querySelector('span').textContent='Layout anpassen';}const on=document.body.classList.toggle('stats-content-editing'),btn=document.getElementById('stats-content-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Inhalt fertig':'Inhalt anpassen';}renderStatsLayoutEditor();};
+  window.toggleStatsLayoutEditing=function(){const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
   window.updateStatsLayoutOption=function(key,value){if(key==='width')state.width=value;if(key==='columns')state.columns=value;save();apply();};
   window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=Number(value)||1;save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
