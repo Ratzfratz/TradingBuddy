@@ -16239,7 +16239,8 @@ const AW_COL       = 'backups';
 const AW_BUCKET    = '6a3a8d040010afe2fbab';
 const AW_INLINE_CHUNK_SIZE = 12000;
 const AW_UPLOAD_TIMEOUT_MS = 12000;
-const AW_SYNC_KEYS = new Set(['tb_trade_tags_v1','tb_tax_settings','tb_theme','tb_depot_capital',
+// Das Farbschema bleibt bewusst gerätebezogen und wird nicht über die Cloud verteilt.
+const AW_SYNC_KEYS = new Set(['tb_trade_tags_v1','tb_tax_settings','tb_depot_capital',
   'tb_underlying_aliases','tb_underlying_merge_groups_v2','tb_underlying_merge_history_v1','tb_calc_v1']);
 const AW_EXCL      = new Set(['tb_roadmap_cache','tb_roadmap_ts','tb_cloud_synced_at',
   'tb_cloud_synced_at_ts','tb_cloud_trades_synced_at','tb_cloud_trades_synced_at_ts',
