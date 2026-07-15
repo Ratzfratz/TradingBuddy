@@ -5940,13 +5940,13 @@ body.tb-compact-small{
     padding-bottom:32px!important;
   }
   .bottom-stack{
-    top:0;
+    top:calc(var(--status-inset) + var(--header-height));
     bottom:0;
     left:max(0px,calc(50% - 560px));
     transform:none;
     width:var(--tb-sidebar-width)!important;
     max-width:var(--tb-sidebar-width)!important;
-    padding:calc(var(--status-inset) + var(--header-height) + 18px) 12px 18px;
+    padding:18px 12px;
     border-top:0;
     border-right:1px solid var(--bd);
     box-shadow:8px 0 22px rgba(0,0,0,.12);
@@ -6009,6 +6009,8 @@ body.tb-compact-small{
   .bottom-stack .calc-dock.show .calc-dock-actions{width:220px}
   .bottom-stack .calc-dock.show .calc-btn{width:100%}
   body.page-tagebuch.journal-chrome-hidden .bottom-stack{
+    top:0;
+    padding-top:calc(var(--status-inset) + var(--header-height) + 18px);
     transform:none!important;
     opacity:1!important;
   }
@@ -6032,7 +6034,7 @@ body.tb-compact-small{
   }
   .fab{
     top:auto;
-    right:max(24px,calc(50% - 536px));
+    right:max(40px,calc(50% - 520px));
     bottom:18px;
     width:180px;
     height:46px;
@@ -6044,7 +6046,7 @@ body.tb-compact-small{
   }
   .fab:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(34,211,160,.3)}
   .fab::after{content:'Neuer Trade';font-size:.78rem;font-weight:800;letter-spacing:.35px;color:var(--bg)}
-  body.page-tagebuch.journal-chrome-hidden .fab{transform:translateY(80px)!important;opacity:0!important}
+  body.page-tagebuch.journal-chrome-hidden .fab{transform:none!important;opacity:1!important}
   #trade-list{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -6227,10 +6229,11 @@ body.tb-compact-small{
   .equity-axis-labels>span{right:6px}
 }
 @media (min-width:1100px){
+  #page-rechner.active{animation:none!important;transform:none!important}
   .bottom-stack .calc-dock.show{display:none!important}
   .calc-inline-actions{
     position:fixed;
-    right:max(24px,calc(50% - 536px));
+    right:max(40px,calc(50% - 520px));
     bottom:18px;
     z-index:180;
     justify-content:flex-end;
