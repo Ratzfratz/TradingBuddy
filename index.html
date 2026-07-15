@@ -11,6 +11,8 @@
   if(viewport && cssWidth < 390 && density <= 2.25){
     viewport.setAttribute('content','width=460, viewport-fit=cover');
     document.documentElement.setAttribute('data-small-layout-viewport','460');
+  }else if(cssWidth<=339){
+    document.documentElement.setAttribute('data-compact-small','true');
   }
 })();
 </script>
@@ -26,7 +28,6 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="appwrite-sdk.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/appwrite@16/dist/iife/sdk.js';"></script>
 <style>
 :root{
@@ -37,7 +38,7 @@
   --green:#22d3a0;--red:#f05c7a;--gold:#f5c542;--blue:#5b8af5;
   --purple:#a57cf5;--orange:#f5834a;--text:#eef1f8;--muted:#6b7a99;
   --field-empty:#6b7a99;--stock:#38bdf8;
-  --f:'Inter',sans-serif;--r:10px;
+  --f:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--r:10px;
   --app-chrome-bg:rgba(13,15,20,.78);
   --app-chrome-filter:blur(18px) saturate(1.18);
   --app-chrome-shadow:0 3px 14px rgba(0,0,0,.12);
@@ -5929,6 +5930,7 @@ body.tb-compact-small{
   /* Desktop app shell: navigation and actions get stable, contextual positions. */
   :root{
     --tb-sidebar-width:180px;
+    --tb-sidebar-header-height:88px;
     --tb-main-left:204px;
     --tb-main-right:24px;
     --tb-desktop-main:calc(min(100vw,1120px) - var(--tb-main-left) - var(--tb-main-right));
@@ -5937,16 +5939,17 @@ body.tb-compact-small{
   .wrap{
     padding-left:var(--tb-main-left)!important;
     padding-right:var(--tb-main-right)!important;
+    padding-top:14px!important;
     padding-bottom:32px!important;
   }
   .bottom-stack{
-    top:calc(var(--status-inset) + var(--header-height));
+    top:0;
     bottom:0;
     left:max(0px,calc(50% - 560px));
     transform:none;
     width:var(--tb-sidebar-width)!important;
     max-width:var(--tb-sidebar-width)!important;
-    padding:18px 12px;
+    padding:calc(var(--tb-sidebar-header-height) + 18px) 12px 18px;
     border-top:0;
     border-right:1px solid var(--bd);
     box-shadow:8px 0 22px rgba(0,0,0,.12);
@@ -6010,12 +6013,13 @@ body.tb-compact-small{
   .bottom-stack .calc-dock.show .calc-btn{width:100%}
   body.page-tagebuch.journal-chrome-hidden .bottom-stack{
     top:0;
-    padding-top:calc(var(--status-inset) + var(--header-height) + 18px);
+    padding-top:calc(var(--tb-sidebar-header-height) + 18px);
     transform:none!important;
     opacity:1!important;
   }
   .journal-filter-panel,
   #journal-glass-layer{
+    top:0!important;
     left:max(var(--tb-main-left),calc(50% - 356px))!important;
     transform:none!important;
     width:var(--tb-desktop-main)!important;
@@ -6032,6 +6036,27 @@ body.tb-compact-small{
     border-bottom:1px solid var(--bd)!important;
     box-shadow:var(--app-chrome-shadow)!important;
   }
+  header,
+  body.page-tagebuch header{
+    top:0;
+    left:max(0px,calc(50% - 560px));
+    width:var(--tb-sidebar-width)!important;
+    min-height:var(--tb-sidebar-header-height);
+    padding:12px 12px 10px;
+    transform:none!important;
+    transition:none!important;
+    border-right:1px solid var(--bd)!important;
+    border-bottom:1px solid var(--bd)!important;
+    box-shadow:none!important;
+  }
+  body.page-tagebuch.journal-chrome-hidden header{transform:none!important;opacity:1!important}
+  header .logo{align-self:flex-start;gap:8px}
+  header .logo-icon{width:32px;height:32px}
+  header .logo-name{font-size:.9rem;line-height:1.05}
+  header #page-subtitle{font-size:.5rem!important}
+  header .version-wrap{position:absolute;right:8px;bottom:6px}
+  header .version-btn{width:32px;height:32px}
+  #journal-glass-layer{height:var(--jf-panel-height)!important}
   .fab{
     top:auto;
     right:max(40px,calc(50% - 520px));
@@ -6043,6 +6068,21 @@ body.tb-compact-small{
     z-index:180;
     box-shadow:0 4px 20px rgba(34,211,160,.2);
     transition:transform 300ms cubic-bezier(.22,.72,.18,1),opacity 220ms ease,box-shadow 180ms ease;
+    isolation:isolate;
+    overflow:visible;
+  }
+  .fab::before{
+    content:'';
+    position:absolute;
+    inset:-7px;
+    z-index:-1;
+    border:1px solid color-mix(in srgb,var(--bd) 72%,transparent);
+    border-radius:12px;
+    background:color-mix(in srgb,var(--bg) 68%,transparent);
+    box-shadow:0 8px 24px rgba(0,0,0,.14);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    pointer-events:none;
   }
   .fab:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(34,211,160,.3)}
   .fab::after{content:'Neuer Trade';font-size:.78rem;font-weight:800;letter-spacing:.35px;color:var(--bg)}
@@ -6198,6 +6238,26 @@ body.tb-compact-small{
 .equity-axis-labels small{display:block;font-size:.55rem;font-weight:600;letter-spacing:.02em;opacity:.78}
 .calc-inline-actions{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 24px}
 .calc-desktop-submit{display:none}
+@media (min-width:460px) and (max-width:1099px){
+  header,.bottom-stack{isolation:isolate}
+  header::after,
+  .bottom-stack::before{
+    content:'';
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:50%;
+    width:100vw;
+    transform:translateX(-50%);
+    z-index:-1;
+    background:var(--app-chrome-bg);
+    backdrop-filter:var(--app-chrome-filter);
+    -webkit-backdrop-filter:var(--app-chrome-filter);
+    pointer-events:none;
+  }
+  header::after{border-bottom:1px solid var(--bd);box-shadow:var(--app-chrome-shadow)}
+  .bottom-stack::before{border-top:1px solid var(--bd);box-shadow:var(--app-chrome-shadow)}
+}
 @media (min-width:900px){
   #view-stats>.stats-chart-section{grid-column:2;grid-row:2}
   #view-stats>.sec:nth-child(2){grid-column:1;grid-row:2}
@@ -6227,6 +6287,39 @@ body.tb-compact-small{
   .equity-chart-layout{grid-template-columns:78px minmax(0,1fr)}
   .equity-axis-labels{font-size:.64rem}
   .equity-axis-labels>span{right:6px}
+}
+@media (max-width:339px){
+  .stats-chart-tab{font-size:.6rem;padding:0 6px}
+  .stats-chart-head{font-size:.67rem}
+  .stats-chart-head strong{font-size:.72rem}
+  .stats-chart-context,.stats-chart-selection{font-size:.59rem}
+  .stats-chart-selection strong{font-size:.64rem}
+  .equity-axis-labels{font-size:.58rem}
+  .equity-axis-labels small{font-size:.5rem}
+  .stats-chart-label{font-size:14px}
+  .stats-chart-value{font-size:15px}
+}
+@media (min-width:340px) and (max-width:599px){
+  .stats-chart-tab{font-size:.64rem}
+  .stats-chart-head{font-size:.72rem}
+  .stats-chart-head strong{font-size:.78rem}
+  .stats-chart-context,.stats-chart-selection{font-size:.63rem}
+  .stats-chart-selection strong{font-size:.68rem}
+  .equity-axis-labels{font-size:.62rem}
+  .equity-axis-labels small{font-size:.53rem}
+  .stats-chart-label{font-size:16px}
+  .stats-chart-value{font-size:17px}
+}
+@media (min-width:600px) and (max-width:899px){
+  .stats-chart-tab{font-size:.68rem}
+  .stats-chart-head{font-size:.78rem}
+  .stats-chart-head strong{font-size:.84rem}
+  .stats-chart-context,.stats-chart-selection{font-size:.68rem}
+  .stats-chart-selection strong{font-size:.73rem}
+  .equity-axis-labels{font-size:.68rem}
+  .equity-axis-labels small{font-size:.58rem}
+  .stats-chart-label{font-size:18px}
+  .stats-chart-value{font-size:19px}
 }
 @media (min-width:1100px){
   #page-rechner.active{animation:none!important;transform:none!important}
