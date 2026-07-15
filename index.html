@@ -14610,17 +14610,18 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
 </script>
 <style id="settings-large-display-layout">
 @media (min-width:900px) and (min-height:650px){
-  #settings-sh{
+  #settings-sh,#rm-sh,#bm-sh{
     width:min(94vw,980px)!important;
     max-width:980px!important;
     height:85vh!important;
     max-height:860px!important;
-    bottom:7.5vh!important;
+    bottom:0!important;
     border:1px solid var(--bd)!important;
-    border-radius:18px!important;
+    border-bottom:0!important;
+    border-radius:18px 18px 0 0!important;
     box-shadow:0 24px 70px rgba(0,0,0,.42);
   }
-  #settings-bar{visibility:hidden;margin:5px auto 0!important}
+  #settings-bar{visibility:visible;margin:10px auto 4px!important}
   #settings-page-main{
     display:grid;
     grid-template-columns:minmax(0,1fr) minmax(0,1fr);
@@ -15069,8 +15070,8 @@ function settingsGoMerge(){
   bmOv.style.display='block';
   if(settBd){settBd.style.transition='none';settBd.style.opacity='1';}
   if(bmBd){bmBd.style.transition='none';bmBd.style.opacity='0';}
-  bmSh.style.transition='none';bmSh.style.transform='translateX(100%)';bmSh.getBoundingClientRect();
-  if(settSh){settSh.style.transition='transform '+ease;settSh.style.transform='translateX(-100%)';}
+  bmSh.style.transition='none';bmSh.style.transform='translateX(calc(50vw + 50%))';bmSh.getBoundingClientRect();
+  if(settSh){settSh.style.transition='transform '+ease;settSh.style.transform='translateX(calc(-50vw - 50%))';}
   bmSh.style.transition='transform '+ease;bmSh.style.transform='translateX(0)';
   _bmFromSettings=true;_bmOpen=true;_settingsOpen=false;
   openMergeTool();
@@ -15094,8 +15095,8 @@ function bmGoSettings(){
   settOv.style.display='block';
   if(bmBd){bmBd.style.transition='none';bmBd.style.opacity='0';}
   if(settBd){settBd.style.transition='none';settBd.style.opacity='1';}
-  settSh.style.transition='none';settSh.style.transform='translateX(-100%)';settSh.getBoundingClientRect();
-  if(bmSh){bmSh.style.transition='transform '+ease;bmSh.style.transform='translateX(100%)';}
+  settSh.style.transition='none';settSh.style.transform='translateX(calc(-50vw - 50%))';settSh.getBoundingClientRect();
+  if(bmSh){bmSh.style.transition='transform '+ease;bmSh.style.transform='translateX(calc(50vw + 50%))';}
   settSh.style.transition='transform '+ease;settSh.style.transform='translateX(0)';
   _bmOpen=false;_bmFromSettings=false;_settingsOpen=true;
   setTimeout(function(){
