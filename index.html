@@ -6728,12 +6728,10 @@ body.tb-compact-small{
   <button type="button" class="stats-layout-edit-toggle" id="stats-layout-edit-toggle" onclick="toggleStatsLayoutEditing()"><span>Layout anpassen</span></button>
   <div class="stats-layout-toolbar-panel">
     <div class="stats-layout-toolbar-controls">
-      <label><span>Inhaltsbreite</span><select class="inp" id="stats-layout-width-direct" onchange="updateStatsLayoutOption('width',this.value)"><option value="compact">Kompakt</option><option value="standard">Standard</option><option value="wide">Breit</option><option value="full">Fast volle Breite</option></select></label>
       <label><span>Spalten</span><select class="inp" id="stats-layout-columns-direct" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
       <button type="button" class="s-btn" onclick="resetStatsLayout()">Standardlayout</button>
     </div>
     <div class="stats-layout-hint">Karten direkt ziehen. Mit dem Griff am rechten Rand die Kartenbreite ändern.</div>
-    <div id="stats-layout-module-list-direct" class="stats-layout-module-list"></div>
   </div>
 </div>
 <div id="view-stats">
@@ -14951,7 +14949,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   <div class="sec settings-card settings-card-statslayout" style="margin-bottom:12px">
     <div class="sec-title">Statistik-Layout</div>
     <div class="stats-layout-settings-head">
-      <label class="field"><span>Inhaltsbreite</span><select class="inp" id="stats-layout-width" onchange="updateStatsLayoutOption('width',this.value)"><option value="compact">Kompakt</option><option value="standard">Standard</option><option value="wide">Breit</option><option value="full">Fast volle Breite</option></select></label>
+      <label class="field"><span>Genutzte Displaybreite</span><select class="inp" id="stats-layout-width" onchange="updateStatsLayoutOption('width',this.value)"><option value="60">60 %</option><option value="75">75 %</option><option value="100">100 %</option></select></label>
       <label class="field"><span>Spalten</span><select class="inp" id="stats-layout-columns" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
     </div>
     <div class="stats-layout-hint">Module ziehen, ausblenden oder ihre Breite festlegen. Gilt nur auf diesem Gerät ab Desktopgröße.</div>
@@ -19774,7 +19772,9 @@ function awTogglePw(){
 .stats-layout-module-size{width:112px;min-height:32px!important;padding:5px 26px 5px 8px!important;font-size:.64rem!important}
 .stats-layout-visible{display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--muted);white-space:nowrap}.stats-layout-visible input{accent-color:var(--green)}
 .stats-layout-reset{width:100%;justify-content:center}
-.settings-card-statslayout{display:none!important}
+.settings-card-statslayout{display:block!important}
+.settings-card-statslayout .stats-layout-settings-head{grid-template-columns:1fr}
+.settings-card-statslayout .stats-layout-settings-head>label:nth-child(2),.settings-card-statslayout .stats-layout-hint,.settings-card-statslayout .stats-layout-module-list,.settings-card-statslayout .stats-layout-reset{display:none!important}
 .stats-layout-toolbar{display:none}
 @media (max-width:719px){.stats-layout-settings-head{grid-template-columns:1fr}.stats-layout-module-row{grid-template-columns:24px minmax(90px,1fr) auto}.stats-layout-visible{grid-column:2/-1}.stats-layout-module-size{width:104px}}
 @media (min-width:900px){
@@ -19783,18 +19783,19 @@ function awTogglePw(){
   .stats-layout-edit-toggle:hover,.stats-layout-edit-toggle.on{color:var(--blue);border-color:rgba(91,138,245,.45);background:rgba(91,138,245,.1)}
   .stats-layout-toolbar-panel{display:none;width:100%;margin-top:8px;padding:12px;border:1px solid var(--bd);border-radius:12px;background:color-mix(in srgb,var(--s1) 88%,transparent);box-shadow:var(--shadow);backdrop-filter:blur(12px)}
   body.stats-layout-editing .stats-layout-toolbar-panel{display:block}
-  .stats-layout-toolbar-controls{display:grid;grid-template-columns:minmax(160px,1fr) minmax(140px,1fr) auto;gap:10px;align-items:end;margin-bottom:8px}
+  .stats-layout-toolbar-controls{display:grid;grid-template-columns:minmax(140px,1fr) auto;gap:10px;align-items:end;margin-bottom:8px}
   .stats-layout-toolbar-controls label>span{display:block;margin-bottom:5px;font-size:.58rem;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
   .stats-layout-toolbar-controls .s-btn{min-height:40px}
   #page-statistik{width:100%;margin-left:auto;margin-right:auto;transition:max-width .22s ease}
-  body[data-stats-layout-width="compact"] #page-statistik{max-width:760px}
-  body[data-stats-layout-width="standard"] #page-statistik{max-width:920px}
-  body[data-stats-layout-width="wide"] #page-statistik{max-width:1092px}
-  body[data-stats-layout-width="full"] #page-statistik{max-width:100%}
+  body[data-stats-layout-width="60"] #page-statistik{max-width:60%}
+  body[data-stats-layout-width="75"] #page-statistik{max-width:75%}
+  body[data-stats-layout-width="100"] #page-statistik{max-width:100%}
   #view-stats{display:grid!important;grid-template-columns:repeat(var(--stats-layout-cols,2),minmax(0,1fr))!important;gap:16px!important;align-items:start!important}
   #view-stats>[data-stats-module]{grid-column:span var(--stats-module-span,1)!important;grid-row:auto!important;height:auto!important;margin:0!important;min-width:0}
   body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
+  body.stats-layout-editing #view-stats{padding:8px;border-radius:12px;background-image:linear-gradient(to right,rgba(91,138,245,.09) 1px,transparent 1px),linear-gradient(to bottom,rgba(91,138,245,.07) 1px,transparent 1px);background-size:calc((100% - (var(--stats-layout-cols,2) - 1)*16px)/var(--stats-layout-cols,2) + 16px) 100%,100% 72px}
   body.stats-layout-editing #view-stats>[data-stats-module].stats-card-dragging{opacity:.45;cursor:grabbing}
+  .stats-grid-placeholder{min-height:120px;grid-column:span var(--stats-placeholder-span,1)!important;border:2px dashed var(--blue);border-radius:var(--r);background:rgba(91,138,245,.12);box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--blue) 8%,transparent);transition:min-height .15s}
   .stats-card-resize-handle{display:none;position:absolute;z-index:8;top:20%;right:-7px;width:14px;height:60%;cursor:ew-resize;touch-action:none}
   .stats-card-resize-handle::before{content:'';position:absolute;top:50%;left:5px;width:4px;height:42px;max-height:70%;transform:translateY(-50%);border-radius:4px;background:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--s1) 85%,transparent)}
   body.stats-layout-editing .stats-card-resize-handle{display:block}
@@ -19821,13 +19822,13 @@ function awTogglePw(){
     {key:'history',name:'P&L Verlauf',selector:'#st-monthly',parent:true,span:1},
     {key:'tax',name:'Steuerübersicht',selector:'#tax-overview',parent:true,span:2}
   ];
-  const defaults=()=>({width:'wide',columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span}]))});
+  const defaults=()=>({width:'75',columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span}]))});
   let state=defaults();
   let draggedKey='';
   const moduleElements={};
   function normalize(raw){
     const d=defaults(),r=raw&&typeof raw==='object'?raw:{};
-    d.width=['compact','standard','wide','full'].includes(r.width)?r.width:d.width;
+    const oldWidth={compact:'60',standard:'75',wide:'75',full:'100'};d.width=['60','75','100'].includes(String(r.width))?String(r.width):(oldWidth[r.width]||d.width);
     d.columns=['auto','1','2','3'].includes(String(r.columns))?String(r.columns):d.columns;
     const order=Array.isArray(r.order)?r.order.filter(k=>MODULES.some(m=>m.key===k)):[];
     d.order=[...new Set(order.concat(MODULES.map(m=>m.key)))];
@@ -19840,10 +19841,10 @@ function awTogglePw(){
   function prepareCard(el,key){
     if(el.dataset.statsPrepared)return;el.dataset.statsPrepared='1';
     const handle=document.createElement('span');handle.className='stats-card-resize-handle';handle.title='Breite ziehen';el.appendChild(handle);
-    el.addEventListener('dragstart',e=>{if(!document.body.classList.contains('stats-layout-editing')||e.target===handle){e.preventDefault();return;}draggedKey=key;el.classList.add('stats-card-dragging');e.dataTransfer.effectAllowed='move';});
-    el.addEventListener('dragend',()=>{el.classList.remove('stats-card-dragging');draggedKey='';});
-    el.addEventListener('dragover',e=>{if(document.body.classList.contains('stats-layout-editing'))e.preventDefault();});
-    el.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===key)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(key);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
+    el.addEventListener('dragstart',e=>{if(!document.body.classList.contains('stats-layout-editing')||e.target===handle){e.preventDefault();return;}draggedKey=key;el.classList.add('stats-card-dragging');e.dataTransfer.effectAllowed='move';const ph=document.createElement('div');ph.className='stats-grid-placeholder';ph.id='stats-grid-placeholder';ph.style.setProperty('--stats-placeholder-span',state.modules[key].span);ph.style.minHeight=el.offsetHeight+'px';el.after(ph);setTimeout(()=>{el.style.display='none';},0);});
+    el.addEventListener('dragend',()=>{el.classList.remove('stats-card-dragging');el.style.display='';const ph=document.getElementById('stats-grid-placeholder');if(ph)ph.remove();draggedKey='';apply();});
+    el.addEventListener('dragover',e=>{if(!document.body.classList.contains('stats-layout-editing')||!draggedKey)return;e.preventDefault();const ph=document.getElementById('stats-grid-placeholder');if(!ph||key===draggedKey)return;const r=el.getBoundingClientRect(),before=e.clientY<r.top+r.height/2;el.parentNode.insertBefore(ph,before?el:el.nextSibling);});
+    el.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey)return;const source=elementFor(draggedKey),ph=document.getElementById('stats-grid-placeholder'),host=document.getElementById('view-stats');if(!source||!ph||!host)return;source.style.display='';host.insertBefore(source,ph);ph.remove();state.order=Array.from(host.children).map(x=>x.dataset.statsModule).filter(Boolean);save();apply();renderStatsLayoutEditor();draggedKey='';});
     handle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();handle.setPointerCapture(e.pointerId);const host=document.getElementById('view-stats'),style=getComputedStyle(host),cols=Math.max(1,style.gridTemplateColumns.split(' ').length),gap=parseFloat(style.columnGap)||0,colWidth=(host.clientWidth-gap*(cols-1))/cols,startX=e.clientX,startSpan=state.modules[key].span;const move=ev=>{const next=Math.max(1,Math.min(3,startSpan+Math.round((ev.clientX-startX)/Math.max(1,colWidth))));if(next!==state.modules[key].span){state.modules[key].span=next;apply();renderStatsLayoutEditor();}};const up=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);save();};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);});
   }
   function elementFor(key){return moduleElements[key]||null;}
