@@ -338,6 +338,7 @@ tr.hl-t td:first-child{color:var(--green);font-weight:700}
 #pc{display:grid;margin-top:0}
 @keyframes tbRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 .page{display:none;grid-area:1/1;min-width:0}.page.active{display:block;padding-top:0;animation:tbRise .22s cubic-bezier(.25,.46,.45,.94) both}
+.fab-card{display:contents}
 .fab{position:fixed;right:16px;bottom:calc(104px + var(--nav-inset));z-index:52;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(34,211,160,.35);transition:all .18s}
 .fab:hover{transform:scale(1.08)}.fab svg{stroke:var(--bg)}
 @media (min-width:460px){.fab{right:calc(50% - 214px)}}
@@ -6038,11 +6039,17 @@ body.tb-compact-small{
   }
   header,
   body.page-tagebuch header{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
     top:0;
     left:max(0px,calc(50% - 560px));
     width:var(--tb-sidebar-width)!important;
+    height:var(--tb-sidebar-header-height)!important;
     min-height:var(--tb-sidebar-header-height);
     padding:12px 12px 10px;
+    z-index:180!important;
+    overflow:visible!important;
     transform:none!important;
     transition:none!important;
     border-right:1px solid var(--bd)!important;
@@ -6050,40 +6057,50 @@ body.tb-compact-small{
     box-shadow:none!important;
   }
   body.page-tagebuch.journal-chrome-hidden header{transform:none!important;opacity:1!important}
-  header .logo{align-self:flex-start;gap:8px}
+  header .logo{display:flex!important;visibility:visible!important;opacity:1!important;align-self:flex-start;gap:8px}
   header .logo-icon{width:32px;height:32px}
   header .logo-name{font-size:.9rem;line-height:1.05}
   header #page-subtitle{font-size:.5rem!important}
-  header .version-wrap{position:absolute;right:8px;bottom:6px}
+  header .version-wrap{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    position:fixed!important;
+    left:max(12px,calc(50% - 548px));
+    right:auto!important;
+    bottom:14px;
+    z-index:190!important;
+  }
   header .version-btn{width:32px;height:32px}
   #journal-glass-layer{height:var(--jf-panel-height)!important}
-  .fab{
-    top:auto;
+  .fab-card{
+    display:block;
+    position:fixed;
     right:max(40px,calc(50% - 520px));
     bottom:18px;
-    width:180px;
-    height:46px;
-    border-radius:9px;
-    gap:8px;
     z-index:180;
-    box-shadow:0 4px 20px rgba(34,211,160,.2);
-    transition:transform 300ms cubic-bezier(.22,.72,.18,1),opacity 220ms ease,box-shadow 180ms ease;
-    isolation:isolate;
-    overflow:visible;
-  }
-  .fab::before{
-    content:'';
-    position:absolute;
-    inset:-7px;
-    z-index:-1;
+    padding:6px;
     border:1px solid color-mix(in srgb,var(--bd) 72%,transparent);
     border-radius:12px;
     background:color-mix(in srgb,var(--bg) 68%,transparent);
     box-shadow:0 8px 24px rgba(0,0,0,.14);
     backdrop-filter:blur(12px);
     -webkit-backdrop-filter:blur(12px);
-    pointer-events:none;
   }
+  .fab-card .fab{
+    position:relative;
+    top:auto;
+    right:auto;
+    bottom:auto;
+    width:180px;
+    height:46px;
+    border-radius:9px;
+    gap:8px;
+    z-index:1;
+    box-shadow:0 4px 20px rgba(34,211,160,.2);
+    transition:transform 300ms cubic-bezier(.22,.72,.18,1),opacity 220ms ease,box-shadow 180ms ease;
+  }
+  .fab::before{content:none}
   .fab:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(34,211,160,.3)}
   .fab::after{content:'Neuer Trade';font-size:.78rem;font-weight:800;letter-spacing:.35px;color:var(--bg)}
   body.page-tagebuch.journal-chrome-hidden .fab{transform:none!important;opacity:1!important}
@@ -6300,15 +6317,16 @@ body.tb-compact-small{
   .stats-chart-value{font-size:15px}
 }
 @media (min-width:340px) and (max-width:599px){
-  .stats-chart-tab{font-size:.64rem}
-  .stats-chart-head{font-size:.72rem}
-  .stats-chart-head strong{font-size:.78rem}
-  .stats-chart-context,.stats-chart-selection{font-size:.63rem}
-  .stats-chart-selection strong{font-size:.68rem}
-  .equity-axis-labels{font-size:.62rem}
-  .equity-axis-labels small{font-size:.53rem}
-  .stats-chart-label{font-size:16px}
-  .stats-chart-value{font-size:17px}
+  .stats-chart-section>.sec-title{font-size:.68rem}
+  .stats-chart-tab{font-size:.72rem}
+  .stats-chart-head{font-size:.8rem}
+  .stats-chart-head strong{font-size:.88rem}
+  .stats-chart-context,.stats-chart-selection{font-size:.7rem}
+  .stats-chart-selection strong{font-size:.78rem}
+  .equity-axis-labels{font-size:.69rem}
+  .equity-axis-labels small{font-size:.6rem}
+  .stats-chart-label{font-size:20px}
+  .stats-chart-value{font-size:21px}
 }
 @media (min-width:600px) and (max-width:899px){
   .stats-chart-tab{font-size:.68rem}
@@ -6822,7 +6840,7 @@ body.tb-compact-small{
 
 </div>
 
-<button class="fab" id="fab-new" style="display:none" onclick="ntOpen();return false" title="Neuer Trade"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+<div class="fab-card" id="fab-card" style="display:none"><button class="fab" id="fab-new" onclick="ntOpen();return false" title="Neuer Trade"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>
 <!-- Confirm Dialog -->
 <div id="confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:24px">
   <div style="background:var(--s1);border:1px solid var(--bd);border-radius:14px;max-width:340px;width:100%;padding:22px 20px;animation:fadeUp .2s ease both">
@@ -6984,8 +7002,12 @@ function navTo(page, options = {}) {
   if (subtitle) subtitle.textContent = SUBTITLES[page] || '';
 
   const fab = $('fab-new');
+  const fabCard = $('fab-card');
   if (fab) {
     fab.style.display = (page === 'tagebuch') ? 'flex' : 'none';
+  }
+  if (fabCard) {
+    fabCard.style.display = (page === 'tagebuch') ? '' : 'none';
   }
 
   const calcDock = $('calc-dock');
