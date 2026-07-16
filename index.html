@@ -12760,7 +12760,7 @@ function renderPerformanceCharts(closed){
   });
   const step=Math.max(1,Math.ceil(rawPoints.length/120));
   const points=rawPoints.filter((_,index)=>index%step===0||index===rawPoints.length-1);
-  const width=640,height=340,left=8,right=12,top=12,bottom=32;
+  const width=Math.max(640,Math.min(1600,Math.round((equityHost?.clientWidth||732)-100))),height=340,left=8,right=12,top=12,bottom=32;
   const values=[0,...points.map(point=>point.value)];
   const min=Math.min(...values),max=Math.max(...values);
   const span=Math.max(1,max-min);
@@ -19933,9 +19933,10 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     {key:'history',name:'P&L Verlauf',selector:'#st-monthly',parent:true,span:1},
     {key:'tax',name:'Steuerübersicht',selector:'#tax-overview',parent:true,span:2}
   ];
-  const HEIGHT_DEFAULTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
+  const HEIGHT_DEFAULTS={hero:1,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
+  const LEGACY_HEIGHT_DEFAULTS={hero:1,overview:3,charts:3,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
   const MIN_SIZES={hero:[1,.5],overview:[1,.5],charts:[1,.5],calendar:[1,.5],insights:[1,.5],top:[1,.5],worst:[1,.5],history:[1,.5],tax:[1,.5]};
-  const defaults=()=>({width:'75',columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
+  const defaults=()=>({layoutVersion:2,width:'75',columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
   let state=defaults();
   let draggedKey='';
   const moduleElements={};
@@ -19948,9 +19949,10 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     const order=Array.isArray(r.order)?r.order.filter(k=>MODULES.some(m=>m.key===k)):[];
     d.order=[...new Set(order.concat(MODULES.map(m=>m.key)))];
     MODULES.forEach(m=>{const x=r.modules&&r.modules[m.key],min=MIN_SIZES[m.key]||[1,.5];if(x){const savedSpan=Number(x.span),savedHeight=Number(x.height);d.modules[m.key].visible=x.visible!==false;d.modules[m.key].span=Math.max(.5,Number.isFinite(savedSpan)&&savedSpan>=.5&&savedSpan<=3?savedSpan:m.span);d.modules[m.key].height=Math.max(min[1],Number.isFinite(savedHeight)&&savedHeight>=.5&&savedHeight<=3&&Number.isInteger(savedHeight*2)?savedHeight:d.modules[m.key].height);}});
+    if(Number(r.layoutVersion)!==2)MODULES.forEach(m=>{if(Number(r.modules?.[m.key]?.height)===LEGACY_HEIGHT_DEFAULTS[m.key])d.modules[m.key].height=HEIGHT_DEFAULTS[m.key];});
     return d;
   }
-  function load(){try{state=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch(e){state=defaults();}}
+  function load(){try{state=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch(e){state=defaults();}save();}
   function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
   function bindElements(){MODULES.forEach(m=>{if(moduleElements[m.key])return;const found=document.querySelector(m.selector),el=m.parent&&found?found.closest('.sec'):found;moduleElements[m.key]=el;if(el)prepareCard(el,m.key);});}
   function captureCardPositions(host,except){return new Map(Array.from(host.querySelectorAll(':scope>[data-stats-module]')).filter(card=>card!==except&&getComputedStyle(card).display!=='none').map(card=>[card,card.getBoundingClientRect()]));}
@@ -19985,7 +19987,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     const host=document.getElementById('view-stats');if(!host)return;const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const fine=window.innerWidth>=1800,desired=state.columns==='auto'?(fine?6:window.innerWidth>=1600?3:2):Number(state.columns),minCol=fine?150:320,maxCols=Math.max(1,Math.floor((host.clientWidth+16)/(minCol+16)));host.style.setProperty('--stats-effective-cols',Math.min(desired,maxCols));
     const desktop=window.matchMedia('(min-width:900px)').matches;
     const activeOrder=tablet?state.order:MODULES.map(m=>m.key);
-    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],level=Math.max(min[1],state.modules[key].height),storedSpan=state.modules[key].span,visualSpan=Math.max(fine?.5:min[0],storedSpan),displaySpan=fine?Math.round(visualSpan*2):Math.ceil(visualSpan),heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].height=level;el.dataset.statsModule=key;el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fine?displaySpan+'/6':displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();
+    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],level=Math.max(min[1],state.modules[key].height),storedSpan=state.modules[key].span,visualSpan=Math.max(fine?.5:min[0],storedSpan),displaySpan=fine?Math.round(visualSpan*2):Math.ceil(visualSpan),heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].height=level;el.dataset.statsModule=key;el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fine?displaySpan+'/6':displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();if(desktop&&typeof currentPage!=='undefined'&&currentPage==='statistik')requestAnimationFrame(()=>{try{renderStats();}catch(e){}});
   }
   function sizeLabel(n){return n===1?'1 Spalte':n===2?'2 Spalten':'Volle Reihe';}
   window.renderStatsLayoutEditor=function(){
