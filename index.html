@@ -6191,6 +6191,11 @@ body.tb-compact-small{
     margin:0;
   }
 }
+@media (min-width:900px){
+  #open-position-summary .ops-list{display:block;column-count:2;column-gap:14px}
+  #open-position-summary .ops-class{display:inline-block;width:100%;margin:0 0 14px;break-inside:avoid-column;-webkit-column-break-inside:avoid}
+  #open-position-summary .empty{column-span:all;width:100%}
+}
 </style>
 <style id="journal-card-usability">
 #page-tagebuch .trade-card{
@@ -6275,8 +6280,8 @@ body.tb-compact-small{
 .stats-chart-line{fill:none;stroke:var(--blue);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .stats-chart-area{fill:rgba(91,138,245,.09)}
 .stats-chart-dot{fill:var(--blue);stroke:var(--s1);stroke-width:2}
-.stats-chart-label{fill:var(--muted);font:600 17px var(--f)}
-.stats-chart-value{fill:var(--text);font:700 17px var(--f)}
+.stats-chart-label{fill:var(--muted);font:600 13px var(--f)}
+.stats-chart-value{fill:var(--text);font:700 14px var(--f)}
 .stats-chart-bar-positive{fill:var(--green)}
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
@@ -6322,8 +6327,8 @@ body.tb-compact-small{
   .stats-chart-selection strong{font-size:.78rem}
   .equity-axis-labels{font-size:.72rem}
   .equity-axis-labels small{font-size:.62rem}
-  .stats-chart-label{font-size:20px}
-  .stats-chart-value{font-size:20px}
+  .stats-chart-label{font-size:13px}
+  .stats-chart-value{font-size:14px}
 }
 @media (max-width:899px){
   .stats-chart-section{gap:9px;padding:14px 12px!important}
@@ -6358,8 +6363,8 @@ body.tb-compact-small{
   .stats-chart-selection strong{font-size:.78rem}
   .equity-axis-labels{font-size:.69rem}
   .equity-axis-labels small{font-size:.6rem}
-  .stats-chart-label{font-size:20px}
-  .stats-chart-value{font-size:21px}
+  .stats-chart-label{font-size:14px}
+  .stats-chart-value{font-size:15px}
 }
 @media (min-width:600px) and (max-width:899px){
   .stats-chart-tab{font-size:.68rem}
@@ -6369,8 +6374,8 @@ body.tb-compact-small{
   .stats-chart-selection strong{font-size:.73rem}
   .equity-axis-labels{font-size:.68rem}
   .equity-axis-labels small{font-size:.58rem}
-  .stats-chart-label{font-size:18px}
-  .stats-chart-value{font-size:19px}
+  .stats-chart-label{font-size:14px}
+  .stats-chart-value{font-size:15px}
 }
 @media (min-width:1100px){
   #page-rechner.active{animation:none!important;transform:none!important}
@@ -14869,16 +14874,17 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
 <style id="settings-large-display-layout">
 @media (min-width:900px) and (min-height:650px){
   #settings-sh,#rm-sh,#bm-sh{
-    width:min(94vw,980px)!important;
-    max-width:980px!important;
-    height:85vh!important;
-    max-height:860px!important;
+    width:min(96vw,1280px)!important;
+    max-width:1280px!important;
+    height:90vh!important;
+    max-height:1000px!important;
     bottom:0!important;
     border:1px solid var(--bd)!important;
     border-bottom:0!important;
     border-radius:18px 18px 0 0!important;
     box-shadow:0 24px 70px rgba(0,0,0,.42);
   }
+  #rm-sh,#bm-sh{width:min(94vw,980px)!important;max-width:980px!important;height:85vh!important;max-height:860px!important}
   #settings-bar{visibility:visible;margin:10px auto 4px!important}
   #settings-page-main{
     display:grid;
@@ -14886,18 +14892,18 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     grid-template-areas:
       "header header"
       "appearance appearance"
-      "statslayout statslayout"
       "depot data"
       "tax account"
       "info info";
-    gap:12px;
+    gap:16px;
     align-content:start;
-    padding:8px 18px 24px!important;
+    padding:10px 24px 28px!important;
   }
   #settings-header{grid-area:header;margin-bottom:0!important}
   #settings-page-main>.settings-card{margin:0!important;align-self:start;min-width:0}
   .settings-card-appearance{grid-area:appearance}
   .settings-card-statslayout{grid-area:statslayout}
+  .settings-card-appearance.settings-card-statslayout{grid-area:appearance}
   .settings-card-depot{grid-area:depot}
   .settings-card-tax{grid-area:tax}
   .settings-card-data{grid-area:data}
@@ -14926,8 +14932,9 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <button class="overlay-head-btn overlay-head-right" onclick="closeSettings()">&#x2715;</button>
   </div>
 
-  <div class="sec settings-card settings-card-appearance" style="margin-bottom:12px">
-    <div class="sec-title">Erscheinungsbild</div>
+  <div class="sec settings-card settings-card-appearance settings-card-statslayout" style="margin-bottom:12px">
+    <div class="sec-title">Darstellung</div>
+    <div class="settings-group-label">Theme</div>
     <div class="theme-selector" role="group" aria-label="Farbschema" style="width:100%">
       <button class="theme-choice active" data-theme-choice="dark" onclick="setTheme('dark')">
         <span class="theme-choice-swatches">
@@ -14954,10 +14961,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         <span class="theme-choice-name">Kontrast Hell</span>
       </button>
     </div>
-  </div>
-
-  <div class="sec settings-card settings-card-statslayout" style="margin-bottom:12px">
-    <div class="sec-title">Statistik-Layout</div>
+    <div class="settings-theme-layout-divider"></div>
+    <div class="settings-group-label">Statistik-Layout</div>
     <div class="stats-layout-settings-head">
       <label class="field"><span>Genutzte Displaybreite</span><select class="inp" id="stats-layout-width" onchange="updateStatsLayoutOption('width',this.value)"><option value="60">60 %</option><option value="75">75 %</option><option value="100">100 %</option></select></label>
       <label class="field"><span>Spalten</span><select class="inp" id="stats-layout-columns" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
@@ -19783,6 +19788,8 @@ function awTogglePw(){
 .stats-layout-visible{display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--muted);white-space:nowrap}.stats-layout-visible input{accent-color:var(--green)}
 .stats-layout-reset{width:100%;justify-content:center}
 .settings-card-statslayout{display:block!important}
+.settings-group-label{margin:0 0 8px;font-size:.6rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.settings-theme-layout-divider{height:1px;margin:14px 0;background:var(--bd)}
 .settings-card-statslayout .stats-layout-settings-head{grid-template-columns:1fr}
 .settings-card-statslayout .stats-layout-settings-head>label:nth-child(2),.settings-card-statslayout .stats-layout-hint,.settings-card-statslayout .stats-layout-module-list,.settings-card-statslayout .stats-layout-reset{display:none!important}
 .stats-layout-toolbar{display:none}
