@@ -14893,7 +14893,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       "header header"
       "appearance appearance"
       "depot data"
-      "tax account"
       "info info";
     gap:16px;
     align-content:start;
@@ -14908,6 +14907,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-tax{grid-area:tax}
   .settings-card-data{grid-area:data}
   .settings-card-account{grid-area:account}
+  .settings-card-depot.settings-card-tax{grid-area:depot}
+  .settings-card-data.settings-card-account{grid-area:data}
   .settings-card-info{grid-area:info}
   .settings-card-info .settings-info-card{
     display:grid;
@@ -14918,6 +14919,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row{border-left:1px solid var(--bd);justify-content:center;position:relative}
   .settings-card-info .settings-info-row>svg{position:absolute;right:18px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1}
+  .settings-card-appearance .theme-selector{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .settings-card-statslayout .stats-layout-settings-head{max-width:360px}
 }
 </style>
 <div id="settings-ov" style="overscroll-behavior:contain;position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:1900;display:none;">
@@ -14964,7 +14967,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <div class="settings-theme-layout-divider"></div>
     <div class="settings-group-label">Statistik-Layout</div>
     <div class="stats-layout-settings-head">
-      <label class="field"><span>Genutzte Displaybreite</span><select class="inp" id="stats-layout-width" onchange="updateStatsLayoutOption('width',this.value)"><option value="60">60 %</option><option value="75">75 %</option><option value="100">100 %</option></select></label>
+      <label class="field stats-layout-width-setting"><span>Genutzte Displaybreite</span><select class="inp" id="stats-layout-width" onchange="updateStatsLayoutOption('width',this.value)"><option value="60">60 %</option><option value="75">75 %</option><option value="100">100 %</option></select></label>
       <label class="field"><span>Spalten</span><select class="inp" id="stats-layout-columns" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
     </div>
     <div class="stats-layout-hint">Module ziehen, ausblenden oder ihre Breite festlegen. Gilt nur auf diesem Gerät ab Desktopgröße.</div>
@@ -14972,17 +14975,16 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <button type="button" class="s-btn stats-layout-reset" onclick="resetStatsLayout()">Standardlayout wiederherstellen</button>
   </div>
 
-    <div class="sec settings-card settings-card-depot" style="margin-bottom:12px">
-    <div class="sec-title">Depot</div>
+    <div class="sec settings-card settings-card-depot settings-card-tax" style="margin-bottom:12px" id="tax-settings-card">
+    <div class="sec-title">Finanzen &amp; Steuern</div>
+    <div class="settings-group-label">Depot</div>
     <div class="field settings-money-field" style="margin:0">
       <label>Eingezahltes Kapital € <span style="color:var(--muted);font-weight:400">(optional)</span></label>
       <input class="inp" type="text" inputmode="decimal" id="s-depot-capital" placeholder="z.B. 10000" enterkeyhint="done" oninput="syncDepotCapital()">
       <div class="tax-settings-hint">Basis für die Depot-Rendite in der Statistik.</div>
     </div>
-  </div>
-
-  <div class="sec settings-card settings-card-tax" style="margin-bottom:12px" id="tax-settings-card">
-    <div class="sec-title">Steuern</div>
+    <div class="settings-theme-layout-divider"></div>
+    <div class="settings-group-label">Steuern</div>
 
     <div class="field settings-money-field" style="margin-bottom:10px">
       <label>Sparerpauschbetrag €</label>
@@ -15037,8 +15039,9 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <div class="tax-note warn" style="margin-top:8px">ETF: pauschal 30 % Teilfreistellung, keine Vorabpauschale.</div>
   </div>
 
-  <div class="sec settings-card settings-card-data" style="margin-bottom:12px">
-    <div class="sec-title">Daten</div>
+  <div class="sec settings-card settings-card-data settings-card-account" style="margin-bottom:12px" id="cloud-sync-card">
+    <div class="sec-title">Daten, Konto &amp; Backup</div>
+    <div class="settings-group-label">Datenverwaltung</div>
     <input type="file" id="zero-csv-input" accept="*/*" style="display:none" onchange="handleZeroCsv(event)">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button onclick="document.getElementById('zero-csv-input').click()" class="s-btn">
@@ -15055,11 +15058,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     </div>
     <div class="s-hint">CSV aus Zero-Konto importieren · Basiswerte mit gleichem Underlying zusammenführen.</div>
     <div id="zero-import-result" style="margin-top:6px"></div>
-  </div>
-
-  <!-- ── Konto (Cloud Sync + Backup) ─────────────────────────────────── -->
-  <div class="sec settings-card settings-card-account" style="margin-bottom:12px" id="cloud-sync-card">
-    <div class="sec-title">Konto &amp; Backup</div>
+    <div class="settings-theme-layout-divider"></div>
+    <div class="settings-group-label">Konto &amp; Backup</div>
 
     <!-- Cloud Sync Block -->
     <div class="s-block s-block-cloud">
@@ -19857,7 +19857,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body[data-stats-layout-columns="6"]{--stats-layout-cols:6}
   body[data-stats-layout-columns="auto"]{--stats-layout-cols:2}
 }
-@media (min-width:1100px){
+@media (min-width:1600px){
   body[data-stats-layout-width="60"]{--tb-shell-width:60vw}
   body[data-stats-layout-width="75"]{--tb-shell-width:75vw}
   body[data-stats-layout-width="100"]{--tb-shell-width:100vw}
@@ -19917,6 +19917,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 }
 @media (min-width:1600px){body[data-stats-layout-columns="auto"]{--stats-layout-cols:3}}
 @media (min-width:1800px){body[data-stats-layout-columns="auto"]{--stats-layout-cols:6}body{--stats-min-col:150px}}
+@media (max-width:1599px){.stats-layout-width-setting{display:none!important}#page-statistik{max-width:100%!important}}
 </style>
 <script>
 (function(){
@@ -19941,6 +19942,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   let draggedKey='';
   const moduleElements={};
   let rowSyncFrame=0;
+  let statsHostWidthObserver=null,lastObservedHostWidth=0;
   const statsRowObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>syncStatsRowSpans()):null;
   function normalize(raw){
     const d=defaults(),r=raw&&typeof raw==='object'?raw:{};
@@ -19984,7 +19986,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   function apply(){
     document.body.dataset.statsLayoutWidth=state.width;
     document.body.dataset.statsLayoutColumns=state.columns;
-    const host=document.getElementById('view-stats');if(!host)return;const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const fine=window.innerWidth>=1800,desired=state.columns==='auto'?(fine?6:window.innerWidth>=1600?3:2):Number(state.columns),minCol=fine?150:320,maxCols=Math.max(1,Math.floor((host.clientWidth+16)/(minCol+16)));host.style.setProperty('--stats-effective-cols',Math.min(desired,maxCols));
+    const host=document.getElementById('view-stats');if(!host)return;if(!statsHostWidthObserver&&typeof ResizeObserver==='function'){lastObservedHostWidth=host.clientWidth;statsHostWidthObserver=new ResizeObserver(entries=>{const next=Math.round(entries[0]?.contentRect?.width||0);if(next&&Math.abs(next-lastObservedHostWidth)>6){lastObservedHostWidth=next;requestAnimationFrame(apply);}});statsHostWidthObserver.observe(host);}const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const contentWidth=host.clientWidth,fine=contentWidth>=1800,desired=state.columns==='auto'?(fine?6:contentWidth>=1050?3:2):Number(state.columns),minCol=fine?150:320,maxCols=Math.max(1,Math.floor((contentWidth+16)/(minCol+16)));host.style.setProperty('--stats-effective-cols',Math.min(desired,maxCols));
     const desktop=window.matchMedia('(min-width:900px)').matches;
     const activeOrder=tablet?state.order:MODULES.map(m=>m.key);
     activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],level=Math.max(min[1],state.modules[key].height),storedSpan=state.modules[key].span,visualSpan=Math.max(fine?.5:min[0],storedSpan),displaySpan=fine?Math.round(visualSpan*2):Math.ceil(visualSpan),heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].height=level;el.dataset.statsModule=key;el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fine?displaySpan+'/6':displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();if(desktop&&typeof currentPage!=='undefined'&&currentPage==='statistik')requestAnimationFrame(()=>{try{renderStats();}catch(e){}});
@@ -20005,7 +20007,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   window.updateStatsLayoutOption=function(key,value){if(key==='width')state.width=value;if(key==='columns')state.columns=value;save();apply();};
   window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=Number(value)||1;save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
-  window.resetStatsLayout=function(){state=defaults();save();apply();renderStatsLayoutEditor();};
+  window.resetStatsLayout=function(){const preservedWidth=state.width;state=defaults();state.width=preservedWidth;save();apply();renderStatsLayoutEditor();};
   load();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();renderStatsLayoutEditor();});else{apply();renderStatsLayoutEditor();}
   window.addEventListener('resize',apply,{passive:true});
