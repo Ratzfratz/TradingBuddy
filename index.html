@@ -19016,7 +19016,6 @@ async function _awPull(force=false,options={}){
 }
 
 
-function _awCollect(){const d={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!AW_EXCL.has(k))d[k]=localStorage.getItem(k);}return d;}
 function _awApplyData(data){Object.entries(data||{}).forEach(([k,v])=>{if(!AW_EXCL.has(k)&&typeof v==='string')localStorage.setItem(k,v);});}
 function _awDevice(){if(window.TBNative&&!TBNative.__browserShim)return 'Android';if(/iphone|ipad/i.test(navigator.userAgent))return 'iOS';return 'Web';}
 function _awErr(e,action=''){
