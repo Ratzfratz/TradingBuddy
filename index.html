@@ -19777,6 +19777,20 @@ function awTogglePw(){
 .settings-card-statslayout .stats-layout-settings-head>label:nth-child(2),.settings-card-statslayout .stats-layout-hint,.settings-card-statslayout .stats-layout-module-list,.settings-card-statslayout .stats-layout-reset{display:none!important}
 .stats-layout-toolbar{display:none}
 .stats-layout-toolbar-panel{display:none!important}
+@media (max-width:719px){
+  .stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge{display:none!important}
+}
+@media (min-width:720px) and (max-width:899px){
+  .stats-layout-toolbar{display:flex;justify-content:flex-end;margin:0 0 12px}
+  .stats-layout-edit-toggle{min-height:40px;padding:0 15px;border:1px solid var(--bd);border-radius:10px;background:color-mix(in srgb,var(--s1) 78%,transparent);color:var(--muted);font:700 .7rem var(--f);cursor:pointer;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+  .stats-layout-edit-toggle:hover,.stats-layout-edit-toggle.on{color:var(--blue);border-color:rgba(91,138,245,.45);background:rgba(91,138,245,.1)}
+  body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
+  body.stats-layout-editing #view-stats{padding:8px;border-radius:12px;background-image:linear-gradient(to bottom,rgba(91,138,245,.07) 1px,transparent 1px);background-size:100% 72px}
+  body.stats-layout-editing #view-stats>[data-stats-module].stats-card-dragging{opacity:.45;cursor:grabbing}
+  body.stats-layout-editing .stats-card-floating{position:fixed!important;z-index:2500!important;margin:0!important;pointer-events:none!important;cursor:grabbing!important;opacity:.96;transform:rotate(.25deg) scale(1.01);box-shadow:0 20px 48px rgba(0,0,0,.3);transition:none!important}
+  .stats-grid-placeholder{min-height:120px;border:2px dashed var(--blue);border-radius:var(--r);background:rgba(91,138,245,.12);box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--blue) 8%,transparent)}
+  .stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge{display:none!important}
+}
 @media (max-width:719px){.stats-layout-settings-head{grid-template-columns:1fr}.stats-layout-module-row{grid-template-columns:24px minmax(90px,1fr) auto}.stats-layout-visible{grid-column:2/-1}.stats-layout-module-size{width:104px}}
 @media (min-width:900px){
   #view-stats>.stats-calendar-section>.stats-calendar-body{display:block!important}
@@ -19928,9 +19942,9 @@ function awTogglePw(){
   function apply(){
     document.body.dataset.statsLayoutWidth=state.width;
     document.body.dataset.statsLayoutColumns=state.columns;
-    const host=document.getElementById('view-stats');if(!host)return;const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik');if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const desired=state.columns==='auto'?(window.innerWidth>=1600?3:2):Number(state.columns),maxCols=Math.max(1,Math.floor((host.clientWidth+16)/(320+16)));host.style.setProperty('--stats-effective-cols',Math.min(desired,maxCols));
+    const host=document.getElementById('view-stats');if(!host)return;const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const desired=state.columns==='auto'?(window.innerWidth>=1600?3:2):Number(state.columns),maxCols=Math.max(1,Math.floor((host.clientWidth+16)/(320+16)));host.style.setProperty('--stats-effective-cols',Math.min(desired,maxCols));
     const desktop=window.matchMedia('(min-width:900px)').matches;
-    const activeOrder=desktop?state.order:MODULES.map(m=>m.key);
+    const activeOrder=tablet?state.order:MODULES.map(m=>m.key);
     activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,1],level=Math.max(min[1],state.modules[key].height),span=Math.max(min[0],state.modules[key].span),heights={1:220,2:456,3:692},badge=el.querySelector('.stats-card-size-badge');state.modules[key].height=level;state.modules[key].span=span;el.dataset.statsModule=key;el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',span);el.style.setProperty('--stats-card-height',heights[level]+'px');if(badge)badge.textContent=span+'×'+level+'×';el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();
   }
   function sizeLabel(n){return n===1?'1 Spalte':n===2?'2 Spalten':'Volle Reihe';}
@@ -19945,7 +19959,7 @@ function awTogglePw(){
       row.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===row.dataset.layoutKey)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(row.dataset.layoutKey);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
     });
   };
-  window.toggleStatsLayoutEditing=function(){const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
+  window.toggleStatsLayoutEditing=function(){if(!window.matchMedia('(min-width:720px)').matches)return;const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
   window.updateStatsLayoutOption=function(key,value){if(key==='width')state.width=value;if(key==='columns')state.columns=value;save();apply();};
   window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=Number(value)||1;save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
