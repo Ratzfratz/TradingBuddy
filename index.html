@@ -19819,6 +19819,7 @@ function awTogglePw(){
 .settings-card-statslayout .stats-layout-settings-head>label:nth-child(2),.settings-card-statslayout .stats-layout-hint,.settings-card-statslayout .stats-layout-module-list,.settings-card-statslayout .stats-layout-reset{display:none!important}
 .stats-layout-toolbar{display:none}
 .stats-layout-toolbar-panel{display:none!important}
+.stats-page-active #view-stats>[data-stats-module]{overflow:hidden!important;overscroll-behavior:none}
 .stats-card-floating{overflow:hidden!important;contain:paint}
 .stats-layout-reset-direct{display:none;min-height:40px;padding:0 14px;border:1px solid color-mix(in srgb,var(--red) 38%,var(--bd));border-radius:10px;background:color-mix(in srgb,var(--red) 8%,var(--s1));color:var(--red);font:700 .68rem var(--f);cursor:pointer;white-space:nowrap}
 .stats-layout-reset-direct:hover{background:color-mix(in srgb,var(--red) 14%,var(--s1));border-color:color-mix(in srgb,var(--red) 58%,var(--bd))}
@@ -19858,7 +19859,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body[data-stats-layout-width="75"] #page-statistik{max-width:75%}
   body[data-stats-layout-width="100"] #page-statistik{max-width:100%}
   #view-stats{display:grid!important;grid-template-columns:repeat(var(--stats-effective-cols,var(--stats-layout-cols,2)),minmax(var(--stats-min-col,320px),1fr))!important;grid-auto-flow:dense;grid-auto-rows:102px;gap:16px!important;align-items:start!important}
-  #view-stats>[data-stats-module]{box-sizing:border-box;grid-column:span var(--stats-module-span,1)!important;grid-row:span var(--stats-row-span,1)!important;height:var(--stats-card-height,220px)!important;min-height:var(--stats-card-height,220px);margin:0!important;min-width:0;overflow:auto;overflow-wrap:anywhere}
+  #view-stats>[data-stats-module]{box-sizing:border-box;grid-column:span var(--stats-module-span,1)!important;grid-row:span var(--stats-row-span,1)!important;height:var(--stats-card-height,220px)!important;min-height:var(--stats-card-height,220px);margin:0!important;min-width:0;overflow:hidden!important;overscroll-behavior:none;overflow-wrap:anywhere}
   body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
   body.stats-layout-editing #view-stats{padding:8px;border-radius:12px;background-image:linear-gradient(to right,rgba(91,138,245,.09) 1px,transparent 1px),linear-gradient(to bottom,rgba(91,138,245,.07) 1px,transparent 1px);background-size:calc((100% - (var(--stats-effective-cols,var(--stats-layout-cols,2)) - 1)*16px)/var(--stats-effective-cols,var(--stats-layout-cols,2)) + 16px) 100%,100% 72px}
   body.stats-layout-editing #view-stats>[data-stats-module].stats-card-dragging{opacity:.45;cursor:grabbing}
@@ -19959,12 +19960,13 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     {key:'history',name:'P&L Verlauf',selector:'#st-monthly',parent:true,span:1},
     {key:'tax',name:'Steuerübersicht',selector:'#tax-overview',parent:true,span:2}
   ];
-  const HEIGHT_DEFAULTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
+  const HEIGHT_DEFAULTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:1.5,worst:1.5,history:1.5,tax:2};
+  const VERSION_3_HEIGHT_DEFAULTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
   const PREVIOUS_HEIGHT_DEFAULTS={hero:1,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
   const LEGACY_HEIGHT_DEFAULTS={hero:1,overview:3,charts:3,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
-  const MIN_SIZES={hero:[1,.5],overview:[1,2],charts:[1,2],calendar:[1.5,2],insights:[1.5,2],top:[.5,1],worst:[.5,1],history:[1,1],tax:[1.5,2]};
+  const MIN_SIZES={hero:[1,.5],overview:[1,2],charts:[1,2],calendar:[1.5,2],insights:[1.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[1.5,2]};
   const MAX_HEIGHTS={hero:.5,overview:2.5,charts:3,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
-  const defaults=()=>({layoutVersion:3,width:'75',columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
+  const defaults=()=>({layoutVersion:4,width:'75',columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
   let state=defaults();
   let draggedKey='';
   const moduleElements={};
@@ -19978,7 +19980,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     const order=Array.isArray(r.order)?r.order.filter(k=>MODULES.some(m=>m.key===k)):[];
     d.order=[...new Set(order.concat(MODULES.map(m=>m.key)))];
     MODULES.forEach(m=>{const x=r.modules&&r.modules[m.key],min=MIN_SIZES[m.key]||[1,.5],maxHeight=MAX_HEIGHTS[m.key]||3;if(x){const savedSpan=Number(x.span),savedHeight=Number(x.height);d.modules[m.key].visible=x.visible!==false;d.modules[m.key].span=Math.max(min[0],Number.isFinite(savedSpan)&&savedSpan>=.5&&savedSpan<=3?savedSpan:m.span);d.modules[m.key].height=Math.min(maxHeight,Math.max(min[1],Number.isFinite(savedHeight)&&savedHeight>=.5&&savedHeight<=3&&Number.isInteger(savedHeight*2)?savedHeight:d.modules[m.key].height));}});
-    if(Number(r.layoutVersion)!==3)MODULES.forEach(m=>{const saved=Number(r.modules?.[m.key]?.height);if(saved===LEGACY_HEIGHT_DEFAULTS[m.key]||saved===PREVIOUS_HEIGHT_DEFAULTS[m.key])d.modules[m.key].height=HEIGHT_DEFAULTS[m.key];});
+    if(Number(r.layoutVersion)!==4)MODULES.forEach(m=>{const saved=Number(r.modules?.[m.key]?.height);if(saved===LEGACY_HEIGHT_DEFAULTS[m.key]||saved===PREVIOUS_HEIGHT_DEFAULTS[m.key]||saved===VERSION_3_HEIGHT_DEFAULTS[m.key])d.modules[m.key].height=HEIGHT_DEFAULTS[m.key];});
     return d;
   }
   function load(){try{state=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch(e){state=defaults();}save();}
