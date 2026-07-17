@@ -5888,7 +5888,7 @@ body.tb-compact-small{
 
 @media (min-width:1100px){
   :root{
-    --tb-large-content:min(100vw,2200px);
+    --tb-large-content:min(100vw,1720px);
     --tb-page-pad:24px;
   }
   .wrap{padding-left:24px!important;padding-right:24px!important}
@@ -14900,8 +14900,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #settings-header{grid-area:header;margin-bottom:0!important}
   #settings-page-main>.settings-card{margin:0!important;align-self:start;min-width:0}
   .settings-card-appearance{grid-area:appearance}
-  .settings-card-statslayout{grid-area:statslayout}
-  .settings-card-appearance.settings-card-statslayout{grid-area:appearance}
   .settings-card-depot{grid-area:depot}
   .settings-card-tax{grid-area:tax}
   .settings-card-data{grid-area:data}
@@ -14919,16 +14917,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row>svg{position:absolute;right:18px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1}
   .settings-card-appearance .theme-selector{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-  .settings-card-statslayout .stats-layout-settings-head{max-width:360px}
-  #settings-page-main{grid-template-columns:1fr;grid-template-areas:"header" "nav" "content"}
-  .settings-desktop-nav{grid-area:nav;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:6px;border:1px solid var(--bd);border-radius:12px;background:var(--s1)}
-  .settings-desktop-nav button{min-height:40px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);font:700 .68rem var(--f);cursor:pointer}
-  .settings-desktop-nav button.active{border-color:var(--blue);background:rgba(91,138,245,.12);color:var(--blue)}
-  #settings-page-main>.settings-card{grid-area:content!important;display:none!important}
-  #settings-page-main[data-desktop-section="appearance"]>.settings-card-appearance,
-  #settings-page-main[data-desktop-section="finance"]>.settings-card-depot,
-  #settings-page-main[data-desktop-section="data"]>.settings-card-data,
-  #settings-page-main[data-desktop-section="info"]>.settings-card-info{display:block!important}
 }
 </style>
 <div id="settings-ov" style="overscroll-behavior:contain;position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:1900;display:none;">
@@ -14942,14 +14930,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <div class="overlay-title">Einstellungen</div>
     <button class="overlay-head-btn overlay-head-right" onclick="closeSettings()">&#x2715;</button>
   </div>
-  <nav class="settings-desktop-nav" aria-label="Einstellungsbereiche" style="display:none">
-    <button type="button" data-settings-section="appearance" onclick="setSettingsDesktopSection('appearance')">Darstellung</button>
-    <button type="button" data-settings-section="finance" onclick="setSettingsDesktopSection('finance')">Finanzen</button>
-    <button type="button" data-settings-section="data" onclick="setSettingsDesktopSection('data')">Daten &amp; Konto</button>
-    <button type="button" data-settings-section="info" onclick="setSettingsDesktopSection('info')">Info</button>
-  </nav>
-
-  <div class="sec settings-card settings-card-appearance settings-card-statslayout" style="margin-bottom:12px">
+  <div class="sec settings-card settings-card-appearance" style="margin-bottom:12px">
     <div class="sec-title">Darstellung</div>
     <div class="settings-group-label">Theme</div>
     <div class="theme-selector" role="group" aria-label="Farbschema" style="width:100%">
@@ -14978,14 +14959,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         <span class="theme-choice-name">Kontrast Hell</span>
       </button>
     </div>
-    <div class="settings-theme-layout-divider"></div>
-    <div class="settings-group-label">Statistik-Layout</div>
-    <div class="stats-layout-settings-head">
-      <label class="field"><span>Spalten</span><select class="inp" id="stats-layout-columns" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
-    </div>
-    <div class="stats-layout-hint">Module ziehen, ausblenden oder ihre Breite festlegen. Gilt nur auf diesem Gerät ab Desktopgröße.</div>
-    <div id="stats-layout-module-list" class="stats-layout-module-list"></div>
-    <button type="button" class="s-btn stats-layout-reset" onclick="resetStatsLayout()">Standardlayout wiederherstellen</button>
   </div>
 
     <div class="sec settings-card settings-card-depot settings-card-tax" style="margin-bottom:12px" id="tax-settings-card">
@@ -15441,16 +15414,6 @@ function settingsGoRoadmap(){
 function settingsGoBack(){
   document.getElementById('settings-pages').style.transform='translateX(0)';
 }
-function setSettingsDesktopSection(section){
-  var main=document.getElementById('settings-page-main');
-  if(!main)return;
-  var allowed=['appearance','finance','data','info'];
-  if(allowed.indexOf(section)<0)section='appearance';
-  main.dataset.desktopSection=section;
-  main.querySelectorAll('[data-settings-section]').forEach(function(button){button.classList.toggle('active',button.dataset.settingsSection===section);});
-  main.scrollTop=0;
-}
-
 function openSettings(section){
   try{if(window.freezeJournalFilterState) window.freezeJournalFilterState();}catch(e){}
   var ov=document.getElementById('settings-ov'),sh=document.getElementById('settings-sh'),bd=document.getElementById('settings-bd');
@@ -15458,11 +15421,9 @@ function openSettings(section){
   var pages=document.getElementById('settings-pages');if(pages)pages.style.transform='translateX(0)';
   var mainPage=document.getElementById('settings-page-main');
   var roadmapPage=document.getElementById('settings-page-rm');
-  if(mainPage&&window.matchMedia('(min-width:900px) and (min-height:650px)').matches)setSettingsDesktopSection(section==='tax'?'finance':(mainPage.dataset.desktopSection||'appearance'));
   if(mainPage)mainPage.scrollTop=0;
   if(roadmapPage)roadmapPage.scrollTop=0;
   try{if(typeof syncSettingsFromTax==='function')syncSettingsFromTax();}catch(e){console.warn('Settings sync:',e);}
-  try{if(typeof renderStatsLayoutEditor==='function')renderStatsLayoutEditor();}catch(e){console.warn('Stats layout:',e);}
   try{
     var sv=document.getElementById('s-version');
     if(sv&&typeof APP_VERSION!=='undefined')sv.textContent=APP_VERSION;
@@ -19814,11 +19775,8 @@ function awTogglePw(){
 .stats-layout-module-size{width:112px;min-height:32px!important;padding:5px 26px 5px 8px!important;font-size:.64rem!important}
 .stats-layout-visible{display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--muted);white-space:nowrap}.stats-layout-visible input{accent-color:var(--green)}
 .stats-layout-reset{width:100%;justify-content:center}
-.settings-card-statslayout{display:block!important}
 .settings-group-label{margin:0 0 8px;font-size:.6rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
 .settings-theme-layout-divider{height:1px;margin:14px 0;background:var(--bd)}
-.settings-card-statslayout .stats-layout-settings-head{grid-template-columns:1fr}
-.settings-card-statslayout .stats-layout-settings-head>label:nth-child(2),.settings-card-statslayout .stats-layout-hint,.settings-card-statslayout .stats-layout-module-list,.settings-card-statslayout .stats-layout-reset{display:none!important}
 .stats-layout-toolbar{display:none}
 .stats-layout-toolbar-panel{display:none!important}
 .stats-page-active #view-stats>[data-stats-module]{overflow:hidden!important;overscroll-behavior:none}
@@ -19913,6 +19871,32 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 }
 @media (min-width:1600px){body[data-stats-layout-columns="auto"]{--stats-layout-cols:3}}
 @media (min-width:1800px){body[data-stats-layout-columns="auto"]{--stats-layout-cols:6}body{--stats-min-col:150px}}
+@media (min-width:720px){
+  #nt-clear-area{display:none!important}
+  #nt-sh .nt-actions{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,200px))!important;
+    justify-content:end!important;
+    gap:8px!important;
+    padding:6px!important;
+    border:1px solid color-mix(in srgb,var(--bd) 72%,transparent)!important;
+    border-radius:12px!important;
+    background:color-mix(in srgb,var(--bg) 68%,transparent)!important;
+    box-shadow:0 8px 24px rgba(0,0,0,.14)!important;
+    backdrop-filter:blur(12px)!important;
+    -webkit-backdrop-filter:blur(12px)!important;
+  }
+  #nt-sh .nt-actions .nt-clear-action,
+  #nt-sh .nt-actions .calc-btn{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:200px!important;
+    max-width:200px!important;
+    height:46px!important;
+    margin:0!important;
+  }
+}
 </style>
 <script>
 (function(){
@@ -19990,8 +19974,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   function sizeLabel(n){return n===1?'1 Spalte':n===2?'2 Spalten':'Volle Reihe';}
   window.renderStatsLayoutEditor=function(){
-    const list=document.getElementById('stats-layout-module-list-direct')||document.getElementById('stats-layout-module-list');if(!list)return;
-    ['stats-layout-columns','stats-layout-columns-direct'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=state.columns;});
+    const list=document.getElementById('stats-layout-module-list-direct');if(!list)return;
+    const columns=document.getElementById('stats-layout-columns-direct');if(columns)columns.value=state.columns;
     list.innerHTML=state.order.map(key=>{const m=MODULES.find(x=>x.key===key),cfg=state.modules[key];return `<div class="stats-layout-module-row" draggable="true" data-layout-key="${key}"><span class="stats-layout-drag" title="Ziehen">⋮⋮</span><span class="stats-layout-module-name">${m.name}</span><select class="inp stats-layout-module-size" aria-label="Breite von ${m.name}" onchange="setStatsModuleSpan('${key}',this.value)">${[1,2,3].map(n=>`<option value="${n}"${cfg.span===n?' selected':''}>${sizeLabel(n)}</option>`).join('')}</select><label class="stats-layout-visible"><input type="checkbox" ${cfg.visible?'checked':''} onchange="setStatsModuleVisible('${key}',this.checked)"> Anzeigen</label></div>`;}).join('');
     list.querySelectorAll('.stats-layout-module-row').forEach(row=>{
       row.addEventListener('dragstart',e=>{draggedKey=row.dataset.layoutKey;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
