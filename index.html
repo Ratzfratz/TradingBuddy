@@ -6283,6 +6283,7 @@ body.tb-compact-small{
 .stats-chart-tab{min-width:0;height:36px;padding:0 9px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .64rem var(--f);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
 .stats-chart-tab:hover{color:var(--text);border-color:var(--blue-border)}
 .stats-chart-tab[aria-selected="true"]{color:var(--blue);background:rgba(91,138,245,.12);border-color:var(--blue);box-shadow:none}
+.stats-chart-panel{display:flex;flex:1;min-height:0;flex-direction:column}
 .stats-chart-panel[hidden]{display:none!important}
 .stats-chart-context{margin:-2px 0 8px;color:var(--muted);font-size:.64rem}
 .stats-chart-selection{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;margin:0 0 5px;padding:6px 9px;border-radius:8px;background:var(--input);color:var(--muted);font-size:.64rem}
@@ -6293,8 +6294,9 @@ body.tb-compact-small{
 .stats-chart-interactive:focus{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px}
 .stats-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:.75rem;color:var(--muted);font-weight:650}
 .stats-chart-head strong{font-size:.82rem;color:var(--text)}
-.stats-chart-host{min-height:116px;min-width:0}
-.stats-chart-host svg{display:block;width:100%;height:auto;overflow:visible}
+.stats-chart-host{flex:1;min-height:116px;min-width:0;overflow:hidden}
+.stats-chart-host .equity-chart-layout{height:100%;min-height:116px}
+.stats-chart-host svg{display:block;width:100%;height:100%;max-height:100%;overflow:hidden}
 .stats-chart-grid{stroke:var(--bd);stroke-width:1}
 .stats-chart-zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
 .stats-chart-line{fill:none;stroke:var(--blue);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
@@ -14897,12 +14899,12 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       "header header header header header header"
       "appearance appearance appearance info info info"
       "depot depot depot data data data";
-    gap:16px;
+    gap:12px;
     align-content:start;
-    padding:10px 24px 28px!important;
+    padding:8px 20px 18px!important;
   }
   #settings-header{grid-area:header;margin-bottom:0!important}
-  #settings-page-main>.settings-card{margin:0!important;align-self:start;min-width:0}
+  #settings-page-main>.settings-card{margin:0!important;align-self:start;min-width:0;padding:14px!important}
   .settings-card-appearance{grid-area:appearance}
   .settings-card-depot{grid-area:depot}
   .settings-card-tax{grid-area:tax}
@@ -14929,8 +14931,9 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row>svg{position:absolute;right:18px}
   .settings-card-info .settings-info-disclaimer{grid-column:auto;align-self:stretch;display:flex;align-items:center;border-top:0;border-left:1px solid var(--bd);padding:7px 12px}
   .settings-card-appearance .theme-selector{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}
-  .settings-card-appearance .theme-choice{min-height:68px;padding:8px 10px;gap:7px;flex-direction:row;align-items:center}
-  .settings-card-appearance .theme-choice-swatches span{width:11px;height:11px}
+  .settings-card-appearance .theme-choice{min-height:64px;padding:7px 9px;gap:7px;flex-direction:row;align-items:center;justify-content:center;text-align:center}
+  .settings-card-appearance .theme-choice-swatches{justify-content:center}
+  .settings-card-appearance .theme-choice-swatches span{width:12px;height:12px;border:1px solid color-mix(in srgb,var(--text) 38%,transparent)!important;box-shadow:0 0 0 1px color-mix(in srgb,var(--s1) 72%,transparent)}
   .settings-card-appearance .theme-choice-name{font-size:.64rem}
   .settings-card-info .settings-info-card{grid-template-columns:minmax(0,1fr) 150px}
   .settings-card-info .settings-info-top{min-width:0}
@@ -14939,6 +14942,27 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row{min-height:44px;padding-left:8px;padding-right:24px;font-size:.68rem}
   .settings-card-info .settings-info-row>svg{right:8px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:1px solid var(--bd);padding:4px 9px;font-size:.53rem}
+  #settings-page-main .settings-group-label{margin-bottom:6px}
+  #settings-page-main .settings-theme-layout-divider{margin:10px 0}
+  #settings-page-main .inp,#settings-page-main select.inp{min-height:38px;height:38px;padding-top:6px;padding-bottom:6px}
+  #settings-page-main .tax-settings-hint,#settings-page-main .s-hint{margin-top:4px;line-height:1.35}
+  #tax-settings-card .settings-theme-layout-divider{display:none}
+  #tax-settings-card>.settings-group-label:nth-of-type(2){margin-top:10px}
+  #tax-settings-card>div:has(>.s-toggle-row){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:2px 0 6px!important}
+  #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0}
+  #tax-settings-card>.s-hint{margin-bottom:7px!important}
+  #tax-settings-card .tax-settings-more summary{min-height:38px;padding-top:8px;padding-bottom:8px}
+  #tax-settings-card .tax-note{margin-top:6px!important;padding-top:7px;padding-bottom:7px}
+  #cloud-sync-card .s-block+.s-block{margin-top:8px;padding-top:9px}
+  #cloud-sync-card .s-block-label{margin-bottom:7px}
+  #cloud-sync-card .s-user-row{margin-bottom:4px}
+  #cloud-sync-card .aw-compare-card{margin-bottom:6px}
+  #cloud-sync-card .aw-sync-build{margin:6px 0 7px;padding:6px 8px}
+  #cloud-sync-card .aw-sync-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
+  #cloud-sync-card .aw-sync-row{min-width:0;padding:6px}
+  #cloud-sync-card .aw-sync-meta{font-size:.54rem}
+  #cloud-sync-card .aw-sync-icon{width:28px;height:28px}
+  #cloud-sync-card .s-btn{min-height:38px;padding-top:7px;padding-bottom:7px}
 }
 </style>
 <style id="large-overlay-space-usage">
