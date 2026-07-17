@@ -14949,8 +14949,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #settings-page-main .inp,#settings-page-main select.inp{min-height:38px;height:38px;padding-top:6px;padding-bottom:6px}
   #settings-page-main .tax-settings-hint,#settings-page-main .s-hint{margin-top:4px;line-height:1.35}
   #tax-settings-card .settings-theme-layout-divider{display:none}
-  #tax-settings-card>.settings-group-label{margin-bottom:10px!important;color:var(--text);font-size:.66rem;letter-spacing:1px}
-  #tax-settings-card .settings-money-field+.settings-theme-layout-divider+.settings-group-label{margin-top:16px}
+  #tax-settings-card .settings-money-field+.settings-theme-layout-divider+.settings-group-label{margin-top:16px!important}
   #tax-settings-card>div:has(>.s-toggle-row){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:2px 0 6px!important}
   #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0;justify-content:flex-start;gap:10px}
   #tax-settings-card>.s-hint{margin-bottom:7px!important}
@@ -19853,11 +19852,14 @@ function awTogglePw(){
 .stats-layout-module-size{width:112px;min-height:32px!important;padding:5px 26px 5px 8px!important;font-size:.64rem!important}
 .stats-layout-visible{display:flex;align-items:center;gap:5px;font-size:.62rem;color:var(--muted);white-space:nowrap}.stats-layout-visible input{accent-color:var(--green)}
 .stats-layout-reset{width:100%;justify-content:center}
-.settings-group-label{margin:0 0 8px;font-size:.6rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.settings-group-label,.s-block-label{margin:0 0 9px!important;font-size:.62rem!important;font-weight:700!important;letter-spacing:.85px!important;text-transform:uppercase;color:var(--text)!important;opacity:.78}
+#settings-page-main .theme-choice{align-items:center!important;justify-content:center!important;text-align:center!important}
+#settings-page-main .theme-choice-swatches{justify-content:center!important}
+#settings-page-main .theme-choice-name{text-align:center!important}
 .settings-theme-layout-divider{height:1px;margin:14px 0;background:var(--bd)}
 .stats-layout-toolbar{display:none}
 .stats-layout-toolbar-panel{display:none!important}
-.stats-page-active #view-stats>[data-stats-module]{overflow:hidden!important;overscroll-behavior:none}
+.stats-page-active #view-stats>[data-stats-module]{overflow:hidden!important;overscroll-behavior:none;touch-action:pan-y}
 .stats-card-floating{overflow:hidden!important;contain:paint}
 .stats-layout-reset-direct{display:none;min-height:40px;padding:0 14px;border:1px solid color-mix(in srgb,var(--red) 38%,var(--bd));border-radius:10px;background:color-mix(in srgb,var(--red) 8%,var(--s1));color:var(--red);font:700 .68rem var(--f);cursor:pointer;white-space:nowrap}
 .stats-layout-reset-direct:hover{background:color-mix(in srgb,var(--red) 14%,var(--s1));border-color:color-mix(in srgb,var(--red) 58%,var(--bd))}
@@ -20068,7 +20070,19 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
   window.resetStatsLayout=function(){state=defaults();save();apply();renderStatsLayoutEditor();};
   load();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();renderStatsLayoutEditor();});else{apply();renderStatsLayoutEditor();}
+  function bindStatsPageWheel(){
+    const host=document.getElementById('view-stats');
+    if(!host||host.dataset.pageWheelBound==='1')return;
+    host.dataset.pageWheelBound='1';
+    host.addEventListener('wheel',event=>{
+      if(!event.target.closest('[data-stats-module]')||!event.deltaY)return;
+      event.preventDefault();
+      const scroller=document.scrollingElement||document.documentElement;
+      const factor=event.deltaMode===1?16:event.deltaMode===2?window.innerHeight:1;
+      scroller.scrollTop+=event.deltaY*factor;
+    },{passive:false});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();renderStatsLayoutEditor();bindStatsPageWheel();});else{apply();renderStatsLayoutEditor();bindStatsPageWheel();}
   window.addEventListener('resize',apply,{passive:true});
 })();
 </script>
