@@ -14878,8 +14878,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
 <style id="settings-large-display-layout">
 @media (min-width:900px) and (min-height:650px){
   #settings-sh,#rm-sh,#bm-sh{
-    width:min(96vw,1280px)!important;
-    max-width:1280px!important;
+    width:min(96vw,1480px)!important;
+    max-width:1480px!important;
     height:90vh!important;
     max-height:1000px!important;
     bottom:0!important;
@@ -14939,6 +14939,29 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row{min-height:44px;padding-left:8px;padding-right:24px;font-size:.68rem}
   .settings-card-info .settings-info-row>svg{right:8px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:1px solid var(--bd);padding:4px 9px;font-size:.53rem}
+}
+</style>
+<style id="large-overlay-space-usage">
+@media (min-width:1400px) and (min-height:720px){
+  #nt-sh{
+    width:min(94vw,1280px)!important;
+    max-width:1280px!important;
+    height:92vh!important;
+    max-height:1040px!important;
+    margin:0 auto;
+  }
+  #settings-sh{
+    height:92vh!important;
+    max-height:1040px!important;
+  }
+  #page-rechner,
+  #page-rechner .calc-workspace{
+    width:100%!important;
+    max-width:none!important;
+  }
+  #page-rechner .calc-workspace{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  }
 }
 </style>
 <div id="settings-ov" style="overscroll-behavior:contain;position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:1900;display:none;">
