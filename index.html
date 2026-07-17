@@ -14913,6 +14913,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-depot.settings-card-tax{grid-area:depot}
   .settings-card-data.settings-card-account{grid-area:data}
   .settings-card-info{grid-area:info}
+  .settings-card-appearance,.settings-card-info{align-self:stretch!important;height:100%}
   .settings-card-info .settings-info-card{
     display:grid;
     grid-template-columns:minmax(220px,1fr) 180px minmax(260px,1fr);
@@ -14921,12 +14922,12 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-divider{display:none}
   .settings-card-info .settings-info-top{
     flex-direction:row!important;
-    justify-content:flex-start;
+    justify-content:center;
     padding:7px 12px!important;
     gap:9px!important;
   }
   .settings-card-info .settings-info-logo{width:34px!important;height:34px!important}
-  .settings-card-info .settings-info-meta{align-items:flex-start!important;text-align:left!important}
+  .settings-card-info .settings-info-meta{align-items:center!important;text-align:center!important}
   .settings-card-info .settings-info-row{min-height:48px;border-left:1px solid var(--bd);justify-content:center;position:relative;padding:7px 12px}
   .settings-card-info .settings-info-row>svg{position:absolute;right:18px}
   .settings-card-info .settings-info-disclaimer{grid-column:auto;align-self:stretch;display:flex;align-items:center;border-top:0;border-left:1px solid var(--bd);padding:7px 12px}
@@ -14942,14 +14943,15 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row{min-height:44px;padding-left:8px;padding-right:24px;font-size:.68rem}
   .settings-card-info .settings-info-row>svg{right:8px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:1px solid var(--bd);padding:4px 9px;font-size:.53rem}
+  .settings-card-info .settings-info-card{height:calc(100% - 22px)}
   #settings-page-main .settings-group-label{margin-bottom:6px}
   #settings-page-main .settings-theme-layout-divider{margin:10px 0}
   #settings-page-main .inp,#settings-page-main select.inp{min-height:38px;height:38px;padding-top:6px;padding-bottom:6px}
   #settings-page-main .tax-settings-hint,#settings-page-main .s-hint{margin-top:4px;line-height:1.35}
   #tax-settings-card .settings-theme-layout-divider{display:none}
-  #tax-settings-card>.settings-group-label:nth-of-type(2){margin-top:10px}
+  #tax-settings-card .settings-money-field+.settings-theme-layout-divider+.settings-group-label{margin-top:12px}
   #tax-settings-card>div:has(>.s-toggle-row){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:2px 0 6px!important}
-  #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0}
+  #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0;justify-content:flex-start;gap:10px}
   #tax-settings-card>.s-hint{margin-bottom:7px!important}
   #tax-settings-card .tax-settings-more summary{min-height:38px;padding-top:8px;padding-bottom:8px}
   #tax-settings-card .tax-note{margin-top:6px!important;padding-top:7px;padding-bottom:7px}
@@ -14963,6 +14965,12 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #cloud-sync-card .aw-sync-meta{font-size:.54rem}
   #cloud-sync-card .aw-sync-icon{width:28px;height:28px}
   #cloud-sync-card .s-btn{min-height:38px;padding-top:7px;padding-bottom:7px}
+}
+</style>
+<style id="settings-intermediate-desktop-layout">
+@media (min-width:900px) and (max-width:1199px) and (min-height:650px){
+  .settings-card-appearance .theme-selector{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .settings-card-appearance .theme-choice{min-height:48px}
 }
 </style>
 <style id="large-overlay-space-usage">
