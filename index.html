@@ -14892,12 +14892,11 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #settings-bar{visibility:visible;margin:10px auto 4px!important}
   #settings-page-main{
     display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-columns:repeat(6,minmax(0,1fr));
     grid-template-areas:
-      "header header"
-      "appearance appearance"
-      "depot data"
-      "info info";
+      "header header header header header header"
+      "appearance appearance appearance appearance info info"
+      "depot depot depot data data data";
     gap:16px;
     align-content:start;
     padding:10px 24px 28px!important;
@@ -14929,7 +14928,17 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row{min-height:48px;border-left:1px solid var(--bd);justify-content:center;position:relative;padding:7px 12px}
   .settings-card-info .settings-info-row>svg{position:absolute;right:18px}
   .settings-card-info .settings-info-disclaimer{grid-column:auto;align-self:stretch;display:flex;align-items:center;border-top:0;border-left:1px solid var(--bd);padding:7px 12px}
-  .settings-card-appearance .theme-selector{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .settings-card-appearance .theme-selector{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}
+  .settings-card-appearance .theme-choice{min-height:42px;padding:6px 9px;gap:4px}
+  .settings-card-appearance .theme-choice-swatches span{width:11px;height:11px}
+  .settings-card-appearance .theme-choice-name{font-size:.64rem}
+  .settings-card-info .settings-info-card{grid-template-columns:minmax(0,1fr) 120px}
+  .settings-card-info .settings-info-top{min-width:0}
+  .settings-card-info .settings-info-appname{font-size:.72rem}
+  .settings-card-info .settings-info-version{font-size:.55rem;padding:1px 6px}
+  .settings-card-info .settings-info-row{min-height:44px;padding-left:8px;padding-right:24px;font-size:.68rem}
+  .settings-card-info .settings-info-row>svg{right:8px}
+  .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:1px solid var(--bd);padding:4px 9px;font-size:.53rem}
 }
 </style>
 <div id="settings-ov" style="overscroll-behavior:contain;position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:1900;display:none;">
