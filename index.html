@@ -2508,8 +2508,8 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 <style id="sunlight-theme-styles">
 /* Hoher Kontrast fuer direkte Sonne und stark spiegelnde Displays. */
 .theme-selector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.theme-choice{display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:10px 11px;border:1.5px solid var(--bd);border-radius:10px;background:var(--s2);color:var(--text);font-family:var(--f);cursor:pointer;transition:border-color .15s,background .15s;text-align:left}
-.theme-choice-swatches{display:flex;gap:4px}
+.theme-choice{display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 11px;border:1.5px solid var(--bd);border-radius:10px;background:var(--s2);color:var(--text);font-family:var(--f);cursor:pointer;transition:border-color .15s,background .15s;text-align:center}
+.theme-choice-swatches{display:flex;justify-content:center;gap:4px}
 .theme-choice-swatches span{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,.10)}
 .theme-choice-name{font-size:.72rem;font-weight:600;color:var(--muted);transition:color .15s}
 .theme-choice.active{border-color:var(--blue);background:rgba(91,138,245,.10)}
@@ -14898,7 +14898,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     grid-template-areas:
       "header header header header header header"
       "appearance appearance appearance info info info"
-      "depot depot depot data data data";
+      "data data data depot depot depot";
     gap:12px;
     align-content:start;
     padding:8px 20px 18px!important;
@@ -14949,7 +14949,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #settings-page-main .inp,#settings-page-main select.inp{min-height:38px;height:38px;padding-top:6px;padding-bottom:6px}
   #settings-page-main .tax-settings-hint,#settings-page-main .s-hint{margin-top:4px;line-height:1.35}
   #tax-settings-card .settings-theme-layout-divider{display:none}
-  #tax-settings-card .settings-money-field+.settings-theme-layout-divider+.settings-group-label{margin-top:12px}
+  #tax-settings-card>.settings-group-label{margin-bottom:10px!important;color:var(--text);font-size:.66rem;letter-spacing:1px}
+  #tax-settings-card .settings-money-field+.settings-theme-layout-divider+.settings-group-label{margin-top:16px}
   #tax-settings-card>div:has(>.s-toggle-row){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:2px 0 6px!important}
   #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0;justify-content:flex-start;gap:10px}
   #tax-settings-card>.s-hint{margin-bottom:7px!important}
