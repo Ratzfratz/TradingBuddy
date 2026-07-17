@@ -2524,14 +2524,12 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 .settings-info-meta{display:flex;flex-direction:column;gap:2px}
 .settings-info-appname{font-size:.88rem;font-weight:700;color:var(--text)}
 .settings-info-version{font-size:.65rem;font-weight:600;color:var(--muted);background:var(--s3);border:1px solid var(--bd);border-radius:20px;padding:2px 8px;display:inline-block;margin-top:1px}
-.settings-info-divider{height:1px;background:var(--bd)}
 .settings-info-row{width:100%;display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:none;border:none;color:var(--text);font-family:var(--f);font-size:.8rem;font-weight:600;cursor:pointer;text-align:left}
 .settings-info-row:active{background:var(--s3)}
-.settings-info-disclaimer{font-size:.6rem;color:var(--muted);padding:8px 14px;border-top:1px solid var(--bd);line-height:1.5}
+.settings-info-disclaimer{font-size:.6rem;color:var(--muted);padding:8px 14px;border-top:0;line-height:1.5}
 
 /* ── Settings: Toggle-Zeilen ohne Rand ── */
-.s-toggle-row{display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0;padding:10px 0;gap:12px;border-bottom:1px solid var(--bd)}
-.s-toggle-row:last-child{border-bottom:none}
+.s-toggle-row{display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0;padding:10px 0;gap:12px;border-bottom:0}
 .s-toggle-label{font-size:.82rem;font-weight:500;color:var(--text)}
 
 /* ── Settings: Schriften vereinheitlichen ── */
@@ -14919,7 +14917,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     grid-template-columns:minmax(220px,1fr) 180px minmax(260px,1fr);
     align-items:center;
   }
-  .settings-card-info .settings-info-divider{display:none}
   .settings-card-info .settings-info-top{
     flex-direction:row!important;
     justify-content:center;
@@ -14928,9 +14925,9 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   }
   .settings-card-info .settings-info-logo{width:34px!important;height:34px!important}
   .settings-card-info .settings-info-meta{align-items:center!important;text-align:center!important}
-  .settings-card-info .settings-info-row{min-height:48px;border-left:1px solid var(--bd);justify-content:center;position:relative;padding:7px 12px}
+  .settings-card-info .settings-info-row{min-height:48px;border-left:0;justify-content:center;position:relative;padding:7px 12px}
   .settings-card-info .settings-info-row>svg{position:absolute;right:18px}
-  .settings-card-info .settings-info-disclaimer{grid-column:auto;align-self:stretch;display:flex;align-items:center;border-top:0;border-left:1px solid var(--bd);padding:7px 12px}
+  .settings-card-info .settings-info-disclaimer{grid-column:auto;align-self:stretch;display:flex;align-items:center;border-top:0;border-left:0;padding:7px 12px}
   .settings-card-appearance .theme-selector{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}
   .settings-card-appearance .theme-choice{min-height:64px;padding:7px 9px;gap:7px;flex-direction:row;align-items:center;justify-content:center;text-align:center}
   .settings-card-appearance .theme-choice-swatches{justify-content:center}
@@ -14942,14 +14939,13 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-version{font-size:.55rem;padding:1px 6px}
   .settings-card-info .settings-info-row{min-height:44px;padding-left:8px;padding-right:24px;font-size:.68rem}
   .settings-card-info .settings-info-row>svg{right:8px}
-  .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:1px solid var(--bd);padding:4px 9px;font-size:.53rem}
+  .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:0;padding:4px 9px;font-size:.53rem}
   .settings-card-info .settings-info-card{height:calc(100% - 22px)}
   #settings-page-main .settings-group-label{margin-bottom:6px}
-  #settings-page-main .settings-theme-layout-divider{margin:10px 0}
   #settings-page-main .inp,#settings-page-main select.inp{min-height:38px;height:38px;padding-top:6px;padding-bottom:6px}
   #settings-page-main .tax-settings-hint,#settings-page-main .s-hint{margin-top:4px;line-height:1.35}
-  #tax-settings-card .settings-theme-layout-divider{display:none}
-  #tax-settings-card .settings-money-field+.settings-theme-layout-divider+.settings-group-label{margin-top:16px!important}
+  #tax-settings-card .settings-money-field+.settings-group-label{margin-top:16px!important}
+  #cloud-sync-card #zero-import-result+.settings-group-label{margin-top:16px!important}
   #tax-settings-card>div:has(>.s-toggle-row){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:2px 0 6px!important}
   #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0;justify-content:flex-start;gap:10px}
   #tax-settings-card>.s-hint{margin-bottom:7px!important}
@@ -15046,7 +15042,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       <input class="inp" type="text" inputmode="decimal" id="s-depot-capital" placeholder="z.B. 10000" enterkeyhint="done" oninput="syncDepotCapital()">
       <div class="tax-settings-hint">Basis für die Depot-Rendite in der Statistik.</div>
     </div>
-    <div class="settings-theme-layout-divider"></div>
     <div class="settings-group-label">Steuern</div>
 
     <div class="field settings-money-field" style="margin-bottom:10px">
@@ -15121,7 +15116,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     </div>
     <div class="s-hint">CSV aus Zero-Konto importieren · Basiswerte mit gleichem Underlying zusammenführen.</div>
     <div id="zero-import-result" style="margin-top:6px"></div>
-    <div class="settings-theme-layout-divider"></div>
     <div class="settings-group-label">Konto &amp; Backup</div>
 
     <!-- Cloud Sync Block -->
@@ -15301,7 +15295,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           <div class="settings-info-version" id="s-version">Alpha 0.40</div>
         </div>
       </div>
-      <div class="settings-info-divider"></div>
       <button onclick="settingsGoRoadmap()" class="settings-info-row">
         <span style="display:flex;align-items:center;gap:8px">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -19856,7 +19849,6 @@ function awTogglePw(){
 #settings-page-main .theme-choice{align-items:center!important;justify-content:center!important;text-align:center!important}
 #settings-page-main .theme-choice-swatches{justify-content:center!important}
 #settings-page-main .theme-choice-name{text-align:center!important}
-.settings-theme-layout-divider{height:1px;margin:14px 0;background:var(--bd)}
 .stats-layout-toolbar{display:none}
 .stats-layout-toolbar-panel{display:none!important}
 .stats-page-active #view-stats>[data-stats-module]{overflow:hidden!important;overscroll-behavior:none;touch-action:pan-y}
