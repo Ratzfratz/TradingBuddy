@@ -16,6 +16,12 @@ function closeLegal(){
   var settings=document.getElementById('settings-ov');
   if(!settings||settings.style.display==='none')document.body.style.overflow='';
 }
+async function tbAskDeleteLocalData(){
+  if(!window.confirm('Alle lokalen Trades, Einstellungen, Anmeldedaten und zwischengespeicherten Screenshots auf diesem Gerät löschen? Cloud-Daten und exportierte Dateien bleiben erhalten.'))return;
+  try{if(typeof awLogout==='function'&&typeof _awUser!=='undefined'&&_awUser)await awLogout();}catch(_){ }
+  try{localStorage.clear();sessionStorage.clear();}catch(_){ }
+  window.location.reload();
+}
 document.addEventListener('keydown',function(e){
   var ov=document.getElementById('legal-ov');
   if(e.key==='Escape'&&ov&&ov.style.display!=='none'){e.preventDefault();closeLegal();}
@@ -15314,6 +15320,9 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           </div>
         </div>
         </div><!-- end aw-sync-controls -->
+        <button type="button" id="aw-delete-cloud-data" class="s-btn" onclick="awAskDeleteCloudData()" style="width:100%;margin-top:9px;color:var(--red);border-color:color-mix(in srgb,var(--red) 38%,var(--bd));background:color-mix(in srgb,var(--red) 7%,var(--s2))">
+          Cloud-Daten löschen
+        </button>
       </div>
 
       <div id="aw-sync-status" class="s-status-row"></div>
@@ -15390,17 +15399,39 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   <div id="legal-card">
     <div class="legal-head"><span id="legal-title">Rechtliches &amp; Datenschutz</span><button class="legal-close" onclick="closeLegal()" aria-label="Schließen">&#x2715;</button></div>
     <div class="legal-body">
-      <div class="legal-summary">Trading Buddy speichert Daten zunächst auf diesem Gerät. Cloud-Funktionen werden nur nach Anmeldung und durch Synchronisation verwendet. Vor einer öffentlichen Veröffentlichung müssen die vollständigen Betreiberangaben ergänzt werden.</div>
+      <div class="legal-summary">Stand: 17. Juli 2026. Trading Buddy speichert Daten zunächst auf diesem Gerät. Cloud-Funktionen werden erst nach Anmeldung verwendet. Vor einer öffentlichen Veröffentlichung müssen die gelb markierten Betreiberangaben ergänzt werden.</div>
       <section class="legal-section">
         <h3>Impressum</h3>
-        <p class="legal-pending">Betreibername, ladungsfähige Anschrift und Kontaktadresse fehlen noch.</p>
+        <p class="legal-pending">Pflichtangaben ergänzen: vollständiger Betreibername, ladungsfähige Anschrift und erreichbare E-Mail-Adresse.</p>
+        <p>Falls vorhanden zusätzlich: Rechtsform und Vertretungsberechtigter, Register und Registernummer sowie Umsatzsteuer-Identifikationsnummer.</p>
       </section>
       <section class="legal-section">
-        <h3>Datenschutz &amp; Datenspeicherung</h3>
-        <p>Trades, Einstellungen und importierte Daten werden lokal im Speicher der App beziehungsweise des Browsers abgelegt. Beim Export wird eine Sicherungsdatei am gewählten Speicherort erstellt.</p>
-        <p>Bei Nutzung eines Cloud-Kontos werden E-Mail-Adresse, verschlüsselte Sicherungsdaten, Synchronisationsstände und – soweit aktiviert – Screenshots über Appwrite verarbeitet. Ohne Anmeldung findet keine Cloud-Synchronisation statt.</p>
-        <p>Die Daten dienen dem Betrieb, der Sicherung und der geräteübergreifenden Synchronisation. Eine Verwendung für Werbung oder Profilbildung ist nicht vorgesehen.</p>
-        <p>Lokale Daten können über die Sicherungsfunktion exportiert werden. Eine vollständige Konto- und Cloud-Löschung wird vor dem öffentlichen Betrieb als eigener Vorgang ergänzt.</p>
+        <h3>Verantwortlicher &amp; Datenschutzkontakt</h3>
+        <p class="legal-pending">Verantwortlicher und Datenschutzkontakt entsprechen den noch einzutragenden Betreiberangaben im Impressum.</p>
+        <p class="legal-pending">Zuständige Datenschutzaufsichtsbehörde nach dem Sitz des Betreibers ergänzen.</p>
+      </section>
+      <section class="legal-section">
+        <h3>Verarbeitete Daten und Zwecke</h3>
+        <p><strong>Lokale Nutzung:</strong> Trades, Notizen, Tags, Einstellungen, Steuerwerte, importierte CSV-Daten, Basiswert-Zuordnungen und lokale Verweise auf Screenshots werden auf dem Gerät gespeichert. Zweck ist die vom Nutzer gewünschte Tagebuch-, Statistik-, Rechner- und Sicherungsfunktion. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO beziehungsweise bei rein lokaler Verarbeitung die Ausführung der angeforderten App-Funktion.</p>
+        <p><strong>Cloud-Konto:</strong> Nach freiwilliger Registrierung werden E-Mail-Adresse, Konto- und Sitzungsdaten, verschlüsselte Sicherungsdaten, Synchronisationszeitpunkte sowie hochgeladene Screenshots über Appwrite verarbeitet. Zweck sind Anmeldung, Sicherung und geräteübergreifende Synchronisation. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
+        <p><strong>Technischer Betrieb:</strong> Hosting- und Cloud-Anbieter können zur Auslieferung und Absicherung technisch erforderliche Verbindungs- und Protokolldaten wie IP-Adresse, Zeitpunkt, Gerätedaten und Fehlerstatus verarbeiten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; berechtigtes Interesse ist der sichere und zuverlässige Betrieb.</p>
+        <p>Es findet keine Nutzung für Werbung, personalisierte Werbung oder Profilbildung statt. Es werden keine ausschließlich automatisierten Entscheidungen mit rechtlicher oder vergleichbarer erheblicher Wirkung getroffen.</p>
+      </section>
+      <section class="legal-section">
+        <h3>Empfänger, Speicherort und Übermittlung</h3>
+        <p>Cloud-Funktionen werden mit Appwrite Cloud bereitgestellt. Webhosting kann über GitHub Pages erfolgen. Mit den eingesetzten Anbietern sind die datenschutzrechtlichen Vertragsgrundlagen und Unterauftragnehmer zu prüfen.</p>
+        <p class="legal-pending">Vor Veröffentlichung ergänzen: tatsächliche Appwrite-Projektregion, Hosting-Standort, Auftragsverarbeitungsverträge und gegebenenfalls Grundlage einer Übermittlung außerhalb des Europäischen Wirtschaftsraums.</p>
+      </section>
+      <section class="legal-section">
+        <h3>Speicherdauer und Löschung</h3>
+        <p>Lokale Daten bleiben gespeichert, bis sie in der App gelöscht, die App-Daten entfernt oder „Lokale Daten löschen“ verwendet wird. Exportdateien liegen außerhalb der App und müssen am gewählten Speicherort selbst gelöscht werden.</p>
+        <p>Cloud-Inhalte bleiben bis zur Löschung durch den Nutzer oder bis zur Beendigung des Kontos gespeichert. Die Funktion „Cloud-Daten löschen“ entfernt die dem Konto zugeordneten Trading-Buddy-Dokumente und Dateien. Das Appwrite-Anmeldekonto selbst bleibt dabei bestehen.</p>
+        <p class="legal-pending">Verbindliche Fristen des Hosters für Serverprotokolle, gelöschte Dateien und Sicherungskopien ergänzen. Empfohlene interne Zielwerte: Protokolle höchstens 14 Tage, gelöschte Inhalte in Sicherungen höchstens 30 Tage.</p>
+      </section>
+      <section class="legal-section">
+        <h3>Rechte betroffener Personen</h3>
+        <p>Betroffene Personen haben nach Maßgabe der DSGVO Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Außerdem besteht ein Beschwerderecht bei einer Datenschutzaufsichtsbehörde. Eine erteilte Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden.</p>
+        <p>Die Angabe einer E-Mail-Adresse ist nur für ein freiwilliges Cloud-Konto erforderlich. Ohne Cloud-Konto kann Trading Buddy lokal genutzt werden.</p>
       </section>
       <section class="legal-section">
         <h3>Hinweis zu Berechnungen</h3>
@@ -15408,6 +15439,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       </section>
       <div class="legal-actions">
         <button class="s-btn" onclick="closeLegal();setTimeout(tbBackupExport,180)">Daten exportieren</button>
+        <button class="s-btn" onclick="tbAskDeleteLocalData()" style="color:var(--red)">Lokale Daten löschen</button>
         <button class="s-btn" onclick="closeLegal()">Schließen</button>
       </div>
     </div>
@@ -17118,6 +17150,40 @@ async function awLogout(){
   _awUser=null;_awDocId=null;_awEncKey=null;_awJwt=null;_awUpdateUI();_awStatus('Abgemeldet.','muted');
 }
 
+async function awAskDeleteCloudData(){
+  if(!_awUser||!_awDocId){_awStatus('Für die Cloud-Löschung zuerst anmelden.','warn');return;}
+  const email=String((_awUser&&_awUser.email)||'diesem Konto');
+  if(!window.confirm('Alle Trading-Buddy-Daten in der Cloud für '+email+' dauerhaft löschen? Lokale Daten auf diesem Gerät bleiben erhalten.'))return;
+  const button=document.getElementById('aw-delete-cloud-data');
+  if(button){button.disabled=true;button.textContent='Cloud-Daten werden gelöscht …';}
+  _awStatus('Cloud-Daten werden gelöscht …','pending');
+  try{
+    clearTimeout(_awPushTimer);_awPushTimer=null;_awPushRequested=false;
+    clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;_awCloudWatchDelay=0;
+    await _awDeleteEntityDoc('trades');
+    await _awDeleteEntityDoc('settings');
+    try{await _awCleanupOldUserNumberDocs();}catch(_){ }
+    for(let pass=0;pass<20;pass++){
+      const listing=await _awListStorageFiles();
+      const files=Array.isArray(listing&&listing.files)?listing.files:[];
+      if(!files.length)break;
+      for(const file of files){
+        const id=String(file&&file.$id||'');
+        if(id)await _awDeleteStorageFile(id,true);
+      }
+      if(files.length<25)break;
+    }
+    ['tb_cloud_trade_count','tb_cloud_synced_at','tb_cloud_synced_at_ts','tb_cloud_trades_synced_at_ts','tb_cloud_settings_synced_at','tb_cloud_settings_synced_at_ts','tb_cloud_checked_at_ts','tb_cloud_latest_sync','tb_aw_img_cache'].forEach(key=>localStorage.removeItem(key));
+    _awStatus('Cloud-Daten vollständig gelöscht. Das Anmeldekonto bleibt bestehen.','ok');
+    _awUpdateSyncStatus();
+  }catch(e){
+    console.warn('Cloud-Daten löschen:',e);
+    _awStatus('Cloud-Daten konnten nicht vollständig gelöscht werden: '+_awErr(e),'error');
+  }finally{
+    if(button){button.disabled=false;button.textContent='Cloud-Daten löschen';}
+  }
+}
+
 function _awPermissions(publicRead=false){
   const userRole=Appwrite.Role.user(_awDocId);
   const permissions=[
@@ -17461,8 +17527,8 @@ async function _awGetStorageFileMeta(fileId){
   }
 }
 
-async function _awDeleteStorageFile(fileId){
-  if(String(fileId||'').startsWith('Shot_')){
+async function _awDeleteStorageFile(fileId,force=false){
+  if(!force&&String(fileId||'').startsWith('Shot_')){
     console.warn('Screenshot-Storage-Delete blockiert:', fileId);
     return null;
   }
@@ -20162,13 +20228,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     const host=document.getElementById('view-stats');
     if(!host||host.dataset.pageWheelBound==='1')return;
     host.dataset.pageWheelBound='1';
-    host.addEventListener('wheel',event=>{
-      if(!event.target.closest('[data-stats-module]')||!event.deltaY)return;
-      event.preventDefault();
-      const scroller=document.scrollingElement||document.documentElement;
-      const factor=event.deltaMode===1?16:event.deltaMode===2?window.innerHeight:1;
-      scroller.scrollTop+=event.deltaY*factor;
-    },{passive:false});
+    /* Karten besitzen bewusst keinen eigenen Scrollbereich. Das Wheel-Ereignis
+       bleibt unangetastet und läuft nativ bis zum Seitenscroller weiter. */
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();renderStatsLayoutEditor();bindStatsPageWheel();});else{apply();renderStatsLayoutEditor();bindStatsPageWheel();}
   window.addEventListener('resize',apply,{passive:true});
