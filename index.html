@@ -2685,9 +2685,14 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 .aw-compare-sep{font-size:1.1rem;color:var(--muted);opacity:.35;align-self:center}
 .aw-unsaved-badge{display:flex;align-items:center;gap:5px;font-size:.64rem;font-weight:600;color:#f5a623;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:6px;padding:5px 9px;margin-bottom:8px}
 .aw-sync-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
-.aw-sync-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:8px;padding:8px}
+.aw-sync-row{display:block;background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.aw-sync-summary{min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;cursor:pointer;list-style:none}
+.aw-sync-summary::-webkit-details-marker{display:none}
+.aw-sync-summary::after{content:'⌄';flex:0 0 auto;color:var(--muted);font-size:.8rem;line-height:1;transition:transform .18s ease}
+.aw-sync-row[open]>.aw-sync-summary::after{transform:rotate(180deg)}
+.aw-sync-detail{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:0 8px 8px}
 .aw-sync-title{font-size:.7rem;font-weight:700;color:var(--text)}
-.aw-sync-meta{font-size:.6rem;color:var(--muted);margin-top:2px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-height:none;overflow:visible;padding-right:2px}
+.aw-sync-meta{font-size:.6rem;color:var(--muted);line-height:1.25;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-height:none;overflow:visible;padding-right:2px}
 .aw-sync-build{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px;padding:7px 9px;border:1px solid rgba(91,138,245,.22);background:rgba(91,138,245,.07);border-radius:8px;color:var(--blue);font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .aw-sync-build span:last-child{font-size:.72rem;color:var(--text);letter-spacing:0;text-transform:none;white-space:nowrap}
 .aw-sync-actions{display:flex;gap:5px}
@@ -15175,7 +15180,9 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #cloud-sync-card .aw-compare-card{margin-bottom:6px}
   #cloud-sync-card .aw-sync-build{margin:6px 0 7px;padding:6px 8px}
   #cloud-sync-card .aw-sync-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
-  #cloud-sync-card .aw-sync-row{min-width:0;padding:6px}
+  #cloud-sync-card .aw-sync-row{min-width:0}
+  #cloud-sync-card .aw-sync-summary{min-height:34px;padding:6px 7px}
+  #cloud-sync-card .aw-sync-detail{padding:0 6px 6px}
   #cloud-sync-card .aw-sync-meta{font-size:.54rem}
   #cloud-sync-card .aw-sync-icon{width:28px;height:28px}
   #cloud-sync-card .s-btn{min-height:38px;padding-top:7px;padding-bottom:7px}
@@ -15497,41 +15504,38 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           <input type="checkbox" id="aw-autosync-chk" class="tax-setting-toggle" checked onchange="awSetAutoSync(this.checked)">
         </div>
         <div class="aw-sync-list">
-          <div class="aw-sync-row">
-            <div>
-              <div class="aw-sync-title">Trades</div>
+          <details class="aw-sync-row">
+            <summary class="aw-sync-summary"><span class="aw-sync-title">Trades</span></summary>
+            <div class="aw-sync-detail">
               <div class="aw-sync-meta" id="aw-sync-trades-meta">–</div>
-            </div>
             <div class="aw-sync-actions">
               <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('trades','upload')" title="Trades hochladen">↑</button>
               <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('trades','download')" title="Trades herunterladen">↓</button>
             </div>
-          </div>
-          <div class="aw-sync-row">
-            <div>
-              <div class="aw-sync-title">Einstellungen</div>
-              <div class="aw-sync-meta" id="aw-sync-settings-meta">–</div>
             </div>
+          </details>
+          <details class="aw-sync-row">
+            <summary class="aw-sync-summary"><span class="aw-sync-title">Einstellungen</span></summary>
+            <div class="aw-sync-detail">
+              <div class="aw-sync-meta" id="aw-sync-settings-meta">–</div>
             <div class="aw-sync-actions">
               <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('settings','upload')" title="Einstellungen hochladen">↑</button>
               <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('settings','download')" title="Einstellungen herunterladen">↓</button>
             </div>
-          </div>
-          <div class="aw-sync-row">
-            <div>
-              <div class="aw-sync-title">Screenshots</div>
-              <div class="aw-sync-meta" id="aw-sync-screens-meta">–</div>
             </div>
+          </details>
+          <details class="aw-sync-row">
+            <summary class="aw-sync-summary"><span class="aw-sync-title">Screenshots</span></summary>
+            <div class="aw-sync-detail">
+              <div class="aw-sync-meta" id="aw-sync-screens-meta">–</div>
             <div class="aw-sync-actions">
               <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('screenshots','upload')" title="Screenshots hochladen">↑</button>
               <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('screenshots','download')" title="Screenshots herunterladen">↓</button>
             </div>
-          </div>
+            </div>
+          </details>
         </div>
         </div><!-- end aw-sync-controls -->
-        <button type="button" id="aw-delete-cloud-data" class="s-btn" onclick="awAskDeleteCloudData()" style="width:100%;margin-top:9px;color:var(--red);border-color:color-mix(in srgb,var(--red) 38%,var(--bd));background:color-mix(in srgb,var(--red) 7%,var(--s2))">
-          Cloud-Daten löschen
-        </button>
       </div>
 
       <div id="aw-sync-status" class="s-status-row"></div>
@@ -15658,7 +15662,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       <div class="legal-actions">
         <button class="s-btn" onclick="closeLegal();setTimeout(tbBackupExport,180)">Daten exportieren</button>
         <button class="s-btn" onclick="tbAskDeleteLocalData()" style="color:var(--red)">Lokale Daten löschen</button>
-        <button class="s-btn" onclick="closeLegal()">Schließen</button>
+        <button type="button" id="aw-delete-cloud-data" class="s-btn" onclick="awAskDeleteCloudData()" style="color:var(--red);border-color:color-mix(in srgb,var(--red) 38%,var(--bd));background:color-mix(in srgb,var(--red) 7%,var(--s2))">Cloud-Daten löschen</button>
       </div>
     </div>
   </div>
@@ -17379,7 +17383,11 @@ async function awLogout(){
 }
 
 async function awAskDeleteCloudData(){
-  if(!_awUser||!_awDocId){_awStatus('Für die Cloud-Löschung zuerst anmelden.','warn');return;}
+  if(!_awUser||!_awDocId){
+    _awStatus('Für die Cloud-Löschung zuerst anmelden.','warn');
+    window.alert('Für die Cloud-Löschung zuerst in den Einstellungen anmelden.');
+    return;
+  }
   const email=String((_awUser&&_awUser.email)||'diesem Konto');
   if(!window.confirm('Alle Trading-Buddy-Daten in der Cloud für '+email+' dauerhaft löschen? Lokale Daten auf diesem Gerät bleiben erhalten.'))return;
   const button=document.getElementById('aw-delete-cloud-data');
