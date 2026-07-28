@@ -6667,7 +6667,7 @@ body.tb-compact-small{
   <div class="sec-title" id="rc-product-title">Optionsschein</div>
   <div class="t-row">
     <div class="field" style="margin-bottom:0" id="rc-field-wkn"><label style="display:flex;justify-content:space-between"><span>WKN / ISIN</span><span style="color:var(--muted);font-weight:400;font-size:.7em">optional</span></label><input class="inp" type="text" id="rc-wkn" placeholder="z.B. HD8M7P oder DE000HD8M7P0" style="text-transform:uppercase;letter-spacing:.05em" maxlength="12" enterkeyhint="done" oninput="this.value=this.value.toUpperCase();updateWknLinks(this.value);requestDerivativeDetailsForCalc(false)"></div>
-    <button class="t-btn" onclick="requestDerivativeDetailsForCalc(true)">Daten abrufen</button>
+    <button class="t-btn" data-tb-feature="autoProductData" onclick="requestDerivativeDetailsForCalc(true)">Daten abrufen</button>
   </div>
   <div id="rc-deriv-fetch-status" class="hint" style="display:none;margin-top:5px"></div>
   <div id="wkn-bar" style="display:none;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
@@ -6703,7 +6703,7 @@ body.tb-compact-small{
     <div class="field" id="rc-field-ticker"><label>Basiswert / Ticker</label>
       <input class="inp" type="text" id="ticker" placeholder="SIE.DE · AMD · SAP.DE" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();updateLinks(this.value)" enterkeyhint="done">
     </div>
-    <button class="t-btn" onclick="requestUnderlyingDetailsForCalc()">Abrufen</button>
+    <button class="t-btn" data-tb-feature="autoProductData" onclick="requestUnderlyingDetailsForCalc()">Abrufen</button>
   </div>
   <div id="link-bar"></div>
   <div class="hint" id="ticker-hint" style="display:none"></div>
@@ -6872,7 +6872,7 @@ body.tb-compact-small{
 
 <div class="page" id="page-statistik">
 <div class="stats-layout-toolbar" id="stats-layout-toolbar">
-  <button type="button" class="stats-layout-edit-toggle" id="stats-layout-edit-toggle" onclick="toggleStatsLayoutEditing()"><span>Layout anpassen</span></button>
+  <button type="button" class="stats-layout-edit-toggle" id="stats-layout-edit-toggle" data-tb-feature="customStatsLayout" onclick="toggleStatsLayoutEditing()"><span>Layout anpassen</span></button>
   <button type="button" class="stats-layout-reset-direct" id="stats-layout-reset-direct" onclick="resetStatsLayout()">Ansicht zurücksetzen</button>
   <div class="stats-layout-toolbar-panel">
     <div class="stats-layout-toolbar-controls">
@@ -6953,9 +6953,9 @@ body.tb-compact-small{
     <div class="sec-title">Performance-Diagramme</div>
     <div class="stats-chart-tabs" role="tablist" aria-label="Diagramm auswählen">
       <button type="button" class="stats-chart-tab" role="tab" aria-selected="true" aria-controls="st-chart-panel-equity" onclick="showStatsChart(this,'st-chart-panel-equity')">Verlauf</button>
-      <button type="button" class="stats-chart-tab" role="tab" aria-selected="false" aria-controls="st-chart-panel-assets" onclick="showStatsChart(this,'st-chart-panel-assets')">Produkttypen</button>
-      <button type="button" class="stats-chart-tab" role="tab" aria-selected="false" aria-controls="st-chart-panel-returns" onclick="showStatsChart(this,'st-chart-panel-returns')">Rendite</button>
-      <button type="button" class="stats-chart-tab" role="tab" aria-selected="false" aria-controls="st-chart-panel-hold" onclick="showStatsChart(this,'st-chart-panel-hold')">Haltedauer</button>
+      <button type="button" class="stats-chart-tab" data-tb-feature="advancedStats" role="tab" aria-selected="false" aria-controls="st-chart-panel-assets" onclick="showStatsChart(this,'st-chart-panel-assets')">Produkttypen</button>
+      <button type="button" class="stats-chart-tab" data-tb-feature="advancedStats" role="tab" aria-selected="false" aria-controls="st-chart-panel-returns" onclick="showStatsChart(this,'st-chart-panel-returns')">Rendite</button>
+      <button type="button" class="stats-chart-tab" data-tb-feature="advancedStats" role="tab" aria-selected="false" aria-controls="st-chart-panel-hold" onclick="showStatsChart(this,'st-chart-panel-hold')">Haltedauer</button>
     </div>
     <div class="stats-chart-block stats-chart-panel" id="st-chart-panel-equity" role="tabpanel">
       <div class="stats-chart-head"><span>Entwicklung des Gesamt-P&amp;L</span><strong id="st-equity-chart-value">—</strong></div>
@@ -6994,7 +6994,7 @@ body.tb-compact-small{
     </div>
   </details>
 
-  <details class="sec stats-tag-section" id="st-journal-insights" style="margin-bottom:14px" open>
+  <details class="sec stats-tag-section" id="st-journal-insights" data-tb-feature-card="advancedStats" style="margin-bottom:14px" open>
     <summary><span class="sec-title">Idee &amp; Ausführung</span><span id="st-tag-summary">Tags analysieren</span></summary>
     <div class="stats-tag-section-body">
     <div class="stats-tag-filter">
@@ -7013,17 +7013,17 @@ body.tb-compact-small{
     </div>
   </details>
 
-  <div class="sec">
+  <div class="sec" data-tb-feature-card="advancedStats">
     <div class="sec-title">Top Basiswerte</div>
     <div id="st-tickers" class="eq-wrap"></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" data-tb-feature-card="advancedStats">
     <div class="sec-title">Schlechteste Basiswerte</div>
     <div id="st-worst-tickers" class="eq-wrap"></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" data-tb-feature-card="advancedStats">
     <div class="pnl-history-head">
       <div class="sec-title" style="margin:0">P&amp;L Verlauf</div>
       <div class="pnl-history-controls">
@@ -7038,7 +7038,7 @@ body.tb-compact-small{
   </div>
 
 
-  <div class="sec" style="margin-top:14px">
+  <div class="sec" id="st-tax-section" data-tb-feature-card="taxFeatures" style="margin-top:14px">
     <div class="tax-title-row">
       <div class="sec-title">Steuerübersicht</div>
       <div class="year-control-row"><div class="year-select-slot year-select-active"><select class="inp tax-year-select" id="tax-year-select" aria-label="Steuerjahr" onchange="setTaxYear(this.value)"></select></div></div>
@@ -7512,6 +7512,10 @@ function scheduleDerivativeFetchStatusClear(target){
 }
 
 function requestDerivativeDetailsForCalc(force,options){
+  if(typeof tbHasFeature==='function'&&!tbHasFeature('autoProductData')){
+    if(force&&typeof tbRequireFeature==='function')tbRequireFeature('autoProductData');
+    return;
+  }
   clearTimeout(_derivativeCalcDetailsTimer);
   const skipFields = new Set((options&&Array.isArray(options.skipFields))?options.skipFields:[]);
   _derivativeCalcDetailsTimer=setTimeout(function(){
@@ -7597,6 +7601,7 @@ function calcTickerFromDerivativeDetails(details){
 }
 
 function requestUnderlyingDetailsForCalc(){
+  if(typeof tbRequireFeature==='function'&&!tbRequireFeature('autoProductData'))return;
   clearTimeout(_derivativeCalcDetailsTimer);
   const wknField=$('rc-wkn');
   const tickerField=$('ticker');
@@ -7642,6 +7647,7 @@ function _awGetEurUsd(){return _awEurUsdRate;}
 })();
 
 function requestDerivativeDetailsForTrade(){
+  if(typeof tbRequireFeature==='function'&&!tbRequireFeature('autoProductData'))return;
   const allowed=['os','ko','faktor','stock','etf'];
   if(!allowed.includes(formAssetType)){
     setDerivativeFetchStatus('trade','','');
@@ -9903,6 +9909,31 @@ async function _awCloudFileExists(fileId){
   }
 }
 
+let _tbScreenshotUsageCache={at:0,bytes:0};
+async function tbCloudScreenshotUsageBytes(force=false){
+  if(!force&&Date.now()-_tbScreenshotUsageCache.at<20000)return _tbScreenshotUsageCache.bytes;
+  if(!_awStorage||!window.Appwrite||!Appwrite.Query)return 0;
+  let offset=0,totalBytes=0,total=0;
+  do{
+    const result=await _awStorage.listFiles(AW_BUCKET,[Appwrite.Query.limit(100),Appwrite.Query.offset(offset)]);
+    const files=Array.isArray(result&&result.files)?result.files:[];
+    total=Number(result&&result.total)||files.length;
+    totalBytes+=files.reduce((sum,file)=>sum+(Number(file&&file.sizeOriginal)||0),0);
+    offset+=files.length;
+    if(!files.length)break;
+  }while(offset<total);
+  _tbScreenshotUsageCache={at:Date.now(),bytes:totalBytes};
+  return totalBytes;
+}
+async function tbAssertScreenshotQuota(nextBytes){
+  const limit=TB_RELEASE.phase==='beta'?TB_RELEASE.betaScreenshotBytes:TB_RELEASE.proScreenshotBytes;
+  const used=await tbCloudScreenshotUsageBytes();
+  if(used+Math.max(0,Number(nextBytes)||0)>limit){
+    const mb=value=>(value/1024/1024).toLocaleString('de-DE',{maximumFractionDigits:1});
+    throw new Error(`Screenshot-Speicher voll (${mb(used)} von ${mb(limit)} MB). Vor einem weiteren Upload bitte Cloud-Screenshots löschen.`);
+  }
+}
+
 async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
   if(!att||!att.dataUrl)return null;
   if(!_awEncKey)throw new Error('Cloud ist nicht entsperrt.');
@@ -9929,7 +9960,9 @@ async function _awUploadScreenshotAttachment(att,imgCache,forceNew=false){
     for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
     const encBytes=await _awEncryptBytes(bytes);
     uploadFile=new File([encBytes],_awCloudFileName('screenshot',att.name||'screenshot.webp'),{type:'application/octet-stream'});
+    await tbAssertScreenshotQuota(uploadFile.size);
     await _awUploadFile(fileId,uploadFile,true,true);
+    _tbScreenshotUsageCache={at:Date.now(),bytes:_tbScreenshotUsageCache.bytes+uploadFile.size};
     imgCache[sha256]=fileId;
     att.fileId=fileId;
     localStorage.setItem('tb_aw_img_cache',JSON.stringify(imgCache));
@@ -10643,6 +10676,10 @@ function parseZeroCsv(text){
 }
 
 function handleZeroCsv(event){
+  if(typeof tbRequireFeature==='function'&&!tbRequireFeature('csvAutomation')){
+    if(event&&event.target)event.target.value='';
+    return;
+  }
   const file=event.target.files&&event.target.files[0];
   const resultBox=document.getElementById('zero-import-result');
   event.target.value=''; // reset für erneuten Import
@@ -12862,6 +12899,7 @@ function renderJournalInsights(closed) {
 }
 
 function showStatsChart(button,panelId){
+  if(panelId!=='st-chart-panel-equity'&&typeof tbRequireFeature==='function'&&!tbRequireFeature('advancedStats'))return;
   const section=button&&button.closest('.stats-chart-section');
   if(!section)return;
   section.querySelectorAll('.stats-chart-tab').forEach(tab=>tab.setAttribute('aria-selected',tab===button?'true':'false'));
@@ -13756,7 +13794,7 @@ if('serviceWorker' in navigator){
     <div class="sec-title" id="nt-entry-title">Einstieg &amp; Produktdetails</div>
     <div class="t-row" id="nt-deriv-fetch-row" style="align-items:end;margin-bottom:8px">
       <div class="field" id="field-nt-wkn" style="margin-bottom:0"><label style="display:flex;justify-content:space-between"><span id="f-wkn-label">WKN / ISIN</span><span id="f-wkn-optional" style="font-weight:400;color:var(--muted);font-size:.7em">optional</span></label><input class="inp" type="text" id="f-wkn" placeholder="z.B. HD8M7P oder DE000..." style="text-transform:uppercase;letter-spacing:.05em;font-family:monospace" maxlength="12" enterkeyhint="done" oninput="this.value=this.value.toUpperCase()"></div>
-      <button class="t-btn" id="nt-deriv-fetch-btn" style="display:none" onclick="requestDerivativeDetailsForTrade()">Daten abrufen</button>
+      <button class="t-btn" id="nt-deriv-fetch-btn" data-tb-feature="autoProductData" style="display:none" onclick="requestDerivativeDetailsForTrade()">Daten abrufen</button>
     </div>
     <div id="nt-deriv-fetch-status" class="hint" style="display:none;margin:-3px 0 8px"></div>
     <div class="field" id="trade-product-name-field" style="display:none;margin-bottom:8px">
@@ -15323,6 +15361,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       <input class="inp" type="text" inputmode="decimal" id="s-depot-capital" placeholder="z.B. 10000" enterkeyhint="done" oninput="syncDepotCapital()">
       <div class="tax-settings-hint">Basis für die Depot-Rendite in der Statistik.</div>
     </div>
+    <div id="tax-settings-pro-content" data-tb-feature-content="taxFeatures">
     <div class="settings-group-label">Steuern</div>
 
     <div class="field settings-money-field" style="margin-bottom:10px">
@@ -15376,6 +15415,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     </details>
 
     <div class="tax-note warn" style="margin-top:8px">ETF: pauschal 30 % Teilfreistellung, keine Vorabpauschale.</div>
+    </div>
   </div>
 
   <div class="sec settings-card settings-card-data settings-card-account" style="margin-bottom:12px" id="cloud-sync-card">
@@ -15383,7 +15423,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <div class="settings-group-label">Datenverwaltung</div>
     <input type="file" id="zero-csv-input" accept="*/*" style="display:none" onchange="handleZeroCsv(event)">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button onclick="document.getElementById('zero-csv-input').click()" class="s-btn">
+      <button onclick="if(tbRequireFeature('csvAutomation'))document.getElementById('zero-csv-input').click()" class="s-btn" data-tb-feature="csvAutomation">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Zero CSV
       </button>
@@ -15423,7 +15463,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <button type="button" id="aw-login-btn" class="s-btn">Anmelden</button>
-          <button type="button" id="aw-register-btn" class="s-btn s-btn-accent">Registrieren</button>
+          <button type="button" id="aw-register-btn" class="s-btn s-btn-accent">Beta-Zugang anfragen</button>
         </div>
       </div>
 
@@ -15524,7 +15564,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
             </div>
             </div>
           </details>
-          <details class="aw-sync-row">
+          <details class="aw-sync-row" data-tb-feature-card="screenshotSync">
             <summary class="aw-sync-summary"><span class="aw-sync-title">Screenshots</span></summary>
             <div class="aw-sync-detail">
               <div class="aw-sync-meta" id="aw-sync-screens-meta">–</div>
@@ -15574,6 +15614,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         <div class="settings-info-meta" style="align-items:center;text-align:center">
           <div class="settings-info-appname">Trading <span style="color:var(--green)">Buddy</span></div>
           <div class="settings-info-version" id="s-version">Alpha 0.40</div>
+          <button type="button" id="tb-plan-status" class="tb-plan-status" onclick="tbOpenProInfo('plan')">Geschlossene Beta · alle Funktionen</button>
         </div>
       </div>
       <div class="settings-info-actions">
@@ -15607,6 +15648,15 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   </div><!-- end settings-pages -->
   </div><!-- end settings-sh -->
 </div><!-- end settings-ov -->
+<div id="tb-pro-ov" role="dialog" aria-modal="true" aria-labelledby="tb-pro-title" onclick="if(event.target===this)tbCloseProInfo()">
+  <div class="tb-pro-sheet">
+    <div class="tb-pro-icon" aria-hidden="true">PRO</div>
+    <h2 id="tb-pro-title">Pro-Version erforderlich</h2>
+    <p id="tb-pro-copy"></p>
+    <div class="tb-pro-assurance">Immer frei: lokale Nutzung, Verschlüsselung, manuelles Hoch- und Herunterladen, JSON-Export/-Import, Datenlöschung und Sicherheitsupdates.</div>
+    <button type="button" class="s-btn s-btn-accent" onclick="tbCloseProInfo()">Verstanden</button>
+  </div>
+</div>
 <div id="legal-ov" role="dialog" aria-modal="true" aria-labelledby="legal-title">
   <div id="legal-bd"></div>
   <div id="legal-sh">
@@ -15645,8 +15695,20 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         <h3>Speicherdauer und Löschung</h3>
         <p>Lokale Daten bleiben gespeichert, bis sie in der App gelöscht, die App-Daten entfernt oder „Lokale Daten löschen“ verwendet wird. Exportdateien liegen außerhalb der App und müssen am gewählten Speicherort selbst gelöscht werden.</p>
         <p>Cloud-Inhalte bleiben bis zur Löschung durch den Nutzer oder bis zur Beendigung des Kontos gespeichert. Die Funktion „Cloud-Daten löschen“ entfernt die dem Konto zugeordneten Trading-Buddy-Dokumente und Dateien. Das Appwrite-Anmeldekonto selbst bleibt dabei bestehen.</p>
-        <p><strong>Appwrite Free:</strong> Das Projekt nutzt den Free-Tarif. Dieser umfasst keine vom Betreiber konfigurierbaren automatischen oder manuellen Projekt-Backups. Appwrite unterhält unabhängig davon interne Sicherungen zur Wiederherstellung der Plattform; nach der aktuellen Anbieterdokumentation werden diese bei unterstützten Datenbanksystemen bis zu sieben Tage vorgehalten.</p>
         <p>Technische Protokolle sowie bereits gelöschte Inhalte in Sicherungssystemen der Anbieter können bis zum Ablauf der jeweils dokumentierten Sicherheits- und Wiederherstellungszeiträume fortbestehen.</p>
+      </section>
+      <section class="legal-section">
+        <h3>Geschlossene Beta und künftige Pro-Funktionen</h3>
+        <p>Die geschlossene Beta ist auf insgesamt zehn eingeladene Personen begrenzt. Während der Beta sind alle Funktionen ohne Entgelt freigeschaltet. Kennzeichnungen wie „Beta · später Pro“ zeigen an, welche Funktionen nach der Beta voraussichtlich eine Pro-Berechtigung erfordern.</p>
+        <p>Beta-Nutzer erhalten ab dem offiziell mitgeteilten Ende der Beta zwölf Monate Pro ohne Entgelt. Es erfolgt keine automatische Umwandlung in ein kostenpflichtiges Angebot. Vor Einführung eines kostenpflichtigen Angebots werden Preis, Leistungsumfang, Laufzeit, Kündigung und gegebenenfalls Widerrufsbedingungen gesondert und transparent mitgeteilt.</p>
+        <p>Unabhängig vom Tarif bleiben lokale Nutzung, Verschlüsselung, Synchronisation von Trades und Einstellungen, manuelles Hoch- und Herunterladen, JSON-Export und -Import, Datenlöschung sowie Sicherheitsupdates verfügbar. Pro vorgesehen sind insbesondere die Synchronisation neuer Screenshots, mehrere gleichzeitig synchronisierte Geräte, automatisierte CSV- und Produktdatenverarbeitung, erweiterte Statistiken, Steuerfunktionen und das individuelle Statistiklayout.</p>
+        <p>Während der Beta beträgt das Cloud-Limit für verschlüsselte Screenshots 100 MB je Nutzer. Lokale Screenshots werden dadurch nicht begrenzt. Für Pro ist nach der Beta ein Screenshot-Limit von 500 MB vorgesehen.</p>
+      </section>
+      <section class="legal-section">
+        <h3>Sicherheit, Updates und Schwachstellen</h3>
+        <p>Sicherheitsrelevante Funktionen und notwendige Sicherheitsupdates werden nicht hinter einer Bezahlschranke verborgen. Trading Buddy verschlüsselt Cloud-Sicherungsinhalte und Screenshots vor dem Hochladen auf dem Endgerät. Schlüssel beziehungsweise Passwörter dürfen nicht an den Betreiber übermittelt werden.</p>
+        <p>Hinweise auf Schwachstellen können vertraulich an <a href="mailto:contact.tradingbuddy@gmail.com?subject=Sicherheitshinweis%20Trading%20Buddy">contact.tradingbuddy@gmail.com</a> mit dem Betreff „Sicherheitshinweis Trading Buddy“ gemeldet werden. Bitte keine vertraulichen Nutzer- oder Zugangsdaten mitsenden und Details bis zur Bestätigung beziehungsweise Behebung nicht veröffentlichen.</p>
+        <p>Für die Beta werden Funktions- und Sicherheitsupdates fortlaufend bereitgestellt. Der verbindliche Unterstützungszeitraum einer späteren kommerziellen Version wird vor deren Bereitstellung ausgewiesen. Bei einem erheblichen Sicherheitsvorfall werden betroffene Nutzer über die verfügbaren Kontakt- beziehungsweise App-Kanäle informiert, soweit dies erforderlich und möglich ist.</p>
       </section>
       <section class="legal-section">
         <h3>Rechte betroffener Personen</h3>
@@ -16918,6 +16980,108 @@ if(document.readyState==='loading'){
 // ???????????????????????????????????????????????????????????????????????????
 // APPWRITE CLOUD SYNC – inkrementell, offline-first
 // ???????????????????????????????????????????????????????????????????????????
+/*
+ * Zentrale Produktberechtigungen. Premium wird nach der Beta ausschliesslich
+ * aus serverseitigen Appwrite-Labels abgeleitet. Sicherheits-, Export-,
+ * Verschluesselungs- und Loeschfunktionen sind absichtlich nie gesperrt.
+ */
+window.TB_RELEASE=Object.freeze({
+  phase:'beta',
+  betaMaxUsers:10,
+  betaScreenshotBytes:100*1024*1024,
+  proScreenshotBytes:500*1024*1024,
+  betaPremiumMonthsAfterEnd:12,
+  // Beim offiziellen Beta-Ende als ISO-Datum setzen. Eingeladene Konten
+  // erhalten serverseitig das Label "tb-beta".
+  betaEndsAt:''
+});
+const TB_FEATURES=Object.freeze({
+  autoProductData:{label:'Automatischer WKN-/ISIN-Datenabruf'},
+  csvAutomation:{label:'CSV-Import und automatische Datenaufbereitung'},
+  advancedStats:{label:'Erweiterte Statistik'},
+  taxFeatures:{label:'Steuerfunktionen'},
+  customStatsLayout:{label:'Individuelles Statistik-Layout'},
+  screenshotSync:{label:'Cloud-Synchronisation von Screenshots'},
+  multiDevice:{label:'Gleichzeitige Synchronisation mehrerer Geräte'}
+});
+function tbBetaGraceActive(labels){
+  if(!labels.includes('tb-beta')||!TB_RELEASE.betaEndsAt)return false;
+  const end=new Date(TB_RELEASE.betaEndsAt);
+  if(Number.isNaN(end.getTime()))return false;
+  const graceEnd=new Date(end);
+  graceEnd.setMonth(graceEnd.getMonth()+TB_RELEASE.betaPremiumMonthsAfterEnd);
+  return Date.now()<graceEnd.getTime();
+}
+function tbIsPro(){
+  if(TB_RELEASE.phase==='beta')return true;
+  const labels=Array.isArray(typeof _awUser!=='undefined'&&_awUser&&_awUser.labels)?_awUser.labels.map(String):[];
+  return labels.includes('tb-pro')||labels.includes('tb-lifetime')||tbBetaGraceActive(labels);
+}
+function tbHasFeature(feature){return !TB_FEATURES[feature]||tbIsPro();}
+function tbFeatureCopy(feature){
+  if(feature==='plan')return 'Die gekennzeichneten Funktionen';
+  return (TB_FEATURES[feature]&&TB_FEATURES[feature].label)||'Diese Funktion';
+}
+function tbOpenProInfo(feature){
+  const ov=document.getElementById('tb-pro-ov');
+  const title=document.getElementById('tb-pro-title');
+  const copy=document.getElementById('tb-pro-copy');
+  if(title)title.textContent=TB_RELEASE.phase==='beta'?'Beta-Funktion · später Pro':'Pro-Version erforderlich';
+  if(copy)copy.textContent=TB_RELEASE.phase==='beta'
+    ?`${tbFeatureCopy(feature)} ist während der geschlossenen Beta freigeschaltet und wird danach Teil von Trading Buddy Pro. Beta-Konten erhalten anschließend 12 Monate Pro.`
+    :`Für ${tbFeatureCopy(feature)} ist die Pro-Version von Trading Buddy nötig. Deine lokalen Daten bleiben erhalten; Export, Löschen, Verschlüsselung und Sicherheitsupdates bleiben immer frei.`;
+  if(ov)ov.classList.add('open');
+}
+function tbCloseProInfo(){const ov=document.getElementById('tb-pro-ov');if(ov)ov.classList.remove('open');}
+function tbRequireFeature(feature){if(tbHasFeature(feature))return true;tbOpenProInfo(feature);return false;}
+function tbApplyFeatureState(){
+  const planStatus=document.getElementById('tb-plan-status');
+  if(planStatus)planStatus.textContent=TB_RELEASE.phase==='beta'
+    ?`Geschlossene Beta · ${TB_RELEASE.betaMaxUsers} Plätze · alle Funktionen`
+    :(tbIsPro()?'Pro aktiv':'Free');
+  document.querySelectorAll('[data-tb-feature]').forEach(el=>{
+    const feature=el.dataset.tbFeature;
+    el.classList.toggle('tb-feature-locked',!tbHasFeature(feature));
+    if(!el.querySelector(':scope > .tb-plan-badge')){
+      const badge=document.createElement('span');
+      badge.className='tb-plan-badge';
+      badge.textContent=TB_RELEASE.phase==='beta'?'Beta · später Pro':'Pro';
+      badge.title=`${tbFeatureCopy(feature)}: ${TB_RELEASE.phase==='beta'?'während der Beta freigeschaltet, danach Pro erforderlich':'Pro erforderlich'}`;
+      badge.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();tbOpenProInfo(feature);});
+      el.appendChild(badge);
+    }
+  });
+  document.querySelectorAll('[data-tb-feature-card]').forEach(el=>{
+    const feature=el.dataset.tbFeatureCard;
+    if(feature==='taxFeatures'){
+      el.hidden=!tbHasFeature(feature);
+      if(el.hidden)return;
+    }
+    el.classList.toggle('tb-feature-card-locked',!tbHasFeature(feature));
+    if(!el.querySelector(':scope > .tb-card-plan-badge')){
+      const badge=document.createElement('button');
+      badge.type='button';
+      badge.className='tb-card-plan-badge';
+      badge.textContent=TB_RELEASE.phase==='beta'?'Beta · später Pro':'Pro erforderlich';
+      badge.onclick=event=>{event.preventDefault();event.stopPropagation();tbOpenProInfo(feature);};
+      el.appendChild(badge);
+    }
+  });
+  document.querySelectorAll('[data-tb-feature-content]').forEach(el=>{el.hidden=!tbHasFeature(el.dataset.tbFeatureContent);});
+  const financeTitle=document.querySelector('#tax-settings-card>.sec-title');
+  if(financeTitle)financeTitle.textContent=tbHasFeature('taxFeatures')?'Finanzen & Steuern':'Finanzen';
+  const layoutButton=document.getElementById('stats-layout-edit-toggle');
+  if(layoutButton&&!layoutButton.dataset.tbFeature)layoutButton.dataset.tbFeature='customStatsLayout';
+}
+window.tbIsPro=tbIsPro;
+window.tbHasFeature=tbHasFeature;
+window.tbRequireFeature=tbRequireFeature;
+window.tbOpenProInfo=tbOpenProInfo;
+window.tbCloseProInfo=tbCloseProInfo;
+window.tbApplyFeatureState=tbApplyFeatureState;
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{tbApplyFeatureState();setTimeout(tbApplyFeatureState,800);});
+else setTimeout(tbApplyFeatureState,0);
+
 const AW_ENDPOINT  = 'https://fra.cloud.appwrite.io/v1';
 const AW_PROJECT   = '6a3a8538003b2ab3b820';
 const AW_DB        = '6a3a8a970024081a55d4';
@@ -17175,6 +17339,12 @@ async function _awCheckCloudChanges(){
     const doc=await _awGetEntityDoc('trades');
     let settingsDoc=null;
     try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
+    const activeDevice=String((doc&&doc.device)||(settingsDoc&&settingsDoc.device)||'');
+    if(activeDevice&&activeDevice!==_awDevice()&&typeof tbHasFeature==='function'&&!tbHasFeature('multiDevice')){
+      awSetAutoSync(false);
+      _awStatus('Dieses Cloud-Konto synchronisiert derzeit ein anderes Gerät. Manuelles Hoch- oder Herunterladen übernimmt den Geräteplatz; lokale Daten bleiben erhalten.','warn');
+      return;
+    }
     if(!doc){
       if(_awHasLocalUnsyncedData())_awSchedulePush();
       else if(settingsDoc)await _awHandleSyncDecision(null,settingsDoc,'watch');
@@ -17292,6 +17462,11 @@ async function awLogin(){
 }
 
 async function awRegister(){
+  if(window.TB_RELEASE&&TB_RELEASE.phase==='beta'){
+    _awStatus('Die geschlossene Beta ist auf 10 eingeladene Personen begrenzt. Zugang bitte über contact.tradingbuddy@gmail.com anfragen.','warn');
+    try{window.location.href='mailto:contact.tradingbuddy@gmail.com?subject=Trading%20Buddy%20Beta-Zugang';}catch(e){}
+    return;
+  }
   if(_awAuthBusy)return;
   if(!_awInit()){_awStatus('SDK nicht geladen.','error');return;}
   if(!_awCryptoReady()){_awStatus('Verschlüsselung wird von dieser WebView nicht unterstützt. Bitte Android System WebView aktualisieren.','error');return;}
@@ -18834,9 +19009,11 @@ async function _awConfirmYes(){
   _awSyncBusy=false;
   if(_awConfirmMode==='push'){
     const ok=await _awPush(true,true,_awCloudKeyMismatch);
+    if(ok)tbActivateCurrentFreeDevice();
     _awStatus(ok?'Sync abgeschlossen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
   }else{
     await _awPull(true);
+    await tbClaimCurrentFreeDevice();
   }
   _awUpdateSyncStatus();
 }
@@ -19012,9 +19189,11 @@ async function awSyncSection(kind,direction){
   if(kind==='settings'){
     if(upload){
       const ok=await _awPushSettingsOnly(true);
+      if(ok)tbActivateCurrentFreeDevice();
       _awStatus(ok?'Einstellungen hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPullSettingsOnly();
+      await tbClaimCurrentFreeDevice();
     }
     _awUpdateSyncStatus();
     return;
@@ -19022,22 +19201,41 @@ async function awSyncSection(kind,direction){
   if(kind==='trades'){
     if(upload){
       const ok=await _awPush(true,false,true,{only:'trades'});
+      if(ok)tbActivateCurrentFreeDevice();
       _awStatus(ok?'Trades hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPull(true);
+      await tbClaimCurrentFreeDevice();
     }
     _awUpdateSyncStatus();
     return;
   }
   if(kind==='screenshots'){
     if(upload){
+      if(typeof tbRequireFeature==='function'&&!tbRequireFeature('screenshotSync'))return;
       const ok=await _awPush(true,false,true,{only:'trades'});
+      if(ok)tbActivateCurrentFreeDevice();
       _awStatus(ok?'Screenshots hochgeladen ✓':'Fehler: '+(_awLastPushError||'unbekannt'),ok?'ok':'error');
     }else{
       await _awPull(true);
+      await tbClaimCurrentFreeDevice();
     }
     _awUpdateSyncStatus();
   }
+}
+
+function tbActivateCurrentFreeDevice(){
+  if(typeof tbHasFeature==='function'&&!tbHasFeature('multiDevice')){
+    _awAutoSync=true;
+    localStorage.setItem('tb_cloud_autosync','1');
+    _awUpdateSyncStatus();
+    _awStartCloudWatcher();
+  }
+}
+async function tbClaimCurrentFreeDevice(){
+  if(typeof tbHasFeature!=='function'||tbHasFeature('multiDevice'))return;
+  const ok=await _awPushSettingsOnly(true);
+  if(ok)tbActivateCurrentFreeDevice();
 }
 
 function _awSchedulePush(){
@@ -19144,6 +19342,7 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
     let uploadSource=[];
     if(shouldUploadTrades){
       uploadSource=dedupeTradesList(trades).map((trade,index)=>normalizeTrade(trade,index));
+      const allowScreenshotUpload=typeof tbHasFeature!=='function'||tbHasFeature('screenshotSync');
       for(const trade of uploadSource){
         const remoteAtts=[];
         const localAtts=[];
@@ -19156,6 +19355,14 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
             }else{
               localAtts.push(att);
             }
+            continue;
+          }
+          if(!allowScreenshotUpload){
+            if(att.fileId){
+              const remoteAtt={fileId:att.fileId,name:att.name||'screenshot.webp',mime:att.mime||'image/webp'};
+              remoteAtts.push(remoteAtt);
+            }
+            localAtts.push(att);
             continue;
           }
           _awSyncLabel('','pending','Screenshots ...');
@@ -19443,7 +19650,20 @@ async function _awPull(force=false,options={}){
 
 
 function _awApplyData(data){Object.entries(data||{}).forEach(([k,v])=>{if(!AW_EXCL.has(k)&&typeof v==='string')localStorage.setItem(k,v);});}
-function _awDevice(){if(window.TBNative&&!TBNative.__browserShim)return 'Android';if(/iphone|ipad/i.test(navigator.userAgent))return 'iOS';return 'Web';}
+function _awDevice(){
+  let id='';
+  try{
+    id=localStorage.getItem('tb_cloud_device_id')||'';
+    if(!id){
+      id=(window.crypto&&typeof crypto.randomUUID==='function')
+        ?crypto.randomUUID()
+        :'tb-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+      localStorage.setItem('tb_cloud_device_id',id);
+    }
+  }catch(_){id='session-'+Math.random().toString(36).slice(2,10);}
+  const platform=window.TBNative&&!TBNative.__browserShim?'Android':(/iphone|ipad/i.test(navigator.userAgent)?'iOS':'Web');
+  return platform+':'+id;
+}
 function _awErr(e,action=''){
   const t=String(e&&e.type||'');
   if(_awIsPermissionDenied(e))return 'Berechtigung fehlt: Appwrite verweigert Lesen der Datei/Daten.';
@@ -19497,6 +19717,7 @@ function _awUpdateUI(){
     _awUpdateSyncStatus();
     if(_awEncKey&&!_awCloudKeyMismatch)_awCheckCloudChanges();
   }else{out.style.display='block';inn.style.display='none';}
+  if(typeof tbApplyFeatureState==='function')tbApplyFeatureState();
 }
 
 (function(){
@@ -20367,6 +20588,37 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
 }
 </style>
+<style>
+.tb-plan-badge,.tb-card-plan-badge{
+  display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;
+  border:1px solid color-mix(in srgb,var(--purple) 48%,var(--bd));
+  border-radius:999px;background:color-mix(in srgb,var(--purple) 10%,var(--s2));
+  color:var(--purple);font-size:.56rem;font-weight:800;letter-spacing:.035em;line-height:1;
+  padding:4px 7px;cursor:pointer
+}
+.tb-plan-badge{position:absolute;right:6px;top:5px;z-index:2}
+[data-tb-feature]{position:relative}
+.stats-chart-tab[data-tb-feature]{padding-right:72px}
+.tb-card-plan-badge{position:absolute;right:12px;top:10px;z-index:5}
+[data-tb-feature-card]{position:relative}
+.tb-feature-locked{opacity:.72}
+.tb-feature-card-locked>:not(.tb-card-plan-badge){filter:saturate(.65);opacity:.56;pointer-events:none}
+.tb-feature-card-locked{min-height:116px}
+#tb-pro-ov{display:none;position:fixed;inset:0;z-index:10050;background:rgba(5,8,14,.68);padding:18px;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#tb-pro-ov.open{display:flex}
+.tb-pro-sheet{width:min(440px,100%);border:1px solid var(--bd);border-radius:20px;background:var(--s1);box-shadow:0 24px 80px rgba(0,0,0,.38);padding:24px;text-align:center}
+.tb-pro-sheet h2{margin:10px 0 8px;font-size:1.15rem}
+.tb-pro-sheet p{margin:0 0 14px;color:var(--text);line-height:1.55}
+.tb-pro-icon{display:inline-grid;place-items:center;min-width:58px;height:34px;padding:0 12px;border-radius:999px;background:linear-gradient(135deg,var(--green),var(--blue));color:white;font-weight:900;letter-spacing:.08em}
+.tb-pro-assurance{margin:0 0 16px;padding:10px;border-radius:10px;background:var(--s2);color:var(--muted);font-size:.72rem;line-height:1.45}
+.tb-plan-status{margin-top:5px;border:1px solid color-mix(in srgb,var(--purple) 42%,var(--bd));border-radius:999px;background:color-mix(in srgb,var(--purple) 9%,var(--s2));color:var(--purple);padding:4px 8px;font:800 .55rem var(--f);cursor:pointer}
+#tax-settings-pro-content[hidden]{display:none!important}
+@media(max-width:719px){
+  .stats-chart-tab[data-tb-feature]{padding-right:8px;padding-top:18px}
+  .stats-chart-tab[data-tb-feature]>.tb-plan-badge{top:4px;right:50%;transform:translateX(50%);font-size:.45rem;padding:3px 5px}
+  .tb-card-plan-badge{right:10px;top:8px}
+}
+</style>
 <script>
 (function(){
   'use strict';
@@ -20453,11 +20705,11 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
       row.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===row.dataset.layoutKey)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(row.dataset.layoutKey);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
     });
   };
-  window.toggleStatsLayoutEditing=function(){if(!window.matchMedia('(min-width:720px)').matches)return;const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
+  window.toggleStatsLayoutEditing=function(){if(typeof tbRequireFeature==='function'&&!tbRequireFeature('customStatsLayout'))return;if(!window.matchMedia('(min-width:720px)').matches)return;const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
   window.updateStatsLayoutOption=function(key,value){if(key==='columns')state.columns=value;save();apply();};
   window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=Number(value)||1;save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
-  window.resetStatsLayout=function(){state=defaults();save();apply();renderStatsLayoutEditor();};
+  window.resetStatsLayout=function(){if(typeof tbRequireFeature==='function'&&!tbRequireFeature('customStatsLayout'))return;state=defaults();save();apply();renderStatsLayoutEditor();};
   load();
   function bindStatsPageWheel(){
     const host=document.getElementById('view-stats');
