@@ -17250,24 +17250,28 @@ async function _awCreateAccount(email,password){
 
 async function _awBiSync(){
   loadTrades();
-  _awScheduleBackupCleanup();
-  let cloudDoc=null;
-  try{cloudDoc=await _awGetEntityDoc('trades');}catch(_){}
-  let settingsDoc=null;
-  try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
-  if(cloudDoc){
-    if(await _awHandleSyncDecision(cloudDoc,settingsDoc,'start'))return;
-    _awMarkCloudDocChecked(cloudDoc);
-  }else if(settingsDoc){
-    if(await _awHandleSyncDecision(null,settingsDoc,'start'))return;
-  }
-  if(!cloudDoc&&!settingsDoc&&_awHasLocalUnsyncedData()){
-    await _awPush();
+  try{
+    let cloudDoc=null;
+    try{cloudDoc=await _awGetEntityDoc('trades');}catch(_){}
+    let settingsDoc=null;
+    try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
+    if(cloudDoc){
+      if(await _awHandleSyncDecision(cloudDoc,settingsDoc,'start'))return;
+      _awMarkCloudDocChecked(cloudDoc);
+    }else if(settingsDoc){
+      if(await _awHandleSyncDecision(null,settingsDoc,'start'))return;
+    }
+    if(!cloudDoc&&!settingsDoc&&_awHasLocalUnsyncedData()){
+      await _awPush();
+      _awUpdateSyncStatus();
+      return;
+    }
     _awUpdateSyncStatus();
-    return;
+  }finally{
+    // Nicht nur zeitversetzt ausführen: Browser können Timer in inaktiven Tabs
+    // drosseln. Nach jedem vollständigen Start-Sync werden Altstände sofort entfernt.
+    await _awCleanupOrphanedBackupChunks();
   }
-  _awUpdateSyncStatus();
-  return;
 }
 
 async function _awClearCloudBackupMeta(){
@@ -17394,6 +17398,9 @@ async function awCheckSession(){
   _awRestoreLoginEmail();
   try{
     _awUser=await _awAccount.get();_awDocId=_awUser.$id;
+    // Verwaiste Backup-Chunks sind über Dokumentrechte eindeutig zuordenbar
+    // und können auch ohne lokalen Entschlüsselungsschlüssel entfernt werden.
+    await _awCleanupOrphanedBackupChunks();
     // Schlüssel aus Android Keystore laden – kein Passwort nötig
     if(!_awEncKey) _awEncKey=await _awLoadKeyFromDevice();
     if(!_awEncKey){_awUpdateUI();return;}
@@ -18360,6 +18367,16 @@ async function _awListDocumentPage(limit=100,offset=0){
 
 let _awChunkCleanupPromise=null;
 let _awChunkCleanupTimer=null;
+function _awDocumentOwnedByCurrentUser(doc){
+  if(!_awDocId)return false;
+  const permissions=Array.isArray(doc&&doc.$permissions)?doc.$permissions.map(String):[];
+  const userToken=`user:${_awDocId}`;
+  return permissions.some(permission=>
+    permission.includes(userToken)&&
+    (permission.startsWith('read(')||permission.startsWith('update(')||permission.startsWith('delete('))
+  );
+}
+
 async function _awCleanupOrphanedBackupChunks(){
   if(_awChunkCleanupPromise)return _awChunkCleanupPromise;
   _awChunkCleanupPromise=(async()=>{
@@ -18383,17 +18400,16 @@ async function _awCleanupOrphanedBackupChunks(){
       if(!rows.length||rows.length<100)break;
     }while(offset<total&&offset<10000);
 
-    const userPrefix=_awUserShortId();
-    const randomPrefixes=[`${userPrefix}_t_`,`${userPrefix}_s_`];
-    const legacyBases=new Set([_awEntityDocId('trades'),_awEntityDocId('settings')]);
     const orphanIds=[];
     documents.forEach(doc=>{
       const id=String(doc&&doc.$id||'');
       const data=String(doc&&doc.data||'');
       if(!/^chunk:\d+:\d+:/.test(data)||!/_c\d+$/.test(id))return;
       const base=id.replace(/_c\d+$/,'');
-      const belongsToCurrentUser=randomPrefixes.some(prefix=>base.startsWith(prefix))||legacyBases.has(base);
-      if(belongsToCurrentUser&&!activeBases.has(base))orphanIds.push(id);
+      // Die Dokumentberechtigung ist die verlässliche Eigentümerprüfung.
+      // Frühere Builds nutzten mehrere ID-Schemata; ein Präfixvergleich ließ
+      // deshalb alte, aber eindeutig diesem Konto gehörende Chunks stehen.
+      if(_awDocumentOwnedByCurrentUser(doc)&&!activeBases.has(base))orphanIds.push(id);
     });
 
     let deleted=0;
