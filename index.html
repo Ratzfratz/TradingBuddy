@@ -6,15 +6,102 @@
 <meta name="theme-color" content="#0d0f14">
 <script>
 function openLegal(){
-  var ov=document.getElementById('legal-ov');if(!ov)return;
-  ov.style.display='flex';document.body.style.overflow='hidden';
-  var close=ov.querySelector('.legal-close');if(close)setTimeout(function(){close.focus()},0);
+  var ov=document.getElementById('legal-ov'),sh=document.getElementById('legal-sh'),bd=document.getElementById('legal-bd'),body=document.getElementById('legal-body');
+  if(!ov||!sh||!bd)return false;
+  window._legalOpenedFromSettings=!!window._settingsOpen;
+  if(window._legalOpenedFromSettings){
+    var settOv=document.getElementById('settings-ov'),settSh=document.getElementById('settings-sh'),settBd=document.getElementById('settings-bd');
+    var ease='.32s cubic-bezier(.4,0,.2,1)';
+    ov.style.zIndex='1901';
+    ov.style.display='block';
+    if(settBd){settBd.style.transition='none';settBd.style.opacity='1';}
+    bd.style.transition='none';bd.style.opacity='0';
+    sh.style.transition='none';
+    sh.style.transform='translateX(calc(50vw + 50%))';
+    sh.getBoundingClientRect();
+    if(settSh){settSh.style.transition='transform '+ease;settSh.style.transform='translateX(calc(-50vw - 50%))';}
+    sh.style.transition='transform '+ease;
+    sh.style.transform='translateX(0)';
+    window._legalOpen=true;
+    window._settingsOpen=false;
+    if(body)body.scrollTop=0;
+    setTimeout(function(){
+      bd.style.opacity='1';
+      if(settOv)settOv.style.display='none';
+      if(settSh){settSh.style.transition='';settSh.style.transform='';}
+    },340);
+  }else{
+    window._legalScrollY=window.scrollY||window.pageYOffset||0;
+    document.body.style.overflow='hidden';
+    document.body.style.position='fixed';
+    document.body.style.top='-'+window._legalScrollY+'px';
+    document.body.style.width='100%';
+    if(body)body.scrollTop=0;
+    ov.style.display='block';
+    sh.style.transition='none';
+    sh.style.transform='translateY(100%)';
+    sh.getBoundingClientRect();
+    sh.style.transition='transform .3s cubic-bezier(.32,.72,0,1)';
+    bd.style.opacity='1';
+    (window.requestAnimationFrame||function(fn){return setTimeout(fn,16);})(function(){sh.style.transform='translateY(0)';});
+    window._legalOpen=true;
+  }
+  try{history.pushState({page:window.currentPage||'tagebuch',overlay:'legal'},'','#'+(window.currentPage||'tagebuch'));}catch(e){}
+  var close=ov.querySelector('.legal-close');if(close)setTimeout(function(){close.focus()},320);
+  return true;
+}
+function legalGoSettings(){
+  if(!window._legalOpen||!window._legalOpenedFromSettings)return closeLegal();
+  var legalOv=document.getElementById('legal-ov'),legalSh=document.getElementById('legal-sh'),legalBd=document.getElementById('legal-bd');
+  var settOv=document.getElementById('settings-ov'),settSh=document.getElementById('settings-sh'),settBd=document.getElementById('settings-bd');
+  if(!settOv||!settSh||!legalSh)return false;
+  var ease='.32s cubic-bezier(.4,0,.2,1)';
+  settOv.style.zIndex='1902';
+  settOv.style.display='block';
+  if(legalBd){legalBd.style.transition='none';legalBd.style.opacity='0';}
+  if(settBd){settBd.style.transition='none';settBd.style.opacity='1';}
+  settSh.style.transition='none';
+  settSh.style.transform='translateX(calc(-50vw - 50%))';
+  settSh.getBoundingClientRect();
+  legalSh.style.transition='transform '+ease;
+  legalSh.style.transform='translateX(calc(50vw + 50%))';
+  settSh.style.transition='transform '+ease;
+  settSh.style.transform='translateX(0)';
+  window._legalOpen=false;
+  window._legalOpenedFromSettings=false;
+  window._settingsOpen=true;
+  setTimeout(function(){
+    if(legalOv){legalOv.style.display='none';legalOv.style.zIndex='';}
+    legalSh.style.transition='';
+    legalSh.style.transform='translateY(100%)';
+    settOv.style.zIndex='1900';
+  },340);
+  return true;
 }
 function closeLegal(){
-  var ov=document.getElementById('legal-ov');if(!ov)return;
-  ov.style.display='none';
-  var settings=document.getElementById('settings-ov');
-  if(!settings||settings.style.display==='none')document.body.style.overflow='';
+  var ov=document.getElementById('legal-ov'),sh=document.getElementById('legal-sh'),bd=document.getElementById('legal-bd');
+  if(!ov||!sh||!bd||!window._legalOpen)return false;
+  var restoreTop=window._legalOpenedFromSettings?parseInt(document.body.style.top||'0',10)*-1:(window._legalScrollY||0);
+  sh.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';
+  sh.style.transform='translateY(100%)';
+  bd.style.opacity='0';
+  window._legalOpen=false;
+  setTimeout(function(){
+    ov.style.display='none';
+    ov.style.zIndex='';
+    sh.style.transition='';
+    var settings=document.getElementById('settings-ov');
+    if(window._legalOpenedFromSettings&&settings)settings.style.display='none';
+    document.body.style.overflow='';
+    document.body.style.position='';
+    document.body.style.top='';
+    document.body.style.width='';
+    window.scrollTo(0,Math.max(0,restoreTop||0));
+    try{if(window.restoreJournalFilterState)window.restoreJournalFilterState();}catch(e){}
+    window._legalOpenedFromSettings=false;
+    window._settingsOpen=false;
+  },300);
+  return true;
 }
 async function tbAskDeleteLocalData(){
   if(!window.confirm('Alle lokalen Trades, Einstellungen, Anmeldedaten und zwischengespeicherten Screenshots auf diesem Gerät löschen? Cloud-Daten und exportierte Dateien bleiben erhalten.'))return;
@@ -24,7 +111,7 @@ async function tbAskDeleteLocalData(){
 }
 document.addEventListener('keydown',function(e){
   var ov=document.getElementById('legal-ov');
-  if(e.key==='Escape'&&ov&&ov.style.display!=='none'){e.preventDefault();closeLegal();}
+  if(e.key==='Escape'&&ov&&ov.style.display!=='none'){e.preventDefault();if(window._legalOpenedFromSettings)legalGoSettings();else closeLegal();}
 });
 (function(){
   var viewport=document.querySelector('meta[name="viewport"]');
@@ -2532,6 +2619,10 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 .theme-choice{display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 11px;border:1.5px solid var(--bd);border-radius:10px;background:var(--s2);color:var(--text);font-family:var(--f);cursor:pointer;transition:border-color .15s,background .15s;text-align:center}
 .theme-choice-swatches{display:flex;justify-content:center;gap:4px}
 .theme-choice-swatches span{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,.10)}
+#settings-page-main .theme-choice-swatches span{
+  border:1px solid var(--s1)!important;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--text) 72%,transparent)!important;
+}
 .theme-choice-name{font-size:.72rem;font-weight:600;color:var(--muted);transition:color .15s}
 .theme-choice.active{border-color:var(--blue);background:rgba(91,138,245,.10)}
 .theme-choice.active .theme-choice-name{color:var(--text)}
@@ -6295,7 +6386,7 @@ body.tb-compact-small{
   #page-tagebuch .tc-actions{gap:4px!important}
 }
 .stats-chart-section{display:flex;flex-direction:column;gap:12px}
-.stats-chart-section>.sec-title{margin-bottom:0}
+.stats-chart-section>.sec-title{margin-bottom:4px}
 .stats-chart-block{min-width:0}
 .stats-chart-block+.stats-chart-block{padding-top:11px;border-top:1px solid var(--bd)}
 .stats-chart-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
@@ -6322,11 +6413,12 @@ body.tb-compact-small{
 .stats-chart-area{fill:rgba(91,138,245,.09)}
 .stats-chart-dot{fill:var(--blue);stroke:var(--s1);stroke-width:2}
 .stats-chart-label{fill:var(--muted);font:600 13px var(--f)}
+.stats-chart-date{fill:var(--muted);font:650 16px var(--f)}
 .stats-chart-value{fill:var(--text);font:700 14px var(--f)}
 .stats-chart-bar-positive{fill:var(--green)}
 .stats-chart-bar-negative{fill:var(--red)}
 .stats-chart-empty{display:grid;place-items:center;min-height:110px;color:var(--muted);font-size:.68rem;text-align:center}
-.equity-chart-layout{display:grid;grid-template-columns:92px minmax(0,1fr);align-items:stretch;min-width:0}
+.equity-chart-layout{display:block;min-width:0;height:100%}
 .equity-axis-labels{position:relative;color:var(--muted);font-size:.65rem;font-weight:650;text-align:right;white-space:nowrap}
 .equity-axis-labels>span{position:absolute;right:8px}
 .equity-axis-labels>span:first-child{top:3.53%;transform:translateY(-50%)}
@@ -6380,7 +6472,6 @@ body.tb-compact-small{
   .stats-chart-head{margin-bottom:5px;font-size:.7rem}
   .stats-chart-head strong{font-size:.76rem}
   .stats-chart-host{min-height:0}
-  .equity-chart-layout{grid-template-columns:78px minmax(0,1fr)}
   .equity-axis-labels{font-size:.64rem}
   .equity-axis-labels>span{right:6px}
 }
@@ -6396,16 +6487,34 @@ body.tb-compact-small{
   .stats-chart-value{font-size:15px}
 }
 @media (min-width:340px) and (max-width:599px){
+  /* Alle Diagrammarten belegen auf Smartphones dieselbe Fläche.
+     So springen Karte und nachfolgender Kalender beim Tabwechsel nicht. */
+  .stats-chart-section{height:410px}
+  .stats-chart-panel{flex:1;min-height:0}
+  .stats-chart-host{flex:1;min-height:0}
   .stats-chart-section>.sec-title{font-size:.68rem}
   .stats-chart-tab{font-size:.72rem}
   .stats-chart-head{font-size:.8rem}
   .stats-chart-head strong{font-size:.88rem}
   .stats-chart-context,.stats-chart-selection{font-size:.7rem}
   .stats-chart-selection strong{font-size:.78rem}
-  .equity-axis-labels{font-size:.69rem}
-  .equity-axis-labels small{font-size:.6rem}
-  .stats-chart-label{font-size:14px}
-  .stats-chart-value{font-size:15px}
+  .equity-axis-labels{font-size:.76rem;line-height:1.18;white-space:normal}
+  .equity-axis-labels>span{right:8px;width:94px}
+  .equity-axis-labels>span:first-child{top:8px;transform:none}
+  .equity-axis-labels>span:last-child{bottom:32px;transform:none}
+  .equity-axis-labels small{font-size:.66rem}
+  .stats-chart-label{font-size:17px}
+  .stats-chart-date{font-size:20px}
+  .stats-chart-value{font-size:18px}
+  .equity-chart-layout .stats-chart-label{font-size:11px}
+  .equity-chart-layout .stats-chart-date{font-size:11px}
+  .equity-chart-layout .stats-chart-value{font-size:12px}
+  #st-asset-chart .stats-chart-label,
+  #st-return-chart .stats-chart-label{font-size:10px}
+  #st-asset-chart .stats-chart-value,
+  #st-return-chart .stats-chart-value{font-size:11px}
+  #st-hold-chart .stats-chart-label{font-size:11px}
+  #st-hold-chart .stats-chart-value{font-size:12px}
 }
 @media (min-width:600px) and (max-width:899px){
   .stats-chart-tab{font-size:.68rem}
@@ -7233,6 +7342,11 @@ window.addEventListener('popstate', event => {
 
   // Zurück-Geste: offene Overlays schließen statt zu navigieren.
   // Reihenfolge: tiefstes Overlay zuerst.
+  if (typeof _legalOpen !== 'undefined' && _legalOpen) {
+    if (window._legalOpenedFromSettings) legalGoSettings();
+    else closeLegal();
+    return;
+  }
   if (typeof _ntOpen !== 'undefined' && _ntOpen) {
     if (currentPage === 'newtrade' && isTradeFormDirty()) {
       history.pushState({page: currentPage, overlay: 'nt'}, '', '#' + currentPage);
@@ -10123,6 +10237,7 @@ let _zeroImportEnrichQueue = [];
 let _zeroImportEnrichCurrent = '';
 let _zeroImportEnrichTotal = 0;
 let _zeroImportEnrichTimer = 0;
+let _zeroStatusHideTimer = 0;
 let _zeroImportEnrichDirty = false;
 let _zeroImportEnrichStats = {checked:0,updated:0,failed:0,knockedOut:0,diffCount:0,diffs:[]};
 
@@ -10133,10 +10248,18 @@ function zeroImportStatusHtml(message,kind){
 function zeroSetImportCheckStatus(message,kind){
   const resultBox=document.getElementById('zero-import-result');
   if(!resultBox)return;
+  if(_zeroStatusHideTimer){clearTimeout(_zeroStatusHideTimer);_zeroStatusHideTimer=0;}
   const html=zeroImportStatusHtml(message,kind);
   const existing=document.getElementById('zero-wkn-check-status');
   if(existing)existing.outerHTML=html;
   else resultBox.innerHTML+=html;
+  if(!/startet|läuft|prüfe|fahre fort/i.test(String(message))){
+    _zeroStatusHideTimer=setTimeout(function(){
+      const status=document.getElementById('zero-wkn-check-status');
+      if(status)status.remove();
+      _zeroStatusHideTimer=0;
+    },10000);
+  }
 }
 
 function zeroClearImportCheckTimer(){
@@ -10775,7 +10898,8 @@ function normalizeMergeGroup(group,index){
     sources:Array.isArray(group&&group.sources)?group.sources.map(v=>String(v||'').trim()).filter(Boolean):[],
     changedTrades:changed.map(item=>({
       id:String((item&&item.id)||''),
-      before:String((item&&(item.before!==undefined?item.before:item.ticker))||'').trim().toUpperCase()
+      before:String((item&&(item.before!==undefined?item.before:item.ticker))||'').trim().toUpperCase(),
+      beforeUnderlyingName:String((item&&item.beforeUnderlyingName)||'').trim()
     })).filter(item=>item.id),
     aliasPrevious:group&&group.aliasPrevious&&typeof group.aliasPrevious==='object'?group.aliasPrevious:{}
   };
@@ -10817,6 +10941,16 @@ function openMergeTool(){
   renderMergeTool();
 }
 
+function mergeToolUnderlyingName(trade){
+  const resolved=cleanUnderlyingDisplayName(trade&&trade.underlyingName) ||
+    inferUnderlyingNameFromProductName(trade&&trade.productName);
+  if(resolved)return resolved;
+  const fallback=String((trade&&trade.ticker)||'').trim();
+  // Reine Börsenkürzel sind keine auswählbaren Basiswertnamen.
+  if(!fallback||/\d/.test(fallback)||/^[A-ZÄÖÜ]{1,4}$/.test(fallback))return '';
+  return cleanUnderlyingDisplayName(fallback);
+}
+
 function renderMergeTool(message){
   const box=document.getElementById('merge-tool-body');
   if(!box)return;
@@ -10829,7 +10963,7 @@ function renderMergeTool(message){
 
   const counts=new Map();
   trades.forEach(t=>{
-    const name=String(t.ticker||'').trim();
+    const name=String(mergeToolUnderlyingName(t)||'').trim();
     if(name)counts.set(name,(counts.get(name)||0)+1);
   });
   const names=Array.from(counts.keys()).sort((a,b)=>a.localeCompare(b,'de',{sensitivity:'base'}));
@@ -10914,10 +11048,15 @@ function applyMerge(){
 
   const changedTrades=[];
   trades.forEach(t=>{
-    const current=String(t.ticker||'').trim();
+    const current=String(mergeToolUnderlyingName(t)||'').trim();
     if(sources.includes(current)&&current.toUpperCase()!==targetTicker){
-      changedTrades.push({id:String(t.id),before:current.toUpperCase()});
+      changedTrades.push({
+        id:String(t.id),
+        before:String(t.ticker||'').trim().toUpperCase(),
+        beforeUnderlyingName:String(t.underlyingName||'').trim()
+      });
       t.ticker=targetTicker;
+      t.underlyingName=target;
     }
   });
   if(!changedTrades.length){
@@ -11022,23 +11161,35 @@ function rebuildTradesFromMergeGroups(groups){
   ordered.forEach(group=>{
     (group.changedTrades||[]).forEach(item=>{
       const id=String(item.id||'');
-      if(id&&!baseByTrade.has(id))baseByTrade.set(id,String(item.before||'').toUpperCase());
+      if(id&&!baseByTrade.has(id))baseByTrade.set(id,{
+        ticker:String(item.before||'').toUpperCase(),
+        underlyingName:String(item.beforeUnderlyingName||'')
+      });
     });
   });
 
   invalidateTradesCache();
   loadTrades();
   const tradeById=new Map(trades.map(trade=>[String(trade.id),trade]));
-  baseByTrade.forEach((ticker,id)=>{
+  baseByTrade.forEach((before,id)=>{
     const trade=tradeById.get(id);
-    if(trade&&ticker)trade.ticker=ticker;
+    if(trade&&before.ticker){
+      trade.ticker=before.ticker;
+      trade.underlyingName=before.underlyingName;
+    }
   });
 
   ordered.filter(group=>group.active!==false).forEach(group=>{
     const sources=new Set((group.sources||[]).map(source=>String(source||'').toUpperCase()));
     (group.changedTrades||[]).forEach(item=>{
       const trade=tradeById.get(String(item.id));
-      if(trade&&sources.has(String(trade.ticker||'').toUpperCase()))trade.ticker=group.target;
+      if(trade&&(
+        sources.has(String(trade.ticker||'').toUpperCase()) ||
+        sources.has(String(tradeDisplayUnderlyingName(trade)||'').toUpperCase())
+      )){
+        trade.ticker=group.target;
+        trade.underlyingName=group.target;
+      }
     });
   });
   saveTrades();
@@ -12711,10 +12862,15 @@ function showStatsChart(button,panelId){
 let _equityChartPoints=[];
 let _equityChartSelectedIndex=0;
 let _equityChartPointerId=null;
+let _equityChartViewWidth=640;
 function formatChartDate(value){
   if(!value)return 'Datum unbekannt';
   const date=new Date(value+'T12:00:00');
   return Number.isNaN(date.getTime())?'Datum unbekannt':date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function formatChartAxisValue(value){
+  const rounded=Math.round(Number(value)||0);
+  return (rounded>0?'+':'')+rounded.toLocaleString('de-DE')+' €';
 }
 function updateEquityChartSelection(index){
   if(!_equityChartPoints.length)return;
@@ -12730,7 +12886,7 @@ function selectEquityChartPoint(event){
   if(!_equityChartPoints.length)return;
   const svg=event.currentTarget.closest('svg')||event.currentTarget;
   const rect=svg.getBoundingClientRect();
-  const viewX=(event.clientX-rect.left)/rect.width*640;
+  const viewX=(event.clientX-rect.left)/rect.width*_equityChartViewWidth;
   let nearest=0,distance=Infinity;
   _equityChartPoints.forEach((point,index)=>{const next=Math.abs(point.x-viewX);if(next<distance){distance=next;nearest=index;}});
   updateEquityChartSelection(nearest);
@@ -12785,7 +12941,13 @@ function renderPerformanceCharts(closed){
   const step=Math.max(1,Math.ceil(rawPoints.length/120));
   const points=rawPoints.filter((_,index)=>index%step===0||index===rawPoints.length-1);
   const chartCard=$('st-chart-section'),desktopChart=window.matchMedia('(min-width:900px)').matches;
-  const width=Math.max(640,Math.min(1600,Math.round((equityHost?.clientWidth||732)-100))),height=desktopChart?Math.max(220,Math.min(300,Math.round((chartCard?.clientHeight||456)-165))):340,left=8,right=12,top=12,bottom=32;
+  const width=desktopChart
+    ?Math.max(640,Math.min(1600,Math.round(equityHost?.clientWidth||732)))
+    :Math.max(300,Math.round(equityHost?.clientWidth||360));
+  const height=desktopChart
+    ?Math.max(220,Math.min(300,Math.round((chartCard?.clientHeight||456)-165)))
+    :Math.max(190,Math.round(equityHost?.clientHeight||220));
+  const left=desktopChart?8:2,right=desktopChart?78:52,top=38,bottom=42;
   const values=[0,...points.map(point=>point.value)];
   const min=Math.min(...values),max=Math.max(...values);
   const span=Math.max(1,max-min);
@@ -12798,16 +12960,24 @@ function renderPerformanceCharts(closed){
   const total=rawPoints[rawPoints.length-1].value;
   if(totalEl){totalEl.textContent=fmtEur(total);totalEl.style.color=total>=0?'var(--green)':'var(--red)';}
   _equityChartPoints=points.map((point,index)=>Object.assign({},point,{x:Number(x(index).toFixed(1)),y:Number(y(point.value).toFixed(1))}));
+  _equityChartViewWidth=width;
+  const yTicks=Array.from({length:5},(_,index)=>{
+    const value=min+(max-min)*index/4,ty=y(value);
+    return `<line class="stats-chart-grid" x1="${left}" y1="${ty.toFixed(1)}" x2="${width-right}" y2="${ty.toFixed(1)}" opacity=".38"/><text class="stats-chart-label" x="${width-right+5}" y="${(ty+4).toFixed(1)}" text-anchor="start">${formatChartAxisValue(value)}</text>`;
+  }).join('');
   const firstDate=formatChartDate(ordered[0].exitDate||ordered[0].entryDate||'');
+  const middleTrade=ordered[Math.floor((ordered.length-1)/2)];
+  const middleDate=formatChartDate(middleTrade.exitDate||middleTrade.entryDate||'');
   const lastDate=formatChartDate(ordered[ordered.length-1].exitDate||ordered[ordered.length-1].entryDate||'');
-  if(equityHost)equityHost.innerHTML=`<div class="equity-chart-layout"><div class="equity-axis-labels" aria-hidden="true"><span><small>Höchster Stand</small>${fmtEur(max)}</span><span><small>Tiefster Stand</small>${fmtEur(min)}</span></div><svg class="stats-chart-interactive" viewBox="0 0 ${width} ${height}" role="img" tabindex="0" aria-label="Kumuliertes P und L vom ${firstDate} bis ${lastDate}. Mit Pfeiltasten einzelne Werte auswählen." onkeydown="keyEquityChartSelection(event)">
-    <line class="stats-chart-grid" x1="${left}" y1="${top}" x2="${left}" y2="${height-bottom}"/>
+  if(equityHost)equityHost.innerHTML=`<div class="equity-chart-layout"><svg class="stats-chart-interactive" viewBox="0 0 ${width} ${height}" role="img" tabindex="0" aria-label="Kumuliertes P und L vom ${firstDate} bis ${lastDate}. Mit Pfeiltasten einzelne Werte auswählen." onkeydown="keyEquityChartSelection(event)">
+    ${yTicks}
     <line class="stats-chart-zero" x1="${left}" y1="${baseY}" x2="${width-right}" y2="${baseY}"/>
     <path class="stats-chart-area" d="${area}"/><path class="stats-chart-line" d="${line}"/>
     <line class="stats-chart-crosshair" id="st-equity-crosshair" x1="${x(points.length-1).toFixed(1)}" y1="${top}" x2="${x(points.length-1).toFixed(1)}" y2="${height-bottom}"/>
     <circle class="stats-chart-dot" id="st-equity-selected-dot" cx="${x(points.length-1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="5"/>
-    <text class="stats-chart-label" x="${left}" y="${height-7}">${firstDate}</text>
-    <text class="stats-chart-label" x="${width-right}" y="${height-7}" text-anchor="end">${lastDate}</text>
+    <text class="stats-chart-date" x="${left}" y="${height-7}">${firstDate}</text>
+    <text class="stats-chart-date" x="${((left+width-right)/2).toFixed(1)}" y="${height-7}" text-anchor="middle">${middleDate}</text>
+    <text class="stats-chart-date" x="${width-right}" y="${height-7}" text-anchor="end">${lastDate}</text>
     <rect class="stats-chart-hitarea" x="${left}" y="${top}" width="${width-left-right}" height="${height-top-bottom}" onpointerdown="startEquityChartSelection(event)" onpointermove="moveEquityChartSelection(event)" onpointerup="stopEquityChartSelection(event)" onpointercancel="stopEquityChartSelection(event)"/>
   </svg></div>`;
   updateEquityChartSelection(_equityChartPoints.length-1);
@@ -12821,14 +12991,18 @@ function renderPerformanceCharts(closed){
   });
   const assets=Object.entries(grouped).sort((a,b)=>Math.abs(b[1].pnl)-Math.abs(a[1].pnl)).slice(0,6);
   const maxAbs=Math.max(1,...assets.map(([,data])=>Math.abs(data.pnl)));
-  const barWidth=300,rowHeight=34,assetHeight=assets.length*rowHeight+14,barX=190;
+  const assetWidth=desktopChart?640:Math.max(300,Math.round(assetHost?.clientWidth||360));
+  const assetHeight=desktopChart?assets.length*34+14:Math.max(170,Math.round(assetHost?.clientHeight||210));
+  const rowHeight=(assetHeight-8)/Math.max(1,assets.length);
+  const barX=desktopChart?190:Math.round(assetWidth*.31);
+  const barWidth=desktopChart?300:Math.max(90,assetWidth-barX-92);
   if(countEl)countEl.textContent=assets.length+' Kategorien';
-  if(assetHost)assetHost.innerHTML=`<svg viewBox="0 0 640 ${assetHeight}" role="img" aria-label="P und L nach Produkttyp">
+  if(assetHost)assetHost.innerHTML=`<svg viewBox="0 0 ${assetWidth} ${assetHeight}" role="img" aria-label="P und L nach Produkttyp">
     ${assets.map(([key,data],index)=>{
       const length=Math.max(2,Math.abs(data.pnl)/maxAbs*barWidth);
       const positive=data.pnl>=0;
-      const by=index*rowHeight+7;
-      return `<text class="stats-chart-label" x="4" y="${by+15}">${mergeEscapeHtml(labels[key]||'Sonstige')} · ${data.count}</text><rect class="${positive?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${barX}" y="${by}" width="${length.toFixed(1)}" height="19" rx="4"/><text class="stats-chart-value" x="${Math.min(632,barX+length+9).toFixed(1)}" y="${by+15}">${fmtEur(data.pnl)}</text>`;
+      const barHeight=Math.min(21,Math.max(14,rowHeight*.56)),by=index*rowHeight+(rowHeight-barHeight)/2;
+      return `<text class="stats-chart-label" x="4" y="${(by+barHeight*.76).toFixed(1)}">${mergeEscapeHtml(labels[key]||'Sonstige')} · ${data.count}</text><rect class="${positive?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${barX}" y="${by.toFixed(1)}" width="${length.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${Math.min(assetWidth-4,barX+length+7).toFixed(1)}" y="${(by+barHeight*.76).toFixed(1)}">${fmtEur(data.pnl)}</text>`;
     }).join('')}
   </svg>`;
 
@@ -12850,14 +13024,17 @@ function renderPerformanceCharts(closed){
   if(returnCountEl)returnCountEl.textContent=returnSamples+' Trades';
   if(returnHost){
     const maxCount=Math.max(1,...returnBins.map(bin=>bin.count));
-    const chartW=640,chartH=220,chartLeft=36,chartRight=10,chartTop=20,chartBottom=52;
+    const chartW=desktopChart?640:Math.max(300,Math.round(returnHost.clientWidth||360));
+    const chartH=desktopChart?220:Math.max(180,Math.round(returnHost.clientHeight||210));
+    const chartLeft=desktopChart?36:4,chartRight=desktopChart?10:4,chartTop=20,chartBottom=52;
     const slot=(chartW-chartLeft-chartRight)/returnBins.length;
     returnHost.innerHTML=returnSamples?`<svg viewBox="0 0 ${chartW} ${chartH}" role="img" aria-label="Verteilung der Renditen in sechs Klassen">
       <line class="stats-chart-grid" x1="${chartLeft}" y1="${chartH-chartBottom}" x2="${chartW-chartRight}" y2="${chartH-chartBottom}"/>
       ${returnBins.map((bin,index)=>{
         const h=bin.count/maxCount*(chartH-chartTop-chartBottom);
-        const x=chartLeft+index*slot+10,y=chartH-chartBottom-h;
-        return `<rect class="${bin.kind==='positive'?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(18,slot-20).toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(x+(slot-20)/2).toFixed(1)}" y="${Math.max(16,y-6).toFixed(1)}" text-anchor="middle">${bin.count}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-25}" text-anchor="middle">${bin.label}</text>`;
+        const inset=desktopChart?10:4,barW=Math.max(18,slot-inset*2);
+        const x=chartLeft+index*slot+inset,y=chartH-chartBottom-h;
+        return `<rect class="${bin.kind==='positive'?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(x+barW/2).toFixed(1)}" y="${Math.max(16,y-6).toFixed(1)}" text-anchor="middle">${bin.count}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-25}" text-anchor="middle">${bin.label}</text>`;
       }).join('')}
     </svg>`:empty;
   }
@@ -12880,12 +13057,19 @@ function renderPerformanceCharts(closed){
   if(holdHost){
     const avgs=holdBins.map(bin=>bin.count?bin.total/bin.count:0);
     const maxAvg=Math.max(1,...avgs.map(Math.abs));
-    const chartW=640,chartH=265,zeroY=108,chartLeft=46,chartRight=12,slot=(chartW-chartLeft-chartRight)/holdBins.length,maxBar=80;
+    const chartW=desktopChart?640:Math.max(300,Math.round(holdHost.clientWidth||360));
+    const chartH=desktopChart?265:Math.max(190,Math.round(holdHost.clientHeight||220));
+    const chartLeft=desktopChart?46:4,chartRight=desktopChart?12:4;
+    const plotTop=18,plotBottom=chartH-66;
+    const zeroY=Math.round(plotTop+(plotBottom-plotTop)*.48);
+    const slot=(chartW-chartLeft-chartRight)/holdBins.length;
+    const maxBar=Math.max(30,Math.min(80,zeroY-plotTop-8,plotBottom-zeroY-22));
     holdHost.innerHTML=holdSamples?`<svg viewBox="0 0 ${chartW} ${chartH}" role="img" aria-label="Durchschnittliches P und L nach Haltedauer">
       <line class="stats-chart-zero" x1="${chartLeft}" y1="${zeroY}" x2="${chartW-chartRight}" y2="${zeroY}"/>
       ${holdBins.map((bin,index)=>{
         const avg=avgs[index],h=Math.abs(avg)/maxAvg*maxBar,x=chartLeft+index*slot+13,y=avg>=0?zeroY-h:zeroY;
-        return `<rect class="${avg>=0?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(20,slot-26).toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${avg>=0?Math.max(18,y-8):Math.min(207,y+h+20)}" text-anchor="middle">${bin.count?fmtEur(avg):'—'}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-30}" text-anchor="middle">${bin.label}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-9}" text-anchor="middle">${bin.count} Trades</text>`;
+        const barInset=desktopChart?13:5,barW=Math.max(20,slot-barInset*2),center=chartLeft+index*slot+slot/2;
+        return `<rect class="${avg>=0?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${(chartLeft+index*slot+barInset).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${center.toFixed(1)}" y="${avg>=0?Math.max(15,y-7):Math.min(plotBottom-5,y+h+16)}" text-anchor="middle">${bin.count?fmtEur(avg):'—'}</text><text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-31}" text-anchor="middle">${bin.label}</text><text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-10}" text-anchor="middle">${bin.count} Trades</text>`;
       }).join('')}
     </svg>`:empty;
   }
@@ -13773,6 +13957,7 @@ var _rmOpen=false;
 function handleBackPressed(){
   if($('trade-attachment-viewer')&&!$('trade-attachment-viewer').classList.contains('hidden')){closeTradeAttachmentViewer();return true;}
   if($('tag-editor-ov')&&$('tag-editor-ov').style.display==='flex'){closeTagEditorDirect();return true;}
+  if(typeof _legalOpen!=='undefined'&&_legalOpen){if(window._legalOpenedFromSettings)legalGoSettings();else closeLegal();return true;}
   if(typeof _ntOpen!=='undefined'&&_ntOpen){ntClose();return true;}
   if(typeof _bmOpen!=='undefined'&&_bmOpen){bmGoSettings();return true;}
   if(typeof _rmOpen!=='undefined'&&_rmOpen){rmGoSettings();return true;}
@@ -14962,7 +15147,9 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row>svg{right:8px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:0;padding:4px 9px;font-size:.53rem}
   .settings-card-info .settings-info-card{height:calc(100% - 22px)}
-  #settings-page-main .settings-group-label{margin-bottom:6px}
+#settings-page-main .settings-group-label{margin-bottom:6px}
+#settings-page-main #zero-import-result:not(:empty){display:block;margin:8px 0 14px!important;clear:both}
+#settings-page-main #zero-import-result .tax-note{position:static!important;margin:0!important}
   #settings-page-main .inp,#settings-page-main select.inp{min-height:38px;height:38px;padding-top:6px;padding-bottom:6px}
   #settings-page-main .tax-settings-hint,#settings-page-main .s-hint{margin-top:4px;line-height:1.35}
   #tax-settings-card .settings-money-field+.settings-group-label{margin-top:16px!important}
@@ -15044,18 +15231,30 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
 .settings-info-actions .settings-info-row{justify-content:center;gap:7px;position:relative}
 .settings-info-actions .settings-info-row+.settings-info-row{border-left:1px solid var(--bd)}
 .settings-info-actions .settings-info-row>svg:last-child{position:absolute;right:10px}
-#legal-ov{position:fixed;inset:0;z-index:2050;display:none;align-items:center;justify-content:center;padding:16px}
-#legal-bd{position:absolute;inset:0;background:rgba(0,0,0,.48);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-#legal-card{position:relative;width:min(760px,100%);max-height:min(82dvh,760px);display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--bd);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden}
-.legal-head{position:relative;display:flex;align-items:center;justify-content:center;min-height:58px;padding:10px 52px;border-bottom:1px solid var(--bd);font-size:.92rem;font-weight:750}
-.legal-close{position:absolute;right:12px;width:38px;height:38px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:1.25rem;cursor:pointer}
-.legal-body{overflow-y:auto;padding:14px;overscroll-behavior:contain}
+#legal-ov{position:fixed;inset:0;z-index:2050;display:none;overscroll-behavior:contain}
+#legal-bd{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+#legal-sh{position:absolute;left:0;right:0;bottom:0;width:100%;max-width:460px;height:min(85dvh,760px);margin:0 auto;display:flex;flex-direction:column;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--bd);border-bottom:0;overflow:hidden;transform:translateY(100%);will-change:transform}
+#legal-bar{width:36px;height:4px;flex:0 0 auto;margin:10px auto 4px;border-radius:2px;background:var(--bd);pointer-events:none}
+#legal-body{position:relative;flex:1;min-height:0;padding:8px 14px calc(24px + var(--nav-inset));overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#legal-body .overlay-sticky-head{top:0;width:100%}
 .legal-summary{padding:11px 12px;margin-bottom:10px;border:1px solid color-mix(in srgb,var(--blue) 38%,var(--bd));border-radius:10px;background:color-mix(in srgb,var(--blue) 8%,var(--s1));font-size:.72rem;line-height:1.5;color:var(--muted)}
 .legal-section{padding:13px 14px;border:1px solid var(--bd);border-radius:11px;background:var(--s1)}
 .legal-section+.legal-section{margin-top:9px}.legal-section h3{margin:0 0 7px;font-size:.76rem;letter-spacing:.6px;text-transform:uppercase}
 .legal-section p,.legal-section li{margin:0;font-size:.7rem;line-height:1.55;color:var(--muted)}.legal-section p+p{margin-top:7px}
 .legal-pending{color:var(--orange)!important;font-weight:650}.legal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-@media(max-width:560px){#legal-ov{padding:0;align-items:flex-end}#legal-card{width:100%;max-height:92dvh;border-radius:18px 18px 0 0}.legal-body{padding:10px}.legal-actions{grid-template-columns:1fr}.settings-info-actions{grid-template-columns:1fr}.settings-info-actions .settings-info-row+.settings-info-row{border-left:0;border-top:1px solid var(--bd)}}
+@media(max-width:560px){
+  #legal-sh{height:calc(100dvh - var(--status-inset) - 6px);max-height:none;border-radius:12px 12px 0 0}
+  #legal-header{grid-template-columns:44px minmax(0,1fr) 44px;column-gap:4px}
+  #legal-header .overlay-back-btn{width:44px;padding:0;font-size:0;overflow:hidden}
+  #legal-header .overlay-back-btn::before{content:'←';font-size:1.25rem;line-height:1;color:var(--blue)}
+  #legal-header .overlay-title{max-width:100%;font-size:.88rem;overflow:hidden;text-overflow:ellipsis}
+  #legal-header .overlay-head-right{width:44px;padding:0}
+  .legal-actions{grid-template-columns:1fr}
+  .settings-info-actions{grid-template-columns:1fr}
+  .settings-info-actions .settings-info-row+.settings-info-row{border-left:0;border-top:1px solid var(--bd)}
+}
+@media(min-width:720px){#legal-sh{max-width:720px}}
+@media(min-width:1100px){#legal-sh{max-width:860px}}
 </style>
 <div id="settings-ov" style="overscroll-behavior:contain;position:fixed;top:0;right:0;bottom:0;left:0;inset:0;z-index:1900;display:none;">
   <div id="settings-bd" style="position:absolute;top:0;right:0;bottom:0;left:0;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)"></div>
@@ -15395,10 +15594,15 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   </div><!-- end settings-sh -->
 </div><!-- end settings-ov -->
 <div id="legal-ov" role="dialog" aria-modal="true" aria-labelledby="legal-title">
-  <div id="legal-bd" onclick="closeLegal()"></div>
-  <div id="legal-card">
-    <div class="legal-head"><span id="legal-title">Rechtliches &amp; Datenschutz</span><button class="legal-close" onclick="closeLegal()" aria-label="Schließen">&#x2715;</button></div>
-    <div class="legal-body">
+  <div id="legal-bd"></div>
+  <div id="legal-sh">
+    <div id="legal-bar" aria-hidden="true"></div>
+    <div id="legal-body">
+      <div class="overlay-sticky-head" id="legal-header">
+        <button class="overlay-head-btn overlay-back-btn overlay-head-left" onclick="legalGoSettings()">&#8592; Einstellungen</button>
+        <div class="overlay-title" id="legal-title">Rechtliches &amp; Datenschutz</div>
+        <button class="overlay-head-btn overlay-head-right legal-close" onclick="closeLegal()" aria-label="Schließen">&#x2715;</button>
+      </div>
       <div class="legal-summary">Stand: 17. Juli 2026. Trading Buddy speichert Daten zunächst auf diesem Gerät. Cloud-Funktionen werden erst nach Anmeldung verwendet. Vor einer öffentlichen Veröffentlichung müssen die gelb markierten Betreiberangaben ergänzt werden.</div>
       <section class="legal-section">
         <h3>Impressum</h3>
@@ -15445,6 +15649,16 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     </div>
   </div>
 </div>
+<script>
+(function(){
+  if(typeof installSafeSheetInteraction==='function'){
+    installSafeSheetInteraction('legal',function(){closeLegal();});
+    return;
+  }
+  var backdrop=document.getElementById('legal-bd');
+  if(backdrop)backdrop.addEventListener('click',function(){closeLegal();});
+})();
+</script>
 <script>
 (function(){
   function raf(fn){return (window.requestAnimationFrame||function(cb){return setTimeout(cb,16);})(fn);}
@@ -20011,6 +20225,7 @@ function awTogglePw(){
 #settings-page-main .theme-choice{align-items:center!important;justify-content:center!important;text-align:center!important}
 #settings-page-main .theme-choice-swatches{justify-content:center!important}
 #settings-page-main .theme-choice-name{text-align:center!important}
+#settings-page-main #cloud-sync-card #zero-import-result + .settings-group-label{margin-top:20px!important}
 .stats-layout-toolbar{display:none}
 .stats-layout-toolbar-panel{display:none!important}
 .stats-page-active #view-stats>[data-stats-module]{overflow:hidden!important;overscroll-behavior:auto;touch-action:pan-y}
