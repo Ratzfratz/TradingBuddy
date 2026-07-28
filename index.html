@@ -15614,7 +15614,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
         <div class="settings-info-meta" style="align-items:center;text-align:center">
           <div class="settings-info-appname">Trading <span style="color:var(--green)">Buddy</span></div>
           <div class="settings-info-version" id="s-version">Alpha 0.40</div>
-          <button type="button" id="tb-plan-status" class="tb-plan-status" onclick="tbOpenProInfo('plan')">Geschlossene Beta · alle Funktionen</button>
         </div>
       </div>
       <div class="settings-info-actions">
@@ -15699,7 +15698,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       </section>
       <section class="legal-section">
         <h3>Geschlossene Beta und künftige Pro-Funktionen</h3>
-        <p>Die geschlossene Beta ist auf insgesamt zehn eingeladene Personen begrenzt. Während der Beta sind alle Funktionen ohne Entgelt freigeschaltet. Kennzeichnungen wie „Beta · später Pro“ zeigen an, welche Funktionen nach der Beta voraussichtlich eine Pro-Berechtigung erfordern.</p>
+        <p>Die geschlossene Beta ist auf insgesamt zehn eingeladene Personen begrenzt. Während der Beta sind alle Funktionen ohne Entgelt freigeschaltet. Welche Funktionen später Teil eines kostenpflichtigen Angebots werden, wird vor dessen Einführung transparent ausgewiesen.</p>
         <p>Beta-Nutzer erhalten ab dem offiziell mitgeteilten Ende der Beta zwölf Monate Pro ohne Entgelt. Es erfolgt keine automatische Umwandlung in ein kostenpflichtiges Angebot. Vor Einführung eines kostenpflichtigen Angebots werden Preis, Leistungsumfang, Laufzeit, Kündigung und gegebenenfalls Widerrufsbedingungen gesondert und transparent mitgeteilt.</p>
         <p>Unabhängig vom Tarif bleiben lokale Nutzung, Verschlüsselung, Synchronisation von Trades und Einstellungen, manuelles Hoch- und Herunterladen, JSON-Export und -Import, Datenlöschung sowie Sicherheitsupdates verfügbar. Pro vorgesehen sind insbesondere die Synchronisation neuer Screenshots, mehrere gleichzeitig synchronisierte Geräte, automatisierte CSV- und Produktdatenverarbeitung, erweiterte Statistiken, Steuerfunktionen und das individuelle Statistiklayout.</p>
         <p>Während der Beta beträgt das Cloud-Limit für verschlüsselte Screenshots 100 MB je Nutzer. Lokale Screenshots werden dadurch nicht begrenzt. Für Pro ist nach der Beta ein Screenshot-Limit von 500 MB vorgesehen.</p>
@@ -17035,18 +17034,18 @@ function tbOpenProInfo(feature){
 function tbCloseProInfo(){const ov=document.getElementById('tb-pro-ov');if(ov)ov.classList.remove('open');}
 function tbRequireFeature(feature){if(tbHasFeature(feature))return true;tbOpenProInfo(feature);return false;}
 function tbApplyFeatureState(){
-  const planStatus=document.getElementById('tb-plan-status');
-  if(planStatus)planStatus.textContent=TB_RELEASE.phase==='beta'
-    ?`Geschlossene Beta · ${TB_RELEASE.betaMaxUsers} Plätze · alle Funktionen`
-    :(tbIsPro()?'Pro aktiv':'Free');
+  const showPlanBadges=TB_RELEASE.phase!=='beta';
+  if(!showPlanBadges){
+    document.querySelectorAll('.tb-plan-badge,.tb-card-plan-badge').forEach(badge=>badge.remove());
+  }
   document.querySelectorAll('[data-tb-feature]').forEach(el=>{
     const feature=el.dataset.tbFeature;
     el.classList.toggle('tb-feature-locked',!tbHasFeature(feature));
-    if(!el.querySelector(':scope > .tb-plan-badge')){
+    if(showPlanBadges&&!el.querySelector(':scope > .tb-plan-badge')){
       const badge=document.createElement('span');
       badge.className='tb-plan-badge';
-      badge.textContent=TB_RELEASE.phase==='beta'?'Beta · später Pro':'Pro';
-      badge.title=`${tbFeatureCopy(feature)}: ${TB_RELEASE.phase==='beta'?'während der Beta freigeschaltet, danach Pro erforderlich':'Pro erforderlich'}`;
+      badge.textContent='Pro';
+      badge.title=`${tbFeatureCopy(feature)}: Pro erforderlich`;
       badge.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();tbOpenProInfo(feature);});
       el.appendChild(badge);
     }
@@ -17058,11 +17057,11 @@ function tbApplyFeatureState(){
       if(el.hidden)return;
     }
     el.classList.toggle('tb-feature-card-locked',!tbHasFeature(feature));
-    if(!el.querySelector(':scope > .tb-card-plan-badge')){
+    if(showPlanBadges&&!el.querySelector(':scope > .tb-card-plan-badge')){
       const badge=document.createElement('button');
       badge.type='button';
       badge.className='tb-card-plan-badge';
-      badge.textContent=TB_RELEASE.phase==='beta'?'Beta · später Pro':'Pro erforderlich';
+      badge.textContent='Pro erforderlich';
       badge.onclick=event=>{event.preventDefault();event.stopPropagation();tbOpenProInfo(feature);};
       el.appendChild(badge);
     }
@@ -17251,6 +17250,7 @@ async function _awCreateAccount(email,password){
 
 async function _awBiSync(){
   loadTrades();
+  _awScheduleBackupCleanup();
   let cloudDoc=null;
   try{cloudDoc=await _awGetEntityDoc('trades');}catch(_){}
   let settingsDoc=null;
@@ -17288,7 +17288,7 @@ function _awHasLocalUnsyncedTrades(referenceMs=0){
   const count=typeof trades!=='undefined'?trades.length:0;
   const localTs=parseInt(localStorage.getItem('tb_local_saved_at')||'0',10);
   const cloudTs=referenceMs||parseInt(localStorage.getItem('tb_cloud_synced_at_ts')||'0',10);
-  return count>0&&(_awPushRequested||localTs>cloudTs+1000);
+  return count>0&&localTs>cloudTs+1000;
 }
 
 function _awHasLocalUnsyncedSettings(referenceMs=0){
@@ -17571,6 +17571,7 @@ async function awAskDeleteCloudData(){
     clearInterval(_awCloudWatchTimer);_awCloudWatchTimer=null;_awCloudWatchDelay=0;
     await _awDeleteEntityDoc('trades');
     await _awDeleteEntityDoc('settings');
+    await _awCleanupOrphanedBackupChunks();
     try{await _awCleanupOldUserNumberDocs();}catch(_){ }
     for(let pass=0;pass<20;pass++){
       const listing=await _awListStorageFiles();
@@ -18297,9 +18298,28 @@ async function _awUpsertEntityDoc(kind, payload){
 }
 
 async function _awDeleteEntityDoc(kind){
+  let existingDoc=null;
+  try{existingDoc=await _awGetEntityDoc(kind);}catch(_){}
+  const existingMeta=_awBackupMeta(existingDoc);
   try{await _awDeleteDocument(_awEntityDocId(kind));}
   catch(e){if(e&&e.code!==404)console.warn('Cloud-Dokument löschen:',kind,e);}
+  if(existingMeta&&existingMeta.chunkCount&&existingMeta.chunkBase){
+    await _awDeleteChunkSet(existingMeta.chunkBase,existingMeta.chunkCount);
+  }
   await _awCleanupEntityChunks(kind,0);
+}
+
+async function _awDeleteChunkSet(baseDocId,count=0){
+  const base=String(baseDocId||'');
+  const total=Math.min(Math.max(parseInt(count,10)||0,0),1000);
+  if(!base||!total)return 0;
+  let deleted=0;
+  for(let start=0;start<total;start+=8){
+    const indexes=Array.from({length:Math.min(8,total-start)},(_,offset)=>start+offset);
+    const results=await Promise.allSettled(indexes.map(index=>_awDeleteDocument(_awChunkDocId(index,base))));
+    results.forEach(result=>{if(result.status==='fulfilled')deleted++;});
+  }
+  return deleted;
 }
 
 async function _awCleanupEntityChunks(kind, keepCount=0){
@@ -18309,6 +18329,98 @@ async function _awCleanupEntityChunks(kind, keepCount=0){
     try{await _awDeleteDocument(_awChunkDocId(i,base));}
     catch(e){if(e&&e.code!==404)console.warn('Alten Chunk löschen:',kind,i,e);}
   }
+}
+
+async function _awCleanupReplacedEntityChunks(kind,previousDoc,activeChunkBase='',activeChunkCount=0){
+  const previousMeta=_awBackupMeta(previousDoc);
+  const previousBase=previousMeta&&previousMeta.chunkCount?String(previousMeta.chunkBase||''):'';
+  const activeBase=String(activeChunkBase||'');
+  if(previousBase&&previousBase!==activeBase){
+    await _awDeleteChunkSet(previousBase,previousMeta.chunkCount);
+  }
+  const legacyBase=_awEntityDocId(kind);
+  if(activeBase===legacyBase)await _awCleanupEntityChunks(kind,activeChunkCount);
+  else await _awCleanupEntityChunks(kind,0);
+}
+
+async function _awListDocumentPage(limit=100,offset=0){
+  const queries=(window.Appwrite&&Appwrite.Query)
+    ?[Appwrite.Query.limit(limit),Appwrite.Query.offset(offset)]
+    :[`limit(${limit})`,`offset(${offset})`];
+  try{return await _awDatabases.listDocuments(AW_DB,AW_COL,queries);}
+  catch(e){
+    if(!_awIsFetchFailure(e))throw e;
+    const query=queries.map(value=>'queries[]='+encodeURIComponent(value)).join('&');
+    return await _awRest(
+      `/databases/${encodeURIComponent(AW_DB)}/collections/${encodeURIComponent(AW_COL)}/documents?${query}`,
+      {method:'GET',headers:await _awFetchHeaders()}
+    );
+  }
+}
+
+let _awChunkCleanupPromise=null;
+let _awChunkCleanupTimer=null;
+async function _awCleanupOrphanedBackupChunks(){
+  if(_awChunkCleanupPromise)return _awChunkCleanupPromise;
+  _awChunkCleanupPromise=(async()=>{
+    if(!_awDatabases||!_awDocId||_awSyncBusy)return 0;
+    const tradeDoc=await _awGetEntityDoc('trades');
+    const settingsDoc=await _awGetEntityDoc('settings');
+    const activeBases=new Set();
+    [tradeDoc,settingsDoc].forEach(doc=>{
+      const meta=_awBackupMeta(doc);
+      if(meta&&meta.chunkCount&&meta.chunkBase)activeBases.add(String(meta.chunkBase));
+    });
+
+    const documents=[];
+    let offset=0,total=0;
+    do{
+      const page=await _awListDocumentPage(100,offset);
+      const rows=Array.isArray(page&&page.documents)?page.documents:[];
+      total=Number(page&&page.total)||rows.length;
+      documents.push(...rows);
+      offset+=rows.length;
+      if(!rows.length||rows.length<100)break;
+    }while(offset<total&&offset<10000);
+
+    const userPrefix=_awUserShortId();
+    const randomPrefixes=[`${userPrefix}_t_`,`${userPrefix}_s_`];
+    const legacyBases=new Set([_awEntityDocId('trades'),_awEntityDocId('settings')]);
+    const orphanIds=[];
+    documents.forEach(doc=>{
+      const id=String(doc&&doc.$id||'');
+      const data=String(doc&&doc.data||'');
+      if(!/^chunk:\d+:\d+:/.test(data)||!/_c\d+$/.test(id))return;
+      const base=id.replace(/_c\d+$/,'');
+      const belongsToCurrentUser=randomPrefixes.some(prefix=>base.startsWith(prefix))||legacyBases.has(base);
+      if(belongsToCurrentUser&&!activeBases.has(base))orphanIds.push(id);
+    });
+
+    let deleted=0;
+    for(let start=0;start<orphanIds.length;start+=8){
+      const batch=orphanIds.slice(start,start+8);
+      const results=await Promise.allSettled(batch.map(id=>_awDeleteDocument(id)));
+      results.forEach(result=>{if(result.status==='fulfilled')deleted++;});
+    }
+    if(deleted){
+      console.info(`Cloud-Bereinigung: ${deleted} verwaiste Backup-Chunks entfernt.`);
+      _awStatus(`${deleted} alte Cloud-Backup-Teile bereinigt ✓`,'ok');
+    }
+    return deleted;
+  })().catch(e=>{
+    console.warn('Cloud-Backup-Bereinigung:',e);
+    return 0;
+  }).finally(()=>{_awChunkCleanupPromise=null;});
+  return _awChunkCleanupPromise;
+}
+
+function _awScheduleBackupCleanup(delay=1800){
+  clearTimeout(_awChunkCleanupTimer);
+  _awChunkCleanupTimer=setTimeout(()=>{
+    _awChunkCleanupTimer=null;
+    if(_awSyncBusy){_awScheduleBackupCleanup(1800);return;}
+    _awCleanupOrphanedBackupChunks();
+  },delay);
 }
 
 async function _awCleanupOldUserNumberDocs(){
@@ -19148,19 +19260,22 @@ async function _awPushSettingsOnly(allowKeyMismatch=false){
     _awSyncLabel('', 'pending', 'Einstellungen ...');
     const syncedAt=new Date().toISOString();
     const settingsDocId=_awEntityDocId('settings');
+    const previousSettingsDoc=await _awGetEntityDoc('settings');
     const settingsPayload=_awCollectSettings();
     const settingsInlinePayload=await _awInlineBackupPayload([],settingsPayload);
     let settingsChunkCount=0;
+    let settingsChunkBase='';
     if(settingsInlinePayload.length>AW_INLINE_CHUNK_SIZE){
-      settingsChunkCount=await _awSaveInlineChunks(settingsInlinePayload,syncedAt,settingsDocId);
+      settingsChunkBase=_awNewChunkBaseId('settings');
+      settingsChunkCount=await _awSaveInlineChunks(settingsInlinePayload,syncedAt,settingsChunkBase);
       if(settingsChunkCount<=0)throw new Error('Einstellungen konnten nicht gespeichert werden.');
     }
     await _awUpsertEntityDoc('settings',{
-      data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount),
+      data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount,settingsChunkBase),
       synced_at:syncedAt,
       device:_awDevice()
     });
-    await _awCleanupEntityChunks('settings',settingsChunkCount);
+    await _awCleanupReplacedEntityChunks('settings',previousSettingsDoc,settingsChunkBase,settingsChunkCount);
     _awApplying=true;
     localStorage.setItem('tb_cloud_settings_synced_at',syncedAt);
     localStorage.setItem('tb_cloud_settings_synced_at_ts',String(Date.now()));
@@ -19169,6 +19284,7 @@ async function _awPushSettingsOnly(allowKeyMismatch=false){
     _awLastPushError=null;
     _awCloudKeyMismatch=false;
     _awSyncLabel(syncedAt);
+    _awScheduleBackupCleanup();
     return true;
   }catch(e){
     _awLastPushError=e&&(e.message||e.type)||'Einstellungen konnten nicht gespeichert werden.';
@@ -19329,7 +19445,7 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
     if(shouldUploadSettings){
       _awSyncLabel('', 'pending', 'Einstellungen ...');
       await _awUpsertEntityDoc('settings',{data:_awMainDocData('settings',Object.keys(settingsPayload||{}).length,settingsInlinePayload,settingsChunkCount,settingsChunkBase),synced_at:syncedAt,device:_awDevice()});
-      await _awCleanupEntityChunks('settings',settingsChunkCount);
+      await _awCleanupReplacedEntityChunks('settings',settingsDoc,settingsChunkBase,settingsChunkCount);
       _awApplying=true;
       localStorage.setItem('tb_cloud_settings_synced_at',syncedAt);
       localStorage.setItem('tb_cloud_settings_synced_at_ts',String(Date.now()));
@@ -19400,7 +19516,7 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
     }
     if(shouldUploadTrades){
       await _awUpsertEntityDoc('trades',{data:_awMainDocData('trades',tradesForUpload.length,tradeInlinePayload,tradeChunkCount,tradeChunkBase),synced_at:syncedAt,device:_awDevice()});
-      await _awCleanupEntityChunks('trades',tradeChunkCount);
+      await _awCleanupReplacedEntityChunks('trades',tradeDoc,tradeChunkBase,tradeChunkCount);
     }
     await _awCleanupOldUserNumberDocs();
 
@@ -19422,6 +19538,7 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
     _awPushRequested=false;
     _awCloudKeyMismatch=false;
     scheduleDeleteQueuedAttachmentFiles([]);
+    _awScheduleBackupCleanup();
     _awSyncLabel(syncedAt);_awLastPushError=null;return true;
   }catch(e){
     _awLastPushError=e&&(e.message||e.type)||'Unbekannter Fehler';
@@ -20611,7 +20728,6 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 .tb-pro-sheet p{margin:0 0 14px;color:var(--text);line-height:1.55}
 .tb-pro-icon{display:inline-grid;place-items:center;min-width:58px;height:34px;padding:0 12px;border-radius:999px;background:linear-gradient(135deg,var(--green),var(--blue));color:white;font-weight:900;letter-spacing:.08em}
 .tb-pro-assurance{margin:0 0 16px;padding:10px;border-radius:10px;background:var(--s2);color:var(--muted);font-size:.72rem;line-height:1.45}
-.tb-plan-status{margin-top:5px;border:1px solid color-mix(in srgb,var(--purple) 42%,var(--bd));border-radius:999px;background:color-mix(in srgb,var(--purple) 9%,var(--s2));color:var(--purple);padding:4px 8px;font:800 .55rem var(--f);cursor:pointer}
 #tax-settings-pro-content[hidden]{display:none!important}
 @media(max-width:719px){
   .stats-chart-tab[data-tb-feature]{padding-right:8px;padding-top:18px}
