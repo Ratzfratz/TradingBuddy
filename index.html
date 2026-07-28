@@ -15627,21 +15627,24 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       </section>
       <section class="legal-section">
         <h3>Verarbeitete Daten und Zwecke</h3>
-        <p><strong>Lokale Nutzung:</strong> Trades, Notizen, Tags, Einstellungen, Steuerwerte, importierte CSV-Daten, Basiswert-Zuordnungen und lokale Verweise auf Screenshots werden auf dem Gerät gespeichert. Zweck ist die vom Nutzer gewünschte Tagebuch-, Statistik-, Rechner- und Sicherungsfunktion. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO beziehungsweise bei rein lokaler Verarbeitung die Ausführung der angeforderten App-Funktion.</p>
-        <p><strong>Cloud-Konto:</strong> Nach freiwilliger Registrierung werden E-Mail-Adresse, Konto- und Sitzungsdaten, verschlüsselte Sicherungsdaten, Synchronisationszeitpunkte sowie hochgeladene Screenshots über Appwrite verarbeitet. Zweck sind Anmeldung, Sicherung und geräteübergreifende Synchronisation. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
-        <p><strong>Technischer Betrieb:</strong> Hosting- und Cloud-Anbieter können zur Auslieferung und Absicherung technisch erforderliche Verbindungs- und Protokolldaten wie IP-Adresse, Zeitpunkt, Gerätedaten und Fehlerstatus verarbeiten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; berechtigtes Interesse ist der sichere und zuverlässige Betrieb.</p>
+        <p><strong>Lokale Nutzung:</strong> Trades, Notizen, Tags, Einstellungen, Steuerwerte, importierte CSV-Daten, Basiswert-Zuordnungen und lokale Verweise auf Screenshots werden auf dem Gerät gespeichert. Zweck ist die vom Nutzer gewünschte Tagebuch-, Statistik-, Rechner- und Sicherungsfunktion. Rein lokale Inhalte werden nicht an den Betreiber übermittelt. Die Speicherung auf dem Endgerät ist für die ausdrücklich angeforderten App-Funktionen erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG).</p>
+        <p><strong>Cloud-Konto:</strong> Nach freiwilliger Registrierung werden E-Mail-Adresse, Konto- und Sitzungsdaten sowie Synchronisationszeitpunkte über Appwrite verarbeitet. Sicherungsinhalte und Screenshots werden von Trading Buddy vor dem Hochladen clientseitig verschlüsselt. Zweck sind Anmeldung, Sicherung und geräteübergreifende Synchronisation. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
+        <p><strong>Technischer Betrieb:</strong> Beim Aufruf der Web-App und bei der Nutzung der Cloud-Funktionen können GitHub und Appwrite technisch erforderliche Verbindungs- und Protokolldaten wie IP-Adresse, Zeitpunkt, Geräte- beziehungsweise Browserinformationen und Fehlerstatus verarbeiten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; berechtigtes Interesse ist der sichere und zuverlässige Betrieb.</p>
         <p>Es findet keine Nutzung für Werbung, personalisierte Werbung oder Profilbildung statt. Es werden keine ausschließlich automatisierten Entscheidungen mit rechtlicher oder vergleichbarer erheblicher Wirkung getroffen.</p>
       </section>
       <section class="legal-section">
         <h3>Empfänger, Speicherort und Übermittlung</h3>
-        <p>Cloud-Funktionen werden mit Appwrite Cloud bereitgestellt. Webhosting kann über GitHub Pages erfolgen. Mit den eingesetzten Anbietern sind die datenschutzrechtlichen Vertragsgrundlagen und Unterauftragnehmer zu prüfen.</p>
-        <p class="legal-pending">Vor Veröffentlichung ergänzen: tatsächliche Appwrite-Projektregion, Hosting-Standort, Auftragsverarbeitungsverträge und gegebenenfalls Grundlage einer Übermittlung außerhalb des Europäischen Wirtschaftsraums.</p>
+        <p><strong>Appwrite Cloud:</strong> Anmeldung, Datenbank, Sicherung und Dateispeicher werden über Appwrite Code Ltd. bereitgestellt. Die gewählte Projektregion ist Frankfurt am Main (FRA). Nach Angaben von Appwrite befinden sich die Kerndaten und Kerndienste eines Projekts in der gewählten Region. Appwrite kann für Netzwerk-, Sicherheits- und Infrastrukturdienste weitere Unterauftragnehmer einsetzen.</p>
+        <p><strong>GitHub Pages:</strong> Die Web-Version wird über GitHub Pages von GitHub B.V. beziehungsweise GitHub, Inc. ausgeliefert. GitHub protokolliert beim Besuch einer GitHub-Pages-Seite die IP-Adresse zu Sicherheitszwecken. GitHub verarbeitet Daten auch in den USA und anderen Ländern und nennt hierfür insbesondere das EU-US Data Privacy Framework sowie die Standardvertragsklauseln der Europäischen Kommission als Übermittlungsgrundlagen.</p>
+        <p class="legal-pending">Vor der Freischaltung von Cloud-Konten organisatorisch abzuschließen: Der Appwrite-Auftragsverarbeitungsvertrag ist noch nicht unterzeichnet. Er muss in den Appwrite-Organisationseinstellungen abgeschlossen und die dort aufgeführte Liste der Unterauftragnehmer regelmäßig geprüft werden.</p>
       </section>
       <section class="legal-section">
         <h3>Speicherdauer und Löschung</h3>
         <p>Lokale Daten bleiben gespeichert, bis sie in der App gelöscht, die App-Daten entfernt oder „Lokale Daten löschen“ verwendet wird. Exportdateien liegen außerhalb der App und müssen am gewählten Speicherort selbst gelöscht werden.</p>
         <p>Cloud-Inhalte bleiben bis zur Löschung durch den Nutzer oder bis zur Beendigung des Kontos gespeichert. Die Funktion „Cloud-Daten löschen“ entfernt die dem Konto zugeordneten Trading-Buddy-Dokumente und Dateien. Das Appwrite-Anmeldekonto selbst bleibt dabei bestehen.</p>
-        <p class="legal-pending">Verbindliche Fristen des Hosters für Serverprotokolle, gelöschte Dateien und Sicherungskopien ergänzen. Empfohlene interne Zielwerte: Protokolle höchstens 14 Tage, gelöschte Inhalte in Sicherungen höchstens 30 Tage.</p>
+        <p><strong>Appwrite Free:</strong> Das Projekt nutzt den Free-Tarif. Dieser umfasst keine vom Betreiber konfigurierbaren automatischen oder manuellen Projekt-Backups. Appwrite unterhält unabhängig davon interne Sicherungen zur Wiederherstellung der Plattform; nach der aktuellen Anbieterdokumentation werden diese bei unterstützten Datenbanksystemen bis zu sieben Tage vorgehalten.</p>
+        <p>Free-Projekte können nach einer Woche ohne Aktivität pausiert werden. Bleibt ein pausiertes Free-Projekt 90 Tage inaktiv, kann Appwrite das Projekt einschließlich seiner Ressourcen nach vorheriger Benachrichtigung löschen.</p>
+        <p>Technische Protokolle sowie bereits gelöschte Inhalte in Sicherungssystemen der Anbieter können bis zum Ablauf der jeweils dokumentierten Sicherheits- und Wiederherstellungszeiträume fortbestehen.</p>
       </section>
       <section class="legal-section">
         <h3>Rechte betroffener Personen</h3>
@@ -16913,7 +16916,7 @@ if(document.readyState==='loading'){
 // ???????????????????????????????????????????????????????????????????????????
 // APPWRITE CLOUD SYNC – inkrementell, offline-first
 // ???????????????????????????????????????????????????????????????????????????
-const AW_ENDPOINT  = 'https://cloud.appwrite.io/v1';
+const AW_ENDPOINT  = 'https://fra.cloud.appwrite.io/v1';
 const AW_PROJECT   = '6a3a8538003b2ab3b820';
 const AW_DB        = '6a3a8a970024081a55d4';
 const AW_COL       = 'backups';
