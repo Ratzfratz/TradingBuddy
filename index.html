@@ -6513,6 +6513,7 @@ body.tb-compact-small{
   .equity-chart-layout .stats-chart-value{font-size:12px}
   #st-asset-chart .stats-chart-label,
   #st-return-chart .stats-chart-label{font-size:12px}
+  #st-return-chart .stats-chart-label{font-size:11px}
   #st-asset-chart .stats-chart-value,
   #st-return-chart .stats-chart-value{font-size:13px}
   #st-hold-chart .stats-chart-label{font-size:12px}
@@ -12997,8 +12998,10 @@ function renderPerformanceCharts(closed){
   const assetWidth=desktopChart?640:Math.max(300,Math.round(assetHost?.clientWidth||360));
   const assetHeight=desktopChart?assets.length*34+14:Math.max(170,Math.round(assetHost?.clientHeight||210));
   const rowHeight=(assetHeight-8)/Math.max(1,assets.length);
-  const barX=desktopChart?190:Math.round(assetWidth*.31);
-  const barWidth=desktopChart?300:Math.max(90,assetWidth-barX-92);
+  /* Die längste Bezeichnung erhält auf schmalen Karten einen reservierten
+     Textbereich; der Balken darf nicht mehr in den Text hineinlaufen. */
+  const barX=desktopChart?190:Math.round(Math.max(130,Math.min(160,assetWidth*.36)));
+  const barWidth=desktopChart?300:Math.max(76,assetWidth-barX-92);
   if(countEl)countEl.textContent=assets.length+' Kategorien';
   if(assetHost)assetHost.innerHTML=`<svg viewBox="0 0 ${assetWidth} ${assetHeight}" role="img" aria-label="P und L nach Produkttyp">
     ${assets.map(([key,data],index)=>{
@@ -13010,12 +13013,12 @@ function renderPerformanceCharts(closed){
   </svg>`;
 
   const returnBins=[
-    {label:'unter −20%',test:value=>value<-20,kind:'negative'},
-    {label:'−20 bis −5%',test:value=>value>=-20&&value<-5,kind:'negative'},
-    {label:'−5 bis 0%',test:value=>value>=-5&&value<0,kind:'negative'},
-    {label:'0 bis +5%',test:value=>value>=0&&value<5,kind:'positive'},
-    {label:'+5 bis +20%',test:value=>value>=5&&value<20,kind:'positive'},
-    {label:'über +20%',test:value=>value>=20,kind:'positive'}
+    {label:'unter −20%',mobileLabel:['unter','−20 %'],test:value=>value<-20,kind:'negative'},
+    {label:'−20 bis −5%',mobileLabel:['−20 bis','−5 %'],test:value=>value>=-20&&value<-5,kind:'negative'},
+    {label:'−5 bis 0%',mobileLabel:['−5 bis','0 %'],test:value=>value>=-5&&value<0,kind:'negative'},
+    {label:'0 bis +5%',mobileLabel:['0 bis','+5 %'],test:value=>value>=0&&value<5,kind:'positive'},
+    {label:'+5 bis +20%',mobileLabel:['+5 bis','+20 %'],test:value=>value>=5&&value<20,kind:'positive'},
+    {label:'über +20%',mobileLabel:['über','+20 %'],test:value=>value>=20,kind:'positive'}
   ].map(bin=>Object.assign(bin,{count:0}));
   let returnSamples=0;
   ordered.forEach(trade=>{
@@ -13029,7 +13032,7 @@ function renderPerformanceCharts(closed){
     const maxCount=Math.max(1,...returnBins.map(bin=>bin.count));
     const chartW=desktopChart?640:Math.max(300,Math.round(returnHost.clientWidth||360));
     const chartH=desktopChart?220:Math.max(180,Math.round(returnHost.clientHeight||210));
-    const chartLeft=desktopChart?36:4,chartRight=desktopChart?10:4,chartTop=20,chartBottom=52;
+    const chartLeft=desktopChart?36:6,chartRight=desktopChart?10:6,chartTop=20,chartBottom=desktopChart?52:64;
     const slot=(chartW-chartLeft-chartRight)/returnBins.length;
     returnHost.innerHTML=returnSamples?`<svg viewBox="0 0 ${chartW} ${chartH}" role="img" aria-label="Verteilung der Renditen in sechs Klassen">
       <line class="stats-chart-grid" x1="${chartLeft}" y1="${chartH-chartBottom}" x2="${chartW-chartRight}" y2="${chartH-chartBottom}"/>
@@ -13037,7 +13040,11 @@ function renderPerformanceCharts(closed){
         const h=bin.count/maxCount*(chartH-chartTop-chartBottom);
         const inset=desktopChart?10:4,barW=Math.max(18,slot-inset*2);
         const x=chartLeft+index*slot+inset,y=chartH-chartBottom-h;
-        return `<rect class="${bin.kind==='positive'?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(x+barW/2).toFixed(1)}" y="${Math.max(16,y-6).toFixed(1)}" text-anchor="middle">${bin.count}</text><text class="stats-chart-label" x="${(chartLeft+index*slot+slot/2).toFixed(1)}" y="${chartH-25}" text-anchor="middle">${bin.label}</text>`;
+        const center=chartLeft+index*slot+slot/2;
+        const label=desktopChart
+          ?`<text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-25}" text-anchor="middle">${bin.label}</text>`
+          :`<text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-34}" text-anchor="middle"><tspan x="${center.toFixed(1)}">${bin.mobileLabel[0]}</tspan><tspan x="${center.toFixed(1)}" dy="15">${bin.mobileLabel[1]}</tspan></text>`;
+        return `<rect class="${bin.kind==='positive'?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(x+barW/2).toFixed(1)}" y="${Math.max(16,y-6).toFixed(1)}" text-anchor="middle">${bin.count}</text>${label}`;
       }).join('')}
     </svg>`:empty;
   }
