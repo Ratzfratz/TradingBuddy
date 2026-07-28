@@ -2684,13 +2684,18 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 .aw-compare-time{font-size:.58rem;color:var(--muted)}
 .aw-compare-sep{font-size:1.1rem;color:var(--muted);opacity:.35;align-self:center}
 .aw-unsaved-badge{display:flex;align-items:center;gap:5px;font-size:.64rem;font-weight:600;color:#f5a623;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:6px;padding:5px 9px;margin-bottom:8px}
-.aw-sync-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
-.aw-sync-row{display:block;background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.aw-sync-panel{display:block;margin-top:10px;background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.aw-sync-panel-preview{min-width:0;color:var(--muted);font-size:.6rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aw-sync-list{display:flex;flex-direction:column;margin:0;padding:0 8px 8px}
+.aw-sync-row{display:block;min-width:0;background:transparent}
+.aw-sync-row+.aw-sync-row{border-top:1px solid var(--bd)}
 .aw-sync-summary{min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;cursor:pointer;list-style:none}
 .aw-sync-summary::-webkit-details-marker{display:none}
 .aw-sync-summary::after{content:'⌄';flex:0 0 auto;color:var(--muted);font-size:.8rem;line-height:1;transition:transform .18s ease}
-.aw-sync-row[open]>.aw-sync-summary::after{transform:rotate(180deg)}
-.aw-sync-detail{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:0 8px 8px}
+.aw-sync-panel[open]>.aw-sync-summary::after{transform:rotate(180deg)}
+.aw-sync-summary-copy{display:flex;align-items:baseline;gap:8px;min-width:0}
+.aw-sync-detail{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px}
+.aw-sync-detail-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
 .aw-sync-title{font-size:.7rem;font-weight:700;color:var(--text)}
 .aw-sync-meta{font-size:.6rem;color:var(--muted);line-height:1.25;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-height:none;overflow:visible;padding-right:2px}
 .aw-sync-build{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px;padding:7px 9px;border:1px solid rgba(91,138,245,.22);background:rgba(91,138,245,.07);border-radius:8px;color:var(--blue);font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
@@ -15217,10 +15222,12 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #cloud-sync-card .s-user-row{margin-bottom:4px}
   #cloud-sync-card .aw-compare-card{margin-bottom:6px}
   #cloud-sync-card .aw-sync-build{margin:6px 0 7px;padding:6px 8px}
-  #cloud-sync-card .aw-sync-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
+  #cloud-sync-card .aw-sync-panel{margin-top:7px}
+  #cloud-sync-card .aw-sync-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:0;padding:0 6px 6px}
   #cloud-sync-card .aw-sync-row{min-width:0}
+  #cloud-sync-card .aw-sync-row+.aw-sync-row{border-top:0;border-left:1px solid var(--bd)}
   #cloud-sync-card .aw-sync-summary{min-height:34px;padding:6px 7px}
-  #cloud-sync-card .aw-sync-detail{padding:0 6px 6px}
+  #cloud-sync-card .aw-sync-detail{padding:6px}
   #cloud-sync-card .aw-sync-meta{font-size:.54rem}
   #cloud-sync-card .aw-sync-icon{width:28px;height:28px}
   #cloud-sync-card .s-btn{min-height:38px;padding-top:7px;padding-bottom:7px}
@@ -15543,38 +15550,52 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           <span class="s-toggle-label" style="font-size:.78rem">Auto-Sync</span>
           <input type="checkbox" id="aw-autosync-chk" class="tax-setting-toggle" checked onchange="awSetAutoSync(this.checked)">
         </div>
-        <div class="aw-sync-list">
-          <details class="aw-sync-row">
-            <summary class="aw-sync-summary"><span class="aw-sync-title">Trades</span></summary>
-            <div class="aw-sync-detail">
-              <div class="aw-sync-meta" id="aw-sync-trades-meta">–</div>
-            <div class="aw-sync-actions">
-              <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('trades','upload')" title="Trades hochladen">↑</button>
-              <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('trades','download')" title="Trades herunterladen">↓</button>
+        <details class="aw-sync-panel">
+          <summary class="aw-sync-summary">
+            <span class="aw-sync-summary-copy">
+              <span class="aw-sync-title">Sync-Details</span>
+              <span class="aw-sync-panel-preview">Trades · Einstellungen · Screenshots</span>
+            </span>
+          </summary>
+          <div class="aw-sync-list">
+            <div class="aw-sync-row">
+              <div class="aw-sync-detail">
+                <div class="aw-sync-detail-copy">
+                  <div class="aw-sync-title">Trades</div>
+                  <div class="aw-sync-meta" id="aw-sync-trades-meta">–</div>
+                </div>
+                <div class="aw-sync-actions">
+                  <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('trades','upload')" title="Trades hochladen">↑</button>
+                  <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('trades','download')" title="Trades herunterladen">↓</button>
+                </div>
+              </div>
             </div>
+            <div class="aw-sync-row">
+              <div class="aw-sync-detail">
+                <div class="aw-sync-detail-copy">
+                  <div class="aw-sync-title">Einstellungen</div>
+                  <div class="aw-sync-meta" id="aw-sync-settings-meta">–</div>
+                </div>
+                <div class="aw-sync-actions">
+                  <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('settings','upload')" title="Einstellungen hochladen">↑</button>
+                  <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('settings','download')" title="Einstellungen herunterladen">↓</button>
+                </div>
+              </div>
             </div>
-          </details>
-          <details class="aw-sync-row">
-            <summary class="aw-sync-summary"><span class="aw-sync-title">Einstellungen</span></summary>
-            <div class="aw-sync-detail">
-              <div class="aw-sync-meta" id="aw-sync-settings-meta">–</div>
-            <div class="aw-sync-actions">
-              <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('settings','upload')" title="Einstellungen hochladen">↑</button>
-              <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('settings','download')" title="Einstellungen herunterladen">↓</button>
+            <div class="aw-sync-row" data-tb-feature-card="screenshotSync">
+              <div class="aw-sync-detail">
+                <div class="aw-sync-detail-copy">
+                  <div class="aw-sync-title">Screenshots</div>
+                  <div class="aw-sync-meta" id="aw-sync-screens-meta">–</div>
+                </div>
+                <div class="aw-sync-actions">
+                  <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('screenshots','upload')" title="Screenshots hochladen">↑</button>
+                  <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('screenshots','download')" title="Screenshots herunterladen">↓</button>
+                </div>
+              </div>
             </div>
-            </div>
-          </details>
-          <details class="aw-sync-row" data-tb-feature-card="screenshotSync">
-            <summary class="aw-sync-summary"><span class="aw-sync-title">Screenshots</span></summary>
-            <div class="aw-sync-detail">
-              <div class="aw-sync-meta" id="aw-sync-screens-meta">–</div>
-            <div class="aw-sync-actions">
-              <button type="button" class="aw-sync-icon aw-sync-icon-up" onclick="awSyncSection('screenshots','upload')" title="Screenshots hochladen">↑</button>
-              <button type="button" class="aw-sync-icon aw-sync-icon-down" onclick="awSyncSection('screenshots','download')" title="Screenshots herunterladen">↓</button>
-            </div>
-            </div>
-          </details>
-        </div>
+          </div>
+        </details>
         </div><!-- end aw-sync-controls -->
       </div>
 
