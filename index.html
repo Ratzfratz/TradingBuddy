@@ -972,6 +972,7 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 .nt-clear{width:auto;min-width:170px;height:auto;border:1px solid rgba(107,122,153,.25);background:transparent;color:var(--muted);border-radius:var(--r);padding:8px 24px;font-family:var(--f);font-size:.68rem;font-weight:600;letter-spacing:.3px;text-transform:uppercase;cursor:pointer;white-space:nowrap}
 .nt-clear:active{background:rgba(240,92,122,.18)}
 .nt-clear-action{display:none}
+.nt-choice-stack{display:contents}
 .nt-asset-sel{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:0}
 .nt-asset-sel .asset-btn{width:100%;height:42px;min-height:42px;padding:0 6px;border-width:1.5px;background:var(--s1);display:flex;align-items:center;justify-content:center;line-height:1.15}
 .nt-mini-hint{font-size:.62rem;color:var(--muted);line-height:1.45;margin-top:8px;opacity:.78}
@@ -13782,6 +13783,7 @@ if('serviceWorker' in navigator){
     <div class="overlay-title" id="form-title">Neuer Trade</div>
     <button class="overlay-head-btn overlay-head-right" onclick="cancelTradeForm()">&#x2715;</button>
   </div>
+  <div class="nt-choice-stack">
   <div class="sec" id="nt-asset-card">
     <div class="asset-sel nt-asset-sel" id="nt-asset-sel">
       <button class="asset-btn active" id="fa-stock" onclick="setAssetType('stock')">Aktie</button>
@@ -13799,6 +13801,7 @@ if('serviceWorker' in navigator){
       <button class="type-btn active call" id="ft-call" onclick="setFormType('call')">▲ CALL</button>
       <button class="type-btn put" id="ft-put" onclick="setFormType('put')">▼ PUT</button>
     </div>
+  </div>
   </div>
 
   <div class="sec" id="nt-entry-card">
@@ -15274,8 +15277,21 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     align-items:stretch;
   }
   #nt-body>.overlay-sticky-head{grid-column:1/-1;grid-row:1}
-  #nt-asset-card{grid-column:1;grid-row:2}
-  #nt-direction-box{grid-column:1;grid-row:3}
+  .nt-choice-stack{
+    display:flex;
+    flex-direction:column;
+    align-self:start;
+    gap:14px;
+    min-width:0;
+    grid-column:1;
+    grid-row:2 / span 2;
+  }
+  .nt-choice-stack>.sec{
+    height:auto!important;
+    min-height:0;
+    margin:0!important;
+  }
+  #nt-asset-card,#nt-direction-box{grid-column:auto;grid-row:auto}
   #nt-entry-card{grid-column:2;grid-row:2 / span 2}
   #nt-plan-card{grid-column:3;grid-row:2 / span 2}
   #nt-exit-card{grid-column:1;grid-row:4}
