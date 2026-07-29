@@ -6877,8 +6877,8 @@ body.tb-compact-small{
 
 <div class="page" id="page-statistik">
 <div class="stats-layout-toolbar" id="stats-layout-toolbar">
-  <button type="button" class="stats-layout-edit-toggle" id="stats-layout-edit-toggle" data-tb-feature="customStatsLayout" onclick="toggleStatsLayoutEditing()"><span>Layout anpassen</span></button>
   <button type="button" class="stats-layout-reset-direct" id="stats-layout-reset-direct" onclick="resetStatsLayout()">Ansicht zurücksetzen</button>
+  <button type="button" class="stats-layout-edit-toggle" id="stats-layout-edit-toggle" data-tb-feature="customStatsLayout" onclick="toggleStatsLayoutEditing()"><span>Layout anpassen</span></button>
   <div class="stats-layout-toolbar-panel">
     <div class="stats-layout-toolbar-controls">
       <label><span>Spalten</span><select class="inp" id="stats-layout-columns-direct" onchange="updateStatsLayoutOption('columns',this.value)"><option value="auto">Automatisch</option><option value="1">1 Spalte</option><option value="2">2 Spalten</option><option value="3">3 Spalten</option></select></label>
@@ -6896,7 +6896,6 @@ body.tb-compact-small{
       <div style="font-size:1.8rem;font-weight:700;white-space:nowrap" id="st-total-pnl">—</div>
       <div style="font-size:1.1rem;font-weight:700" id="st-depot-ret"></div>
     </div>
-    <div style="font-size:.72rem;color:var(--muted);margin-top:2px;display:none" id="st-depot-base"></div>
   </div>
 
   <!-- Unified Übersicht -->
@@ -13237,20 +13236,14 @@ function renderStats() {
   if(totalPnlElement) totalPnlElement.style.color = periodPnl >= 0 ? 'var(--green)' : 'var(--red)';
 
   const depotRetEl = $('st-depot-ret');
-  const depotBaseEl = $('st-depot-base');
   if(hasDepot){
     const depotRet = periodPnl / depotCapital * 100;
     if(depotRetEl){
       depotRetEl.innerHTML = fmtPct(depotRet);
       depotRetEl.style.color = depotRet >= 0 ? 'var(--green)' : 'var(--red)';
     }
-    if(depotBaseEl){
-      depotBaseEl.style.display = '';
-      depotBaseEl.innerHTML = fmt(depotCapital,2)+'\u202f€ \u2192 '+fmt(depotCapital+periodPnl,2)+'\u202f€';
-    }
   } else {
     if(depotRetEl){ depotRetEl.innerHTML=''; depotRetEl.style.color=''; }
-    if(depotBaseEl){ depotBaseEl.style.display='none'; }
   }
 
   // Kapitalrendite für den gewählten Zeitraum
@@ -20629,8 +20622,9 @@ function awTogglePw(){
 .stats-layout-reset-direct:hover{background:color-mix(in srgb,var(--red) 14%,var(--s1));border-color:color-mix(in srgb,var(--red) 58%,var(--bd))}
 body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:inline-flex;align-items:center;justify-content:center}
 .stats-grid-placeholder{position:relative;display:grid;place-items:center;overflow:hidden}
-.stats-grid-placeholder-preview{position:absolute;inset:8px;display:grid;place-items:center;padding:14px;border:1px solid color-mix(in srgb,var(--blue) 55%,var(--bd));border-radius:calc(var(--r) - 3px);background:color-mix(in srgb,var(--s1) 82%,var(--blue));color:var(--blue);font:700 .68rem var(--f);letter-spacing:.25px;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,.12);animation:statsDropPreviewIn .18s cubic-bezier(.22,.72,.18,1) both;pointer-events:none}
-.stats-grid-placeholder-preview::before{content:'↳';display:grid;place-items:center;width:30px;height:30px;margin-bottom:7px;border-radius:50%;background:rgba(91,138,245,.14);font-size:1rem}
+.stats-grid-placeholder-card{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;margin:0!important;overflow:hidden!important;opacity:.58;filter:saturate(.82);pointer-events:none!important;box-shadow:none!important}
+.stats-grid-placeholder-card .stats-card-resize-handle,.stats-grid-placeholder-card .stats-card-height-handle,.stats-grid-placeholder-card .stats-card-size-badge{display:none!important}
+.stats-grid-placeholder-preview{position:absolute;z-index:2;right:12px;bottom:12px;display:block;padding:7px 10px;border:1px solid color-mix(in srgb,var(--blue) 55%,var(--bd));border-radius:8px;background:color-mix(in srgb,var(--s1) 90%,var(--blue));color:var(--blue);font:700 .62rem var(--f);letter-spacing:.2px;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,.18);animation:statsDropPreviewIn .18s cubic-bezier(.22,.72,.18,1) both;pointer-events:none}
 @keyframes statsDropPreviewIn{from{opacity:.25;transform:scale(.975)}to{opacity:.82;transform:scale(1)}}
 @media (max-width:719px){
   .stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge{display:none!important}
@@ -20826,7 +20820,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
   function bindElements(){MODULES.forEach(m=>{if(moduleElements[m.key])return;const found=document.querySelector(m.selector),el=m.parent&&found?found.closest('.sec'):found;moduleElements[m.key]=el;if(el)prepareCard(el,m.key);});}
   function captureCardPositions(host,except){return new Map(Array.from(host.querySelectorAll(':scope>[data-stats-module]')).filter(card=>card!==except&&getComputedStyle(card).display!=='none').map(card=>[card,card.getBoundingClientRect()]));}
-  function animateCardReflow(before){requestAnimationFrame(()=>before.forEach((oldRect,card)=>{const next=card.getBoundingClientRect(),dx=oldRect.left-next.left,dy=oldRect.top-next.top;if(Math.abs(dx)<1&&Math.abs(dy)<1)return;card.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:240,easing:'cubic-bezier(.22,.72,.18,1)'});}));}
+  function animateCardReflow(before){requestAnimationFrame(()=>before.forEach((oldRect,card)=>{const next=card.getBoundingClientRect(),dx=oldRect.left-next.left,dy=oldRect.top-next.top;if(Math.abs(dx)<1&&Math.abs(dy)<1)return;card.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:280,easing:'cubic-bezier(.22,.72,.18,1)'});}));}
+  function animatePlaceholderReflow(placeholder,oldRect){requestAnimationFrame(()=>{if(!placeholder?.isConnected||!oldRect)return;const next=placeholder.getBoundingClientRect(),dx=oldRect.left-next.left,dy=oldRect.top-next.top;if(Math.abs(dx)<1&&Math.abs(dy)<1)return;placeholder.getAnimations().forEach(animation=>animation.cancel());placeholder.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:280,easing:'cubic-bezier(.22,.72,.18,1)'});});}
   function prepareCard(el,key){
     if(el.dataset.statsPrepared)return;el.dataset.statsPrepared='1';if(statsRowObserver)statsRowObserver.observe(el);
     const handle=document.createElement('span');handle.className='stats-card-resize-handle';handle.title='Breite ziehen';el.appendChild(handle);const heightHandle=document.createElement('span');heightHandle.className='stats-card-height-handle';heightHandle.title='Höhe ziehen';el.appendChild(heightHandle);const badge=document.createElement('span');badge.className='stats-card-size-badge';el.appendChild(badge);
@@ -20836,7 +20831,39 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
       const originalOrder=Array.from(host.querySelectorAll(':scope>[data-stats-module]')).map(card=>card.dataset.statsModule);
       const originalRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};
       let active=false,ph=null,lastPlacement='';
-      const begin=()=>{active=true;draggedKey=key;ph=document.createElement('div');ph.className='stats-grid-placeholder';ph.id='stats-grid-placeholder';const moduleName=MODULES.find(module=>module.key===key)?.name||'Kachel',availableCols=Math.max(1,getComputedStyle(host).gridTemplateColumns.split(' ').length),fine=availableCols>=6,placeholderSpan=Math.min(availableCols,fine?Math.round(state.modules[key].span*2):Math.ceil(state.modules[key].span));ph.innerHTML=`<div class="stats-grid-placeholder-preview"><span>${moduleName}<br>Hier wird die Kachel einsortiert</span></div>`;ph.style.setProperty('--stats-placeholder-span',placeholderSpan);ph.style.setProperty('--stats-placeholder-rows',el.style.getPropertyValue('--stats-row-span')||3);ph.style.minHeight=rect.height+'px';el.before(ph);el.classList.add('stats-card-floating');document.body.appendChild(el);Object.assign(el.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});try{el.setPointerCapture(pointerId);}catch(e){}el.addEventListener('pointerup',finish,{once:true});el.addEventListener('pointercancel',finish,{once:true});};
+      const begin=()=>{
+        active=true;
+        draggedKey=key;
+        ph=document.createElement('div');
+        ph.className='stats-grid-placeholder';
+        ph.id='stats-grid-placeholder';
+        const moduleName=MODULES.find(module=>module.key===key)?.name||'Kachel';
+        const availableCols=Math.max(1,getComputedStyle(host).gridTemplateColumns.split(' ').length);
+        const fine=availableCols>=6;
+        const placeholderSpan=Math.min(availableCols,fine?Math.round(state.modules[key].span*2):Math.ceil(state.modules[key].span));
+        const previewCard=el.cloneNode(true);
+        previewCard.removeAttribute('id');
+        previewCard.removeAttribute('data-stats-module');
+        previewCard.removeAttribute('data-stats-prepared');
+        previewCard.classList.remove('stats-card-floating','stats-card-dragging','stats-size-preview','stats-size-snapping');
+        previewCard.classList.add('stats-grid-placeholder-card');
+        previewCard.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
+        previewCard.querySelectorAll('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge').forEach(node=>node.remove());
+        const previewLabel=document.createElement('div');
+        previewLabel.className='stats-grid-placeholder-preview';
+        previewLabel.textContent=moduleName+' · Zielposition';
+        ph.append(previewCard,previewLabel);
+        ph.style.setProperty('--stats-placeholder-span',placeholderSpan);
+        ph.style.setProperty('--stats-placeholder-rows',el.style.getPropertyValue('--stats-row-span')||3);
+        ph.style.minHeight=rect.height+'px';
+        el.before(ph);
+        el.classList.add('stats-card-floating');
+        document.body.appendChild(el);
+        Object.assign(el.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});
+        try{el.setPointerCapture(pointerId);}catch(e){}
+        el.addEventListener('pointerup',finish,{once:true});
+        el.addEventListener('pointercancel',finish,{once:true});
+      };
       const place=(left,top)=>{
         const dragRect={left,top,right:left+rect.width,bottom:top+rect.height,width:rect.width,height:rect.height};
         const intersection=Math.max(0,Math.min(dragRect.right,originalRect.right)-Math.max(dragRect.left,originalRect.left))*Math.max(0,Math.min(dragRect.bottom,originalRect.bottom)-Math.max(dragRect.top,originalRect.top));
@@ -20844,7 +20871,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
           const nextKey=originalOrder.slice(originalOrder.indexOf(key)+1).find(candidate=>elementFor(candidate)?.parentElement===host);
           const reference=nextKey?elementFor(nextKey):null,placement='origin';
           if(placement!==lastPlacement&&reference!==ph){
-            const positions=captureCardPositions(host,el);host.insertBefore(ph,reference);lastPlacement=placement;animateCardReflow(positions);
+            const positions=captureCardPositions(host,el),placeholderRect=ph.getBoundingClientRect();host.insertBefore(ph,reference);lastPlacement=placement;animateCardReflow(positions);animatePlaceholderReflow(ph,placeholderRect);
           }
           return;
         }
@@ -20861,7 +20888,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
         if(placement===lastPlacement)return;
         const reference=before?target.card:target.card.nextSibling;
         if(reference===ph||(!reference&&ph===host.lastElementChild)){lastPlacement=placement;return;}
-        const positions=captureCardPositions(host,el);host.insertBefore(ph,reference);lastPlacement=placement;animateCardReflow(positions);
+        const positions=captureCardPositions(host,el),placeholderRect=ph.getBoundingClientRect();host.insertBefore(ph,reference);lastPlacement=placement;animateCardReflow(positions);animatePlaceholderReflow(ph,placeholderRect);
       };
       const move=ev=>{if(active&&ev.buttons===0){finish();return;}if(!active){if(Math.hypot(ev.clientX-startX,ev.clientY-startY)<9)return;begin();}ev.preventDefault();const cardLeft=ev.clientX-offsetX,cardTop=ev.clientY-offsetY;el.style.left=cardLeft+'px';el.style.top=cardTop+'px';place(cardLeft,cardTop);};
       const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);window.removeEventListener('blur',finish);document.removeEventListener('pointerup',finish,true);el.removeEventListener('pointerup',finish);el.removeEventListener('pointercancel',finish);if(!active)return;active=false;try{if(el.hasPointerCapture(pointerId))el.releasePointerCapture(pointerId);}catch(e){}const positions=captureCardPositions(host,el);host.insertBefore(el,ph);ph.remove();el.classList.remove('stats-card-floating');Object.assign(el.style,{left:'',top:'',width:'',height:''});state.order=Array.from(host.children).map(x=>x.dataset.statsModule).filter(Boolean);draggedKey='';save();apply();renderStatsLayoutEditor();animateCardReflow(positions);};
@@ -20876,7 +20903,19 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   function elementFor(key){return moduleElements[key]||null;}
   function syncStatsRowSpans(){
-    if(rowSyncFrame)return;rowSyncFrame=requestAnimationFrame(()=>{rowSyncFrame=0;if(!window.matchMedia('(min-width:900px)').matches)return;MODULES.forEach(m=>{const el=elementFor(m.key);if(!el||el.classList.contains('stats-module-hidden')||el.style.display==='none')return;const rows=Math.max(1,Math.min(6,Math.round((state.modules[m.key]?.height||.5)*2)));if(el.style.getPropertyValue('--stats-row-span')!==String(rows))el.style.setProperty('--stats-row-span',rows);});});
+    if(rowSyncFrame)return;
+    rowSyncFrame=requestAnimationFrame(()=>{
+      rowSyncFrame=0;
+      if(!window.matchMedia('(min-width:900px)').matches)return;
+      MODULES.forEach(m=>{
+        const el=elementFor(m.key);
+        if(!el||el.classList.contains('stats-module-hidden')||el.style.display==='none')return;
+        const configuredRows=Math.max(1,Math.min(6,Math.round((state.modules[m.key]?.height||.5)*2)));
+        const contentRows=m.key==='insights'?Math.max(1,Math.ceil((el.scrollHeight+16)/118)):configuredRows;
+        const rows=Math.max(configuredRows,contentRows);
+        if(el.style.getPropertyValue('--stats-row-span')!==String(rows))el.style.setProperty('--stats-row-span',rows);
+      });
+    });
   }
   function apply(){
     delete document.body.dataset.statsLayoutWidth;
