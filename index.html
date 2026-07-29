@@ -6490,6 +6490,11 @@ body.tb-compact-small{
   .equity-axis-labels small{font-size:.62rem}
   .stats-chart-label{font-size:13px}
   .stats-chart-value{font-size:14px}
+  #view-stats>[data-stats-module="hero"]{padding:10px 13px!important}
+  #view-stats>[data-stats-module="hero"] .sec-title{margin-bottom:6px!important}
+  #view-stats>[data-stats-module="hero"] #st-total-pnl{font-size:clamp(1rem,1.25vw,1.4rem)!important;line-height:1.05}
+  #view-stats>[data-stats-module="hero"] #st-depot-ret{font-size:clamp(.78rem,.9vw,1rem)!important;line-height:1.05}
+  #view-stats>[data-stats-module="hero"]>div:last-child{gap:6px!important;margin-bottom:0!important}
 }
 @media (max-width:899px){
   .stats-chart-section{gap:9px;padding:14px 12px!important}
@@ -12925,8 +12930,10 @@ function showStatsChart(button,panelId){
   if(!section)return;
   section.querySelectorAll('.stats-chart-tab').forEach(tab=>tab.setAttribute('aria-selected',tab===button?'true':'false'));
   section.querySelectorAll('.stats-chart-panel').forEach(panel=>panel.hidden=panel.id!==panelId);
+  requestAnimationFrame(()=>renderPerformanceCharts(_performanceChartTrades));
 }
 
+let _performanceChartTrades=[];
 let _equityChartPoints=[];
 let _equityChartSelectedIndex=0;
 let _equityChartPointerId=null;
@@ -12988,6 +12995,7 @@ function renderPerformanceCharts(closed){
   const returnCountEl=$('st-return-chart-count');
   const holdCountEl=$('st-hold-chart-count');
   const ordered=(Array.isArray(closed)?closed:[]).slice().sort((a,b)=>(a.exitDate||a.entryDate||'').localeCompare(b.exitDate||b.entryDate||''));
+  _performanceChartTrades=ordered;
   const empty='<div class="stats-chart-empty">Noch keine abgeschlossenen Trades in diesem Zeitraum.</div>';
   if(!ordered.length){
     if(equityHost)equityHost.innerHTML=empty;
@@ -13009,13 +13017,13 @@ function renderPerformanceCharts(closed){
   const step=Math.max(1,Math.ceil(rawPoints.length/120));
   const points=rawPoints.filter((_,index)=>index%step===0||index===rawPoints.length-1);
   const chartCard=$('st-chart-section'),desktopChart=window.matchMedia('(min-width:900px)').matches;
-  const width=desktopChart
-    ?Math.max(640,Math.min(1600,Math.round(equityHost?.clientWidth||732)))
-    :Math.max(300,Math.round(equityHost?.clientWidth||360));
-  const height=desktopChart
-    ?Math.max(220,Math.min(300,Math.round((chartCard?.clientHeight||456)-165)))
-    :Math.max(190,Math.round(equityHost?.clientHeight||220));
-  const left=desktopChart?8:2,right=desktopChart?78:52,top=38,bottom=42;
+  const visiblePanel=chartCard?.querySelector('.stats-chart-panel:not([hidden])');
+  const visibleHost=visiblePanel?.querySelector('.stats-chart-host');
+  const sharedWidth=Math.max(300,Math.round(visibleHost?.clientWidth||chartCard?.clientWidth||360));
+  const sharedHeight=Math.max(180,Math.round(visibleHost?.clientHeight||Math.max(180,(chartCard?.clientHeight||410)-150)));
+  const compactChart=sharedWidth<620;
+  const width=sharedWidth,height=sharedHeight;
+  const left=compactChart?2:8,right=compactChart?58:78,top=28,bottom=compactChart?36:42;
   const values=[0,...points.map(point=>point.value)];
   const min=Math.min(...values),max=Math.max(...values);
   const span=Math.max(1,max-min);
@@ -13059,13 +13067,14 @@ function renderPerformanceCharts(closed){
   });
   const assets=Object.entries(grouped).sort((a,b)=>Math.abs(b[1].pnl)-Math.abs(a[1].pnl)).slice(0,6);
   const maxAbs=Math.max(1,...assets.map(([,data])=>Math.abs(data.pnl)));
-  const assetWidth=desktopChart?640:Math.max(300,Math.round(assetHost?.clientWidth||360));
-  const assetHeight=desktopChart?assets.length*34+14:Math.max(170,Math.round(assetHost?.clientHeight||210));
+  const assetWidth=sharedWidth;
+  const assetHeight=sharedHeight;
   const rowHeight=(assetHeight-8)/Math.max(1,assets.length);
   /* Die längste Bezeichnung erhält auf schmalen Karten einen reservierten
      Textbereich; der Balken darf nicht mehr in den Text hineinlaufen. */
-  const barX=desktopChart?190:Math.round(Math.max(130,Math.min(160,assetWidth*.36)));
-  const barWidth=desktopChart?300:Math.max(76,assetWidth-barX-92);
+  const barX=Math.round(Math.max(128,Math.min(220,assetWidth*.32)));
+  const valueReserve=Math.round(Math.max(88,Math.min(138,assetWidth*.2)));
+  const barWidth=Math.max(64,assetWidth-barX-valueReserve);
   if(countEl)countEl.textContent=assets.length+' Kategorien';
   if(assetHost)assetHost.innerHTML=`<svg viewBox="0 0 ${assetWidth} ${assetHeight}" role="img" aria-label="P und L nach Produkttyp">
     ${assets.map(([key,data],index)=>{
@@ -13094,31 +13103,30 @@ function renderPerformanceCharts(closed){
   if(returnCountEl)returnCountEl.textContent=returnSamples+' Trades';
   if(returnHost){
     const maxCount=Math.max(1,...returnBins.map(bin=>bin.count));
-    const chartW=desktopChart?640:Math.max(300,Math.round(returnHost.clientWidth||360));
-    const chartH=desktopChart?220:Math.max(180,Math.round(returnHost.clientHeight||210));
-    const chartLeft=desktopChart?36:6,chartRight=desktopChart?10:6,chartTop=20,chartBottom=desktopChart?52:64;
+    const chartW=sharedWidth,chartH=sharedHeight,compactReturn=chartW<620;
+    const chartLeft=compactReturn?6:36,chartRight=compactReturn?6:10,chartTop=20,chartBottom=compactReturn?64:52;
     const slot=(chartW-chartLeft-chartRight)/returnBins.length;
     returnHost.innerHTML=returnSamples?`<svg viewBox="0 0 ${chartW} ${chartH}" role="img" aria-label="Verteilung der Renditen in sechs Klassen">
       <line class="stats-chart-grid" x1="${chartLeft}" y1="${chartH-chartBottom}" x2="${chartW-chartRight}" y2="${chartH-chartBottom}"/>
       ${returnBins.map((bin,index)=>{
         const h=bin.count/maxCount*(chartH-chartTop-chartBottom);
-        const inset=desktopChart?10:4,barW=Math.max(18,slot-inset*2);
+        const inset=compactReturn?4:10,barW=Math.max(18,slot-inset*2);
         const x=chartLeft+index*slot+inset,y=chartH-chartBottom-h;
         const center=chartLeft+index*slot+slot/2;
-        const label=desktopChart
-          ?`<text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-25}" text-anchor="middle">${bin.label}</text>`
-          :`<text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-34}" text-anchor="middle"><tspan x="${center.toFixed(1)}">${bin.mobileLabel[0]}</tspan><tspan x="${center.toFixed(1)}" dy="15">${bin.mobileLabel[1]}</tspan></text>`;
+        const label=compactReturn
+          ?`<text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-34}" text-anchor="middle"><tspan x="${center.toFixed(1)}">${bin.mobileLabel[0]}</tspan><tspan x="${center.toFixed(1)}" dy="15">${bin.mobileLabel[1]}</tspan></text>`
+          :`<text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-25}" text-anchor="middle">${bin.label}</text>`;
         return `<rect class="${bin.kind==='positive'?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${(x+barW/2).toFixed(1)}" y="${Math.max(16,y-6).toFixed(1)}" text-anchor="middle">${bin.count}</text>${label}`;
       }).join('')}
     </svg>`:empty;
   }
 
   const holdBins=[
-    {label:'Intraday',min:0,max:0,total:0,count:0},
-    {label:'1–3 Tage',min:1,max:3,total:0,count:0},
-    {label:'4–7 Tage',min:4,max:7,total:0,count:0},
-    {label:'8–30 Tage',min:8,max:30,total:0,count:0},
-    {label:'Über 30 Tage',min:31,max:Infinity,total:0,count:0}
+    {label:'Intraday',mobileLabel:['Intraday'],min:0,max:0,total:0,count:0},
+    {label:'1–3 Tage',mobileLabel:['1–3','Tage'],min:1,max:3,total:0,count:0},
+    {label:'4–7 Tage',mobileLabel:['4–7','Tage'],min:4,max:7,total:0,count:0},
+    {label:'8–30 Tage',mobileLabel:['8–30','Tage'],min:8,max:30,total:0,count:0},
+    {label:'Über 30 Tage',mobileLabel:['Über 30','Tage'],min:31,max:Infinity,total:0,count:0}
   ];
   ordered.forEach(trade=>{
     if(!trade.entryDate||!trade.exitDate)return;
@@ -13131,10 +13139,9 @@ function renderPerformanceCharts(closed){
   if(holdHost){
     const avgs=holdBins.map(bin=>bin.count?bin.total/bin.count:0);
     const maxAvg=Math.max(1,...avgs.map(Math.abs));
-    const chartW=desktopChart?640:Math.max(300,Math.round(holdHost.clientWidth||360));
-    const chartH=desktopChart?265:Math.max(190,Math.round(holdHost.clientHeight||220));
-    const chartLeft=desktopChart?46:4,chartRight=desktopChart?12:4;
-    const plotTop=18,plotBottom=chartH-66;
+    const chartW=sharedWidth,chartH=sharedHeight,compactHold=chartW<620;
+    const chartLeft=compactHold?4:46,chartRight=compactHold?4:12;
+    const plotTop=18,plotBottom=chartH-(compactHold?72:66);
     const zeroY=Math.round(plotTop+(plotBottom-plotTop)*.48);
     const slot=(chartW-chartLeft-chartRight)/holdBins.length;
     const maxBar=Math.max(30,Math.min(80,zeroY-plotTop-8,plotBottom-zeroY-22));
@@ -13142,8 +13149,10 @@ function renderPerformanceCharts(closed){
       <line class="stats-chart-zero" x1="${chartLeft}" y1="${zeroY}" x2="${chartW-chartRight}" y2="${zeroY}"/>
       ${holdBins.map((bin,index)=>{
         const avg=avgs[index],h=Math.abs(avg)/maxAvg*maxBar,x=chartLeft+index*slot+13,y=avg>=0?zeroY-h:zeroY;
-        const barInset=desktopChart?13:5,barW=Math.max(20,slot-barInset*2),center=chartLeft+index*slot+slot/2;
-        return `<rect class="${avg>=0?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${(chartLeft+index*slot+barInset).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${center.toFixed(1)}" y="${avg>=0?Math.max(15,y-7):Math.min(plotBottom-5,y+h+16)}" text-anchor="middle">${bin.count?fmtEur(avg):'—'}</text><text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-31}" text-anchor="middle">${bin.label}</text><text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-10}" text-anchor="middle">${bin.count} Trades</text>`;
+        const barInset=compactHold?5:13,barW=Math.max(20,slot-barInset*2),center=chartLeft+index*slot+slot/2;
+        const parts=compactHold?bin.mobileLabel:[bin.label],labelY=chartH-(parts.length>1?43:31);
+        const label=`<text class="stats-chart-label" x="${center.toFixed(1)}" y="${labelY}" text-anchor="middle">${parts.map((part,partIndex)=>`<tspan x="${center.toFixed(1)}"${partIndex?' dy="14"':''}>${part}</tspan>`).join('')}</text>`;
+        return `<rect class="${avg>=0?'stats-chart-bar-positive':'stats-chart-bar-negative'}" x="${(chartLeft+index*slot+barInset).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4"/><text class="stats-chart-value" x="${center.toFixed(1)}" y="${avg>=0?Math.max(15,y-7):Math.min(plotBottom-5,y+h+16)}" text-anchor="middle">${bin.count?fmtEur(avg):'—'}</text>${label}<text class="stats-chart-label" x="${center.toFixed(1)}" y="${chartH-8}" text-anchor="middle">${bin.count} Trades</text>`;
       }).join('')}
     </svg>`:empty;
   }
@@ -20817,10 +20826,10 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   'use strict';
   const STORAGE_KEY='tb_stats_layout_v1';
   const MODULES=[
-    {key:'hero',name:'Gesamt P&L',selector:'#view-stats > .sec:first-child',span:3},
+    {key:'hero',name:'Gesamt P&L',selector:'#view-stats > .sec:first-child',span:.5},
     {key:'overview',name:'Übersicht',selector:'#view-stats > .sec:nth-child(2)',span:1},
     {key:'charts',name:'Performance-Diagramme',selector:'#st-chart-section',span:2},
-    {key:'calendar',name:'Tagesansicht',selector:'#st-calendar-section',span:3},
+    {key:'calendar',name:'Tagesansicht',selector:'#st-calendar-section',span:2},
     {key:'insights',name:'Idee & Ausführung',selector:'#st-journal-insights',span:3},
     {key:'top',name:'Top Basiswerte',selector:'#st-tickers',parent:true,span:1},
     {key:'worst',name:'Schlechteste Basiswerte',selector:'#st-worst-tickers',parent:true,span:1},
@@ -20832,8 +20841,10 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   const PREVIOUS_HEIGHT_DEFAULTS={hero:1,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
   const LEGACY_HEIGHT_DEFAULTS={hero:1,overview:3,charts:3,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
   const MIN_SIZES={hero:[.5,.5],overview:[1,2],charts:[1,2],calendar:[.5,2],insights:[.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[.5,2]};
-  const MAX_HEIGHTS={hero:.5,overview:2,charts:2,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
-  const defaults=()=>({layoutVersion:5,columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
+  const MAX_SPANS={hero:.5,charts:2,calendar:2};
+  const MAX_HEIGHTS={hero:.5,overview:2,charts:2,calendar:2,insights:3,top:2,worst:2,history:2,tax:3};
+  const HARD_MAX_SIZE_KEYS=new Set(['hero','charts','calendar']);
+  const defaults=()=>({layoutVersion:6,columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
   let state=defaults();
   let draggedKey='';
   const moduleElements={};
@@ -20846,8 +20857,18 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     d.columns=['auto','1','2','3','6'].includes(String(r.columns))?String(r.columns):d.columns;
     const order=Array.isArray(r.order)?r.order.filter(k=>MODULES.some(m=>m.key===k)):[];
     d.order=[...new Set(order.concat(MODULES.map(m=>m.key)))];
-    MODULES.forEach(m=>{const x=r.modules&&r.modules[m.key],min=MIN_SIZES[m.key]||[1,.5],maxHeight=MAX_HEIGHTS[m.key]||3;if(x){const savedSpan=Number(x.span),savedHeight=Number(x.height);d.modules[m.key].visible=x.visible!==false;d.modules[m.key].span=Math.max(min[0],Number.isFinite(savedSpan)&&savedSpan>=.5&&savedSpan<=3?savedSpan:m.span);d.modules[m.key].height=Math.min(maxHeight,Math.max(min[1],Number.isFinite(savedHeight)&&savedHeight>=.5&&savedHeight<=3&&Number.isInteger(savedHeight*2)?savedHeight:d.modules[m.key].height));if(m.key==='insights')d.modules[m.key].height=Math.ceil(d.modules[m.key].height);}});
-    if(Number(r.layoutVersion)!==5)MODULES.forEach(m=>{const saved=Number(r.modules?.[m.key]?.height);if(saved===LEGACY_HEIGHT_DEFAULTS[m.key]||saved===PREVIOUS_HEIGHT_DEFAULTS[m.key]||saved===VERSION_3_HEIGHT_DEFAULTS[m.key])d.modules[m.key].height=HEIGHT_DEFAULTS[m.key];});
+    MODULES.forEach(m=>{
+      const x=r.modules&&r.modules[m.key],min=MIN_SIZES[m.key]||[1,.5],maxSpan=MAX_SPANS[m.key]||3,maxHeight=MAX_HEIGHTS[m.key]||3;
+      if(x){
+        const savedSpan=Number(x.span),savedHeight=Number(x.height);
+        const validSpan=Number.isFinite(savedSpan)&&savedSpan>=.5&&savedSpan<=3?savedSpan:m.span;
+        d.modules[m.key].visible=x.visible!==false;
+        d.modules[m.key].span=Math.min(maxSpan,Math.max(min[0],validSpan));
+        d.modules[m.key].height=Math.min(maxHeight,Math.max(min[1],Number.isFinite(savedHeight)&&savedHeight>=.5&&savedHeight<=3&&Number.isInteger(savedHeight*2)?savedHeight:d.modules[m.key].height));
+        if(m.key==='insights')d.modules[m.key].height=Math.ceil(d.modules[m.key].height);
+      }
+    });
+    if(Number(r.layoutVersion)!==6)MODULES.forEach(m=>{const saved=Number(r.modules?.[m.key]?.height);if(saved===LEGACY_HEIGHT_DEFAULTS[m.key]||saved===PREVIOUS_HEIGHT_DEFAULTS[m.key]||saved===VERSION_3_HEIGHT_DEFAULTS[m.key])d.modules[m.key].height=HEIGHT_DEFAULTS[m.key];});
     return d;
   }
   function load(){try{state=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch(e){state=defaults();}save();}
@@ -20943,7 +20964,28 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     el.addEventListener('dragend',()=>{el.classList.remove('stats-card-dragging');el.style.display='';const ph=document.getElementById('stats-grid-placeholder');if(ph)ph.remove();draggedKey='';apply();});
     el.addEventListener('dragover',e=>{if(!document.body.classList.contains('stats-layout-editing')||!draggedKey)return;e.preventDefault();const ph=document.getElementById('stats-grid-placeholder');if(!ph||key===draggedKey)return;const r=el.getBoundingClientRect(),before=e.clientY<r.top+r.height/2;el.parentNode.insertBefore(ph,before?el:el.nextSibling);});
     el.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey)return;const source=elementFor(draggedKey),ph=document.getElementById('stats-grid-placeholder'),host=document.getElementById('view-stats');if(!source||!ph||!host)return;source.style.display='';host.insertBefore(source,ph);ph.remove();state.order=Array.from(host.children).map(x=>x.dataset.statsModule).filter(Boolean);save();apply();renderStatsLayoutEditor();draggedKey='';});
-    handle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();handle.setPointerCapture(e.pointerId);const host=document.getElementById('view-stats'),style=getComputedStyle(host),cols=Math.max(1,style.gridTemplateColumns.split(' ').length),fine=cols>=6,gap=parseFloat(style.columnGap)||0,colWidth=(host.clientWidth-gap*(cols-1))/cols,startX=e.clientX,startWidth=el.getBoundingClientRect().width,baseMin=(MIN_SIZES[key]||[1,1])[0],minUnits=fine?baseMin*2:Math.ceil(baseMin),minWidth=colWidth*minUnits+gap*(minUnits-1);let preview=state.modules[key].span;el.classList.add('stats-size-preview');const move=ev=>{const width=Math.max(minWidth,Math.min(host.clientWidth,startWidth+ev.clientX-startX)),units=Math.max(minUnits,Math.min(cols,Math.round((width+gap)/(colWidth+gap))));preview=fine?units/2:units;el.style.width=width+'px';badge.textContent=(fine?units+'/6':preview+' Sp.')+' × '+state.modules[key].height;};const up=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);state.modules[key].span=preview;el.classList.remove('stats-size-preview');el.classList.add('stats-size-snapping');const units=fine?preview*2:preview,target=colWidth*Math.min(units,cols)+gap*(Math.min(units,cols)-1);requestAnimationFrame(()=>{el.style.width=target+'px';});setTimeout(()=>{el.style.width='';el.classList.remove('stats-size-snapping');apply();},240);save();};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);});
+    handle.addEventListener('pointerdown',e=>{
+      e.preventDefault();e.stopPropagation();handle.setPointerCapture(e.pointerId);
+      const host=document.getElementById('view-stats'),style=getComputedStyle(host),cols=Math.max(1,style.gridTemplateColumns.split(' ').length),fine=cols>=6,gap=parseFloat(style.columnGap)||0,colWidth=(host.clientWidth-gap*(cols-1))/cols,startX=e.clientX,startWidth=el.getBoundingClientRect().width,baseMin=(MIN_SIZES[key]||[1,1])[0],maxSpan=MAX_SPANS[key]||3,minUnits=fine?baseMin*2:Math.ceil(baseMin),maxUnits=Math.max(minUnits,Math.min(cols,fine?Math.round(maxSpan*2):Math.ceil(maxSpan))),minWidth=colWidth*minUnits+gap*(minUnits-1),maxWidth=colWidth*maxUnits+gap*(maxUnits-1);
+      let preview=Math.min(maxSpan,Math.max(baseMin,state.modules[key].span));
+      el.classList.add('stats-size-preview');
+      const move=ev=>{
+        const width=Math.max(minWidth,Math.min(maxWidth,startWidth+ev.clientX-startX)),units=Math.max(minUnits,Math.min(maxUnits,Math.round((width+gap)/(colWidth+gap))));
+        preview=fine?units/2:Math.min(maxSpan,units);
+        el.style.width=width+'px';
+        badge.textContent=(fine?units+'/6':preview+' Sp.')+' × '+state.modules[key].height;
+      };
+      const up=()=>{
+        handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);
+        state.modules[key].span=Math.min(maxSpan,Math.max(baseMin,preview));
+        el.classList.remove('stats-size-preview');el.classList.add('stats-size-snapping');
+        const units=fine?state.modules[key].span*2:Math.ceil(state.modules[key].span),target=colWidth*Math.min(units,cols)+gap*(Math.min(units,cols)-1);
+        requestAnimationFrame(()=>{el.style.width=target+'px';});
+        setTimeout(()=>{el.style.width='';el.classList.remove('stats-size-snapping');apply();},240);
+        save();
+      };
+      handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
+    });
     heightHandle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();heightHandle.setPointerCapture(e.pointerId);const levels=[102,220,338,456,574,692],values=[.5,1,1.5,2,2.5,3],startY=e.clientY,startHeight=el.getBoundingClientRect().height,min=(MIN_SIZES[key]||[1,.5])[1],max=MAX_HEIGHTS[key]||3,minIndex=Math.max(0,values.indexOf(min)),maxIndex=Math.max(minIndex,values.indexOf(max)),allowedIndexes=values.map((value,index)=>index).filter(index=>index>=minIndex&&index<=maxIndex&&(key!=='insights'||Number.isInteger(values[index])));let preview=state.modules[key].height;el.classList.add('stats-size-preview');const move=ev=>{const lower=levels[allowedIndexes[0]],upper=levels[allowedIndexes[allowedIndexes.length-1]],height=Math.max(lower,Math.min(upper,startHeight+ev.clientY-startY)),index=allowedIndexes.reduce((best,current)=>Math.abs(levels[current]-height)<Math.abs(levels[best]-height)?current:best,allowedIndexes[0]);preview=values[index];el.style.setProperty('--stats-card-height',height+'px');badge.textContent=state.modules[key].span+'×'+preview;};const up=()=>{heightHandle.removeEventListener('pointermove',move);heightHandle.removeEventListener('pointerup',up);heightHandle.removeEventListener('pointercancel',up);state.modules[key].height=preview;el.classList.remove('stats-size-preview');el.classList.add('stats-size-snapping');requestAnimationFrame(()=>el.style.setProperty('--stats-card-height',levels[values.indexOf(preview)]+'px'));setTimeout(()=>{el.classList.remove('stats-size-snapping');apply();},240);save();};heightHandle.addEventListener('pointermove',move);heightHandle.addEventListener('pointerup',up);heightHandle.addEventListener('pointercancel',up);});
   }
   function elementFor(key){return moduleElements[key]||null;}
@@ -20966,7 +21008,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
         const configuredRows=Math.max(1,Math.min(6,Math.round((state.modules[m.key]?.height||.5)*2)));
         const naturalHeight=naturalStatsCardHeight(el);
         const contentRows=Math.max(1,Math.ceil((naturalHeight+16)/118));
-        const rows=Math.max(configuredRows,contentRows);
+        const maxRows=Math.max(1,Math.round((MAX_HEIGHTS[m.key]||3)*2));
+        const rows=HARD_MAX_SIZE_KEYS.has(m.key)?Math.min(maxRows,Math.max(configuredRows,contentRows)):Math.max(configuredRows,contentRows);
         const effectiveHeight=Math.max(102,rows*118-16);
         if(el.style.getPropertyValue('--stats-row-span')!==String(rows))el.style.setProperty('--stats-row-span',rows);
         if(el.style.getPropertyValue('--stats-card-height')!==effectiveHeight+'px')el.style.setProperty('--stats-card-height',effectiveHeight+'px');
@@ -20977,16 +21020,17 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   function apply(){
     delete document.body.dataset.statsLayoutWidth;
     document.body.dataset.statsLayoutColumns=state.columns;
-    const host=document.getElementById('view-stats');if(!host)return;if(!statsHostWidthObserver&&typeof ResizeObserver==='function'){lastObservedHostWidth=host.clientWidth;statsHostWidthObserver=new ResizeObserver(entries=>{const next=Math.round(entries[0]?.contentRect?.width||0);if(next&&Math.abs(next-lastObservedHostWidth)>6){lastObservedHostWidth=next;requestAnimationFrame(apply);}});statsHostWidthObserver.observe(host);}if(!statsContentObserver&&typeof MutationObserver==='function'){statsContentObserver=new MutationObserver(mutations=>{if(mutations.some(mutation=>mutation.type==='attributes'||mutation.type==='characterData'||Array.from(mutation.addedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))||Array.from(mutation.removedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))))syncStatsRowSpans();});statsContentObserver.observe(host,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['open']});}const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const contentWidth=host.clientWidth,fine=contentWidth>=1800,desired=state.columns==='auto'?(fine?6:contentWidth>=1050?3:2):Number(state.columns),minCol=fine?150:320,maxCols=Math.max(1,Math.floor((contentWidth+16)/(minCol+16))),effectiveCols=Math.min(desired,maxCols);host.style.setProperty('--stats-effective-cols',effectiveCols);
+    const host=document.getElementById('view-stats');if(!host)return;if(!statsHostWidthObserver&&typeof ResizeObserver==='function'){lastObservedHostWidth=host.clientWidth;statsHostWidthObserver=new ResizeObserver(entries=>{const next=Math.round(entries[0]?.contentRect?.width||0);if(next&&Math.abs(next-lastObservedHostWidth)>6){lastObservedHostWidth=next;requestAnimationFrame(apply);}});statsHostWidthObserver.observe(host);}if(!statsContentObserver&&typeof MutationObserver==='function'){statsContentObserver=new MutationObserver(mutations=>{if(mutations.some(mutation=>mutation.type==='attributes'||mutation.type==='characterData'||Array.from(mutation.addedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))||Array.from(mutation.removedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))))syncStatsRowSpans();});statsContentObserver.observe(host,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['open']});}const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const contentWidth=host.clientWidth,fine=contentWidth>=1050,requestedColumns=state.columns==='auto'?(fine?3:2):Number(state.columns),desired=fine?Math.max(2,requestedColumns)*2:requestedColumns,minCol=fine?150:320,maxCols=Math.max(1,Math.floor((contentWidth+16)/(minCol+16))),effectiveCols=Math.min(desired,maxCols);host.style.setProperty('--stats-effective-cols',effectiveCols);
     const desktop=window.matchMedia('(min-width:900px)').matches;
     const activeOrder=tablet?state.order:MODULES.map(m=>m.key);
-    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],rawLevel=Math.min(MAX_HEIGHTS[key]||3,Math.max(min[1],state.modules[key].height)),level=key==='insights'?Math.ceil(rawLevel):rawLevel,storedSpan=state.modules[key].span,visualSpan=Math.max(fine?min[0]:Math.ceil(min[0]),storedSpan),requestedSpan=fine?Math.round(visualSpan*2):Math.ceil(visualSpan),displaySpan=Math.min(effectiveCols,requestedSpan),heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].height=level;el.dataset.statsModule=key;el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fine?displaySpan+'/'+effectiveCols:displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();if(desktop&&typeof currentPage!=='undefined'&&currentPage==='statistik')requestAnimationFrame(()=>{try{renderStats();}catch(e){}});
+    const fineGrid=effectiveCols>=6;
+    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],maxSpan=MAX_SPANS[key]||3,rawLevel=Math.min(MAX_HEIGHTS[key]||3,Math.max(min[1],state.modules[key].height)),level=key==='insights'?Math.ceil(rawLevel):rawLevel,storedSpan=Math.min(maxSpan,Math.max(min[0],state.modules[key].span)),visualSpan=fineGrid?storedSpan:Math.max(Math.ceil(min[0]),Math.ceil(storedSpan)),requestedSpan=fineGrid?Math.round(visualSpan*2):Math.ceil(visualSpan),displaySpan=Math.min(effectiveCols,requestedSpan),heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].span=storedSpan;state.modules[key].height=level;el.dataset.statsModule=key;el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fineGrid?displaySpan+'/'+effectiveCols:displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();if(desktop&&typeof currentPage!=='undefined'&&currentPage==='statistik')requestAnimationFrame(()=>{try{renderStats();}catch(e){}});
   }
-  function sizeLabel(n){return n===1?'1 Spalte':n===2?'2 Spalten':'Volle Reihe';}
+  function sizeLabel(n){return n===.5?'½ Spalte':n===1?'1 Spalte':n===2?'2 Spalten':'Volle Reihe';}
   window.renderStatsLayoutEditor=function(){
     const list=document.getElementById('stats-layout-module-list-direct');if(!list)return;
     const columns=document.getElementById('stats-layout-columns-direct');if(columns)columns.value=state.columns;
-    list.innerHTML=state.order.map(key=>{const m=MODULES.find(x=>x.key===key),cfg=state.modules[key];return `<div class="stats-layout-module-row" draggable="true" data-layout-key="${key}"><span class="stats-layout-drag" title="Ziehen">⋮⋮</span><span class="stats-layout-module-name">${m.name}</span><select class="inp stats-layout-module-size" aria-label="Breite von ${m.name}" onchange="setStatsModuleSpan('${key}',this.value)">${[1,2,3].map(n=>`<option value="${n}"${cfg.span===n?' selected':''}>${sizeLabel(n)}</option>`).join('')}</select><label class="stats-layout-visible"><input type="checkbox" ${cfg.visible?'checked':''} onchange="setStatsModuleVisible('${key}',this.checked)"> Anzeigen</label></div>`;}).join('');
+    list.innerHTML=state.order.map(key=>{const m=MODULES.find(x=>x.key===key),cfg=state.modules[key],min=(MIN_SIZES[key]||[1,.5])[0],max=MAX_SPANS[key]||3,spanOptions=[.5,1,2,3].filter(n=>n>=min&&n<=max);return `<div class="stats-layout-module-row" draggable="true" data-layout-key="${key}"><span class="stats-layout-drag" title="Ziehen">⋮⋮</span><span class="stats-layout-module-name">${m.name}</span><select class="inp stats-layout-module-size" aria-label="Breite von ${m.name}" onchange="setStatsModuleSpan('${key}',this.value)">${spanOptions.map(n=>`<option value="${n}"${cfg.span===n?' selected':''}>${sizeLabel(n)}</option>`).join('')}</select><label class="stats-layout-visible"><input type="checkbox" ${cfg.visible?'checked':''} onchange="setStatsModuleVisible('${key}',this.checked)"> Anzeigen</label></div>`;}).join('');
     list.querySelectorAll('.stats-layout-module-row').forEach(row=>{
       row.addEventListener('dragstart',e=>{draggedKey=row.dataset.layoutKey;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
       row.addEventListener('dragend',()=>{row.classList.remove('dragging');draggedKey='';});
@@ -20996,7 +21040,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   };
   window.toggleStatsLayoutEditing=function(){if(typeof tbRequireFeature==='function'&&!tbRequireFeature('customStatsLayout'))return;if(!window.matchMedia('(min-width:720px)').matches)return;const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
   window.updateStatsLayoutOption=function(key,value){if(key==='columns')state.columns=value;save();apply();};
-  window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=Number(value)||1;save();apply();};
+  window.setStatsModuleSpan=function(key,value){if(state.modules[key]){const min=(MIN_SIZES[key]||[1,.5])[0],max=MAX_SPANS[key]||3;state.modules[key].span=Math.min(max,Math.max(min,Number(value)||1));}save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
   window.resetStatsLayout=function(){if(typeof tbRequireFeature==='function'&&!tbRequireFeature('customStatsLayout'))return;state=defaults();save();apply();renderStatsLayoutEditor();};
   load();
