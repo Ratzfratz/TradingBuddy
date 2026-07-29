@@ -6400,7 +6400,7 @@ body.tb-compact-small{
 .stats-chart-block{min-width:0}
 .stats-chart-block+.stats-chart-block{padding-top:11px;border-top:1px solid var(--bd)}
 .stats-chart-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-.stats-chart-tab{min-width:0;height:36px;padding:0 9px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .64rem var(--f);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.stats-chart-tab{min-width:0;height:36px;padding:0 9px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .64rem var(--f);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s;display:flex;align-items:center;justify-content:center;text-align:center}
 .stats-chart-tab:hover{color:var(--text);border-color:var(--blue-border)}
 .stats-chart-tab[aria-selected="true"]{color:var(--blue);background:rgba(91,138,245,.12);border-color:var(--blue);box-shadow:none}
 .stats-chart-panel{display:flex;flex:1;min-height:0;flex-direction:column}
@@ -17061,6 +17061,7 @@ function tbApplyFeatureState(){
   }
   document.querySelectorAll('[data-tb-feature]').forEach(el=>{
     const feature=el.dataset.tbFeature;
+    el.classList.toggle('tb-feature-has-badge',showPlanBadges);
     el.classList.toggle('tb-feature-locked',!tbHasFeature(feature));
     if(showPlanBadges&&!el.querySelector(':scope > .tb-plan-badge')){
       const badge=document.createElement('span');
@@ -17073,11 +17074,14 @@ function tbApplyFeatureState(){
   });
   document.querySelectorAll('[data-tb-feature-card]').forEach(el=>{
     const feature=el.dataset.tbFeatureCard;
+    const locked=!tbHasFeature(feature);
     if(feature==='taxFeatures'){
-      el.hidden=!tbHasFeature(feature);
+      el.hidden=locked;
       if(el.hidden)return;
     }
-    el.classList.toggle('tb-feature-card-locked',!tbHasFeature(feature));
+    el.classList.toggle('tb-feature-card-locked',locked);
+    if(locked)el.dataset.tbLockedLabel=tbFeatureCopy(feature);
+    else delete el.dataset.tbLockedLabel;
     if(showPlanBadges&&!el.querySelector(':scope > .tb-card-plan-badge')){
       const badge=document.createElement('button');
       badge.type='button';
@@ -20752,12 +20756,23 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 }
 .tb-plan-badge{position:absolute;right:6px;top:5px;z-index:2}
 [data-tb-feature]{position:relative}
-.stats-chart-tab[data-tb-feature]{padding-right:72px}
+.stats-chart-tab[data-tb-feature]{padding-left:9px;padding-right:9px}
+.stats-chart-tab.tb-feature-has-badge{padding-right:72px}
 .tb-card-plan-badge{position:absolute;right:12px;top:10px;z-index:5}
 [data-tb-feature-card]{position:relative}
 .tb-feature-locked{opacity:.72}
-.tb-feature-card-locked>:not(.tb-card-plan-badge){filter:saturate(.65);opacity:.56;pointer-events:none}
-.tb-feature-card-locked{min-height:116px}
+.tb-feature-card-locked{min-height:116px;overflow:hidden}
+.tb-feature-card-locked>:not(.tb-card-plan-badge){visibility:hidden!important;pointer-events:none!important}
+.tb-feature-card-locked::before{
+  content:'';position:absolute;inset:0;z-index:3;border-radius:inherit;
+  background:var(--s1)
+}
+.tb-feature-card-locked::after{
+  content:attr(data-tb-locked-label);position:absolute;inset:0;z-index:4;
+  display:flex;align-items:center;justify-content:center;padding:42px 18px 18px;
+  color:var(--muted);font-size:.72rem;font-weight:750;text-align:center;line-height:1.35;
+  pointer-events:none
+}
 #tb-pro-ov{display:none;position:fixed;inset:0;z-index:10050;background:rgba(5,8,14,.68);padding:18px;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #tb-pro-ov.open{display:flex}
 .tb-pro-sheet{width:min(440px,100%);border:1px solid var(--bd);border-radius:20px;background:var(--s1);box-shadow:0 24px 80px rgba(0,0,0,.38);padding:24px;text-align:center}
@@ -20767,7 +20782,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 .tb-pro-assurance{margin:0 0 16px;padding:10px;border-radius:10px;background:var(--s2);color:var(--muted);font-size:.72rem;line-height:1.45}
 #tax-settings-pro-content[hidden]{display:none!important}
 @media(max-width:719px){
-  .stats-chart-tab[data-tb-feature]{padding-right:8px;padding-top:18px}
+  .stats-chart-tab[data-tb-feature]{padding:0 8px}
+  .stats-chart-tab.tb-feature-has-badge{padding:18px 8px 0}
   .stats-chart-tab[data-tb-feature]>.tb-plan-badge{top:4px;right:50%;transform:translateX(50%);font-size:.45rem;padding:3px 5px}
   .tb-card-plan-badge{right:10px;top:8px}
 }
