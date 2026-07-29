@@ -20829,10 +20829,17 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
       e.preventDefault();const pointerId=e.pointerId,host=document.getElementById('view-stats'),startX=e.clientX,startY=e.clientY,rect=el.getBoundingClientRect(),offsetX=startX-rect.left,offsetY=startY-rect.top;
       const originalOrder=Array.from(host.querySelectorAll(':scope>[data-stats-module]')).map(card=>card.dataset.statsModule);
       const originalRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};
-      let active=false,ph=null,lastPlacement='';
+      let active=false,ph=null,lastPlacement='',stableSlots=[];
       const begin=()=>{
         active=true;
         draggedKey=key;
+        stableSlots=Array.from(host.querySelectorAll(':scope>[data-stats-module]'))
+          .filter(card=>card!==el&&getComputedStyle(card).display!=='none')
+          .map(card=>{
+            const slot=card.getBoundingClientRect();
+            return {card,r:{left:slot.left,top:slot.top,right:slot.right,bottom:slot.bottom,width:slot.width,height:slot.height}};
+          })
+          .sort((a,b)=>Math.abs(a.r.top-b.r.top)>18?a.r.top-b.r.top:a.r.left-b.r.left);
         ph=document.createElement('div');
         ph.className='stats-grid-placeholder';
         ph.id='stats-grid-placeholder';
@@ -20858,6 +20865,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
         ph.style.setProperty('--stats-placeholder-rows',el.style.getPropertyValue('--stats-row-span')||3);
         ph.style.minHeight=rect.height+'px';
         el.before(ph);
+        lastPlacement='origin';
         el.classList.add('stats-card-floating');
         document.body.appendChild(el);
         Object.assign(el.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});
@@ -20876,7 +20884,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
           }
           return;
         }
-        const boxes=Array.from(host.querySelectorAll(':scope>[data-stats-module]')).filter(card=>getComputedStyle(card).display!=='none').map(card=>({card,r:card.getBoundingClientRect()})).sort((a,b)=>Math.abs(a.r.top-b.r.top)>18?a.r.top-b.r.top:a.r.left-b.r.left),rows=[];
+        const boxes=stableSlots,rows=[];
         if(!boxes.length)return;
         boxes.forEach(item=>{let row=rows.find(candidate=>Math.max(0,Math.min(candidate.bottom,item.r.bottom)-Math.max(candidate.top,item.r.top))>Math.min(candidate.bottom-candidate.top,item.r.height)*.35);if(!row){row={top:item.r.top,bottom:item.r.bottom,items:[]};rows.push(row);}row.top=Math.min(row.top,item.r.top);row.bottom=Math.max(row.bottom,item.r.bottom);row.items.push(item);});
         rows.forEach(row=>{row.overlap=Math.max(0,Math.min(dragRect.bottom,row.bottom)-Math.max(dragRect.top,row.top));row.distance=Math.abs((dragRect.top+dragRect.bottom)/2-(row.top+row.bottom)/2);});
