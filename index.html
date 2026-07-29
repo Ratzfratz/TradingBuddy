@@ -20805,6 +20805,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   const moduleElements={};
   let rowSyncFrame=0;
   let statsHostWidthObserver=null,lastObservedHostWidth=0;
+  let statsContentObserver=null;
   const statsRowObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>syncStatsRowSpans()):null;
   function normalize(raw){
     const d=defaults(),r=raw&&typeof raw==='object'?raw:{};
@@ -20823,6 +20824,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   function animatePlaceholderReflow(placeholder,oldRect){requestAnimationFrame(()=>{if(!placeholder?.isConnected||!oldRect)return;const next=placeholder.getBoundingClientRect(),dx=oldRect.left-next.left,dy=oldRect.top-next.top;if(Math.abs(dx)<1&&Math.abs(dy)<1)return;placeholder.getAnimations().forEach(animation=>animation.cancel());placeholder.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:280,easing:'cubic-bezier(.22,.72,.18,1)'});});}
   function prepareCard(el,key){
     if(el.dataset.statsPrepared)return;el.dataset.statsPrepared='1';if(statsRowObserver)statsRowObserver.observe(el);
+    el.addEventListener('toggle',()=>requestAnimationFrame(syncStatsRowSpans),true);
     const handle=document.createElement('span');handle.className='stats-card-resize-handle';handle.title='Breite ziehen';el.appendChild(handle);const heightHandle=document.createElement('span');heightHandle.className='stats-card-height-handle';heightHandle.title='Höhe ziehen';el.appendChild(heightHandle);const badge=document.createElement('span');badge.className='stats-card-size-badge';el.appendChild(badge);
     el.addEventListener('pointerdown',e=>{
       if(!document.body.classList.contains('stats-layout-editing')||e.button!==0||e.target.closest('button,input,select,a,summary,.stats-card-resize-handle,.stats-card-height-handle'))return;
@@ -20911,32 +20913,41 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     heightHandle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();heightHandle.setPointerCapture(e.pointerId);const levels=[102,220,338,456,574,692],values=[.5,1,1.5,2,2.5,3],startY=e.clientY,startHeight=el.getBoundingClientRect().height,min=(MIN_SIZES[key]||[1,.5])[1],max=MAX_HEIGHTS[key]||3,minIndex=Math.max(0,values.indexOf(min)),maxIndex=Math.max(minIndex,values.indexOf(max)),allowedIndexes=values.map((value,index)=>index).filter(index=>index>=minIndex&&index<=maxIndex&&(key!=='insights'||Number.isInteger(values[index])));let preview=state.modules[key].height;el.classList.add('stats-size-preview');const move=ev=>{const lower=levels[allowedIndexes[0]],upper=levels[allowedIndexes[allowedIndexes.length-1]],height=Math.max(lower,Math.min(upper,startHeight+ev.clientY-startY)),index=allowedIndexes.reduce((best,current)=>Math.abs(levels[current]-height)<Math.abs(levels[best]-height)?current:best,allowedIndexes[0]);preview=values[index];el.style.setProperty('--stats-card-height',height+'px');badge.textContent=state.modules[key].span+'×'+preview;};const up=()=>{heightHandle.removeEventListener('pointermove',move);heightHandle.removeEventListener('pointerup',up);heightHandle.removeEventListener('pointercancel',up);state.modules[key].height=preview;el.classList.remove('stats-size-preview');el.classList.add('stats-size-snapping');requestAnimationFrame(()=>el.style.setProperty('--stats-card-height',levels[values.indexOf(preview)]+'px'));setTimeout(()=>{el.classList.remove('stats-size-snapping');apply();},240);save();};heightHandle.addEventListener('pointermove',move);heightHandle.addEventListener('pointerup',up);heightHandle.addEventListener('pointercancel',up);});
   }
   function elementFor(key){return moduleElements[key]||null;}
+  function naturalStatsCardHeight(el){
+    const cardRect=el.getBoundingClientRect(),cardStyle=getComputedStyle(el);
+    let contentBottom=parseFloat(cardStyle.paddingTop)||0;
+    Array.from(el.children).forEach(child=>{
+      if(child.matches('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))return;
+      const style=getComputedStyle(child);
+      if(style.display==='none'||style.visibility==='hidden'||style.position==='absolute'||style.position==='fixed')return;
+      const rect=child.getBoundingClientRect();
+      contentBottom=Math.max(contentBottom,rect.bottom-cardRect.top+(parseFloat(style.marginBottom)||0));
+    });
+    return Math.ceil(contentBottom+(parseFloat(cardStyle.paddingBottom)||0));
+  }
   function syncStatsRowSpans(){
     if(rowSyncFrame)return;
     rowSyncFrame=requestAnimationFrame(()=>{
       rowSyncFrame=0;
       if(!window.matchMedia('(min-width:900px)').matches)return;
-      let layoutGrew=false;
       MODULES.forEach(m=>{
         const el=elementFor(m.key);
         if(!el||el.classList.contains('stats-module-hidden')||el.style.display==='none')return;
         const configuredRows=Math.max(1,Math.min(6,Math.round((state.modules[m.key]?.height||.5)*2)));
-        const measuredRows=m.key==='insights'?Math.max(1,Math.ceil((el.scrollHeight+16)/118)):configuredRows;
-        const contentRows=m.key==='insights'?Math.min(6,Math.ceil(measuredRows/2)*2):configuredRows;
+        const naturalHeight=naturalStatsCardHeight(el);
+        const contentRows=Math.max(1,Math.ceil((naturalHeight+16)/118));
         const rows=Math.max(configuredRows,contentRows);
-        if(m.key==='insights'&&state.modules[m.key].height!==rows/2){
-          state.modules[m.key].height=rows/2;
-          layoutGrew=true;
-        }
+        const effectiveHeight=Math.max(102,rows*118-16);
         if(el.style.getPropertyValue('--stats-row-span')!==String(rows))el.style.setProperty('--stats-row-span',rows);
+        if(el.style.getPropertyValue('--stats-card-height')!==effectiveHeight+'px')el.style.setProperty('--stats-card-height',effectiveHeight+'px');
+        el.toggleAttribute('data-stats-content-grown',rows>configuredRows);
       });
-      if(layoutGrew){save();requestAnimationFrame(apply);}
     });
   }
   function apply(){
     delete document.body.dataset.statsLayoutWidth;
     document.body.dataset.statsLayoutColumns=state.columns;
-    const host=document.getElementById('view-stats');if(!host)return;if(!statsHostWidthObserver&&typeof ResizeObserver==='function'){lastObservedHostWidth=host.clientWidth;statsHostWidthObserver=new ResizeObserver(entries=>{const next=Math.round(entries[0]?.contentRect?.width||0);if(next&&Math.abs(next-lastObservedHostWidth)>6){lastObservedHostWidth=next;requestAnimationFrame(apply);}});statsHostWidthObserver.observe(host);}const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const contentWidth=host.clientWidth,fine=contentWidth>=1800,desired=state.columns==='auto'?(fine?6:contentWidth>=1050?3:2):Number(state.columns),minCol=fine?150:320,maxCols=Math.max(1,Math.floor((contentWidth+16)/(minCol+16))),effectiveCols=Math.min(desired,maxCols);host.style.setProperty('--stats-effective-cols',effectiveCols);
+    const host=document.getElementById('view-stats');if(!host)return;if(!statsHostWidthObserver&&typeof ResizeObserver==='function'){lastObservedHostWidth=host.clientWidth;statsHostWidthObserver=new ResizeObserver(entries=>{const next=Math.round(entries[0]?.contentRect?.width||0);if(next&&Math.abs(next-lastObservedHostWidth)>6){lastObservedHostWidth=next;requestAnimationFrame(apply);}});statsHostWidthObserver.observe(host);}if(!statsContentObserver&&typeof MutationObserver==='function'){statsContentObserver=new MutationObserver(mutations=>{if(mutations.some(mutation=>mutation.type==='characterData'||Array.from(mutation.addedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))||Array.from(mutation.removedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))))syncStatsRowSpans();});statsContentObserver.observe(host,{subtree:true,childList:true,characterData:true});}const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const contentWidth=host.clientWidth,fine=contentWidth>=1800,desired=state.columns==='auto'?(fine?6:contentWidth>=1050?3:2):Number(state.columns),minCol=fine?150:320,maxCols=Math.max(1,Math.floor((contentWidth+16)/(minCol+16))),effectiveCols=Math.min(desired,maxCols);host.style.setProperty('--stats-effective-cols',effectiveCols);
     const desktop=window.matchMedia('(min-width:900px)').matches;
     const activeOrder=tablet?state.order:MODULES.map(m=>m.key);
     activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],rawLevel=Math.min(MAX_HEIGHTS[key]||3,Math.max(min[1],state.modules[key].height)),level=key==='insights'?Math.ceil(rawLevel):rawLevel,storedSpan=state.modules[key].span,visualSpan=Math.max(fine?min[0]:Math.ceil(min[0]),storedSpan),requestedSpan=fine?Math.round(visualSpan*2):Math.ceil(visualSpan),displaySpan=Math.min(effectiveCols,requestedSpan),heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].height=level;el.dataset.statsModule=key;el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fine?displaySpan+'/'+effectiveCols:displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();if(desktop&&typeof currentPage!=='undefined'&&currentPage==='statistik')requestAnimationFrame(()=>{try{renderStats();}catch(e){}});
