@@ -6897,7 +6897,6 @@ body.tb-compact-small{
       <div style="font-size:1.1rem;font-weight:700" id="st-depot-ret"></div>
     </div>
     <div style="font-size:.72rem;color:var(--muted);margin-top:2px;display:none" id="st-depot-base"></div>
-    <div style="font-size:.64rem;color:var(--muted);margin-top:6px;line-height:1.35;display:none" id="st-tax-note">Hinweis: Abgeführte Steuern und sonstige Cashbuchungen sind nicht enthalten.</div>
   </div>
 
   <!-- Unified Übersicht -->
@@ -13239,7 +13238,6 @@ function renderStats() {
 
   const depotRetEl = $('st-depot-ret');
   const depotBaseEl = $('st-depot-base');
-  const taxNoteEl = $('st-tax-note');
   if(hasDepot){
     const depotRet = periodPnl / depotCapital * 100;
     if(depotRetEl){
@@ -13250,11 +13248,9 @@ function renderStats() {
       depotBaseEl.style.display = '';
       depotBaseEl.innerHTML = fmt(depotCapital,2)+'\u202f€ \u2192 '+fmt(depotCapital+periodPnl,2)+'\u202f€';
     }
-    if(taxNoteEl) taxNoteEl.style.display = '';
   } else {
     if(depotRetEl){ depotRetEl.innerHTML=''; depotRetEl.style.color=''; }
     if(depotBaseEl){ depotBaseEl.style.display='none'; }
-    if(taxNoteEl) taxNoteEl.style.display='none';
   }
 
   // Kapitalrendite für den gewählten Zeitraum
@@ -20646,7 +20642,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
   body.stats-layout-editing #view-stats{padding:8px;border-radius:12px;background-image:linear-gradient(to bottom,rgba(91,138,245,.07) 1px,transparent 1px);background-size:100% 72px}
   body.stats-layout-editing #view-stats>[data-stats-module].stats-card-dragging{opacity:.45;cursor:grabbing}
-  body.stats-layout-editing .stats-card-floating{position:fixed!important;z-index:2500!important;margin:0!important;pointer-events:none!important;cursor:grabbing!important;opacity:.96;transform:rotate(.25deg) scale(1.01);box-shadow:0 20px 48px rgba(0,0,0,.3);transition:none!important}
+  body.stats-layout-editing .stats-card-floating{position:fixed!important;z-index:2500!important;margin:0!important;pointer-events:none!important;cursor:grabbing!important;opacity:.96;transform:none!important;box-shadow:0 20px 48px rgba(0,0,0,.3);transition:none!important}
   .stats-grid-placeholder{min-height:120px;border:2px dashed var(--blue);border-radius:var(--r);background:rgba(91,138,245,.12);box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--blue) 8%,transparent)}
   .stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge{display:none!important}
 }
@@ -20668,7 +20664,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
   body.stats-layout-editing #view-stats{padding:8px;border-radius:12px;background-image:linear-gradient(to right,rgba(91,138,245,.09) 1px,transparent 1px),linear-gradient(to bottom,rgba(91,138,245,.07) 1px,transparent 1px);background-size:calc((100% - (var(--stats-effective-cols,var(--stats-layout-cols,2)) - 1)*16px)/var(--stats-effective-cols,var(--stats-layout-cols,2)) + 16px) 100%,100% 72px}
   body.stats-layout-editing #view-stats>[data-stats-module].stats-card-dragging{opacity:.45;cursor:grabbing}
-  body.stats-layout-editing .stats-card-floating{position:fixed!important;z-index:2500!important;margin:0!important;pointer-events:none!important;cursor:grabbing!important;opacity:.96;transform:rotate(.25deg) scale(1.01);box-shadow:0 20px 48px rgba(0,0,0,.3);transition:none!important}
+  body.stats-layout-editing .stats-card-floating{position:fixed!important;z-index:2500!important;margin:0!important;pointer-events:none!important;cursor:grabbing!important;opacity:.96;transform:none!important;box-shadow:0 20px 48px rgba(0,0,0,.3);transition:none!important}
   body.stats-layout-editing .stats-card-floating{overflow:hidden!important;contain:paint}
   body.stats-layout-editing #view-stats>[data-stats-module].stats-size-preview{z-index:20;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.24);transition:none!important}
   body.stats-layout-editing #view-stats>[data-stats-module].stats-size-snapping{z-index:20;overflow:hidden;transition:width .22s cubic-bezier(.22,.72,.18,1),height .22s cubic-bezier(.22,.72,.18,1),min-height .22s cubic-bezier(.22,.72,.18,1)!important}
@@ -20682,6 +20678,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   .stats-card-size-badge{display:none;position:absolute;z-index:7;right:10px;bottom:9px;padding:3px 6px;border:1px solid var(--bd);border-radius:7px;background:var(--s2);color:var(--muted);font:700 .55rem var(--f);pointer-events:none}
   body.stats-layout-editing .stats-card-resize-handle,body.stats-layout-editing .stats-card-height-handle,body.stats-layout-editing .stats-card-size-badge{display:block}
   #view-stats>[data-stats-module].stats-module-hidden{display:none!important}
+  #view-stats>[data-stats-module="insights"]{height:auto!important;min-height:var(--stats-card-height,220px)!important;overflow:visible!important}
   body[data-stats-layout-columns="1"]{--stats-layout-cols:1}
   body[data-stats-layout-columns="2"]{--stats-layout-cols:2}
   body[data-stats-layout-columns="3"]{--stats-layout-cols:3}
@@ -20807,7 +20804,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   const VERSION_3_HEIGHT_DEFAULTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
   const PREVIOUS_HEIGHT_DEFAULTS={hero:1,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
   const LEGACY_HEIGHT_DEFAULTS={hero:1,overview:3,charts:3,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
-  const MIN_SIZES={hero:[1,.5],overview:[1,2],charts:[1,2],calendar:[1.5,2],insights:[1.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[1.5,2]};
+  const MIN_SIZES={hero:[.5,.5],overview:[1,2],charts:[1,2],calendar:[.5,2],insights:[.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[.5,2]};
   const MAX_HEIGHTS={hero:.5,overview:2.5,charts:3,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
   const defaults=()=>({layoutVersion:5,columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
   let state=defaults();
@@ -20836,10 +20833,37 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     el.addEventListener('pointerdown',e=>{
       if(!document.body.classList.contains('stats-layout-editing')||e.button!==0||e.target.closest('button,input,select,a,summary,.stats-card-resize-handle,.stats-card-height-handle'))return;
       e.preventDefault();const pointerId=e.pointerId,host=document.getElementById('view-stats'),startX=e.clientX,startY=e.clientY,rect=el.getBoundingClientRect(),offsetX=startX-rect.left,offsetY=startY-rect.top;
-      let active=false,ph=null,lastPlacement='',lastPlacementX=startX,lastPlacementY=startY,dropBoxes=[];
-      const begin=()=>{active=true;draggedKey=key;ph=document.createElement('div');ph.className='stats-grid-placeholder';ph.id='stats-grid-placeholder';const moduleName=MODULES.find(module=>module.key===key)?.name||'Kachel',availableCols=Math.max(1,getComputedStyle(host).gridTemplateColumns.split(' ').length),fine=availableCols>=6,placeholderSpan=Math.min(availableCols,fine?Math.round(state.modules[key].span*2):Math.ceil(state.modules[key].span));ph.innerHTML=`<div class="stats-grid-placeholder-preview"><span>${moduleName}<br>Hier wird die Kachel einsortiert</span></div>`;ph.style.setProperty('--stats-placeholder-span',placeholderSpan);ph.style.setProperty('--stats-placeholder-rows',el.style.getPropertyValue('--stats-row-span')||3);ph.style.minHeight=rect.height+'px';el.after(ph);el.classList.add('stats-card-floating');Object.assign(el.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});document.body.appendChild(el);dropBoxes=Array.from(host.querySelectorAll(':scope>[data-stats-module]')).filter(card=>getComputedStyle(card).display!=='none').map(card=>({card,r:card.getBoundingClientRect()}));try{el.setPointerCapture(pointerId);}catch(e){}el.addEventListener('pointerup',finish,{once:true});el.addEventListener('pointercancel',finish,{once:true});};
-      const place=(x,y)=>{if(lastPlacement&&Math.hypot(x-lastPlacementX,y-lastPlacementY)<18)return;const boxes=dropBoxes.slice().sort((a,b)=>Math.abs(a.r.top-b.r.top)>18?a.r.top-b.r.top:a.r.left-b.r.left),rows=[];if(!boxes.length)return;boxes.forEach(item=>{let row=rows.find(candidate=>Math.abs(candidate.top-item.r.top)<24);if(!row){row={top:item.r.top,bottom:item.r.bottom,items:[]};rows.push(row);}row.top=Math.min(row.top,item.r.top);row.bottom=Math.max(row.bottom,item.r.bottom);row.items.push(item);});const dragTop=y-rect.height/2,dragBottom=y+rect.height/2;rows.forEach(row=>{row.overlap=Math.max(0,Math.min(dragBottom,row.bottom)-Math.max(dragTop,row.top));row.distance=Math.abs(y-(row.top+row.bottom)/2);});rows.sort((a,b)=>b.overlap-a.overlap||a.distance-b.distance);const chosen=rows[0];chosen.items.sort((a,b)=>a.r.left-b.r.left);let target=chosen.items[chosen.items.length-1],before=false;for(const item of chosen.items){if(x<item.r.left+item.r.width/2){target=item;before=true;break;}}const placement=target.card.dataset.statsModule+':'+(before?'before':'after');if(placement===lastPlacement)return;const reference=before?target.card:target.card.nextSibling;if(reference===ph||(!reference&&ph===host.lastElementChild))return;const positions=captureCardPositions(host,el);host.insertBefore(ph,reference);lastPlacement=placement;lastPlacementX=x;lastPlacementY=y;animateCardReflow(positions);};
-      const move=ev=>{if(active&&ev.buttons===0){finish();return;}if(!active){if(Math.hypot(ev.clientX-startX,ev.clientY-startY)<9)return;begin();}ev.preventDefault();const cardLeft=ev.clientX-offsetX,cardTop=ev.clientY-offsetY;el.style.left=cardLeft+'px';el.style.top=cardTop+'px';place(cardLeft+rect.width/2,cardTop+rect.height/2);};
+      const originalOrder=Array.from(host.querySelectorAll(':scope>[data-stats-module]')).map(card=>card.dataset.statsModule);
+      const originalRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};
+      let active=false,ph=null,lastPlacement='';
+      const begin=()=>{active=true;draggedKey=key;ph=document.createElement('div');ph.className='stats-grid-placeholder';ph.id='stats-grid-placeholder';const moduleName=MODULES.find(module=>module.key===key)?.name||'Kachel',availableCols=Math.max(1,getComputedStyle(host).gridTemplateColumns.split(' ').length),fine=availableCols>=6,placeholderSpan=Math.min(availableCols,fine?Math.round(state.modules[key].span*2):Math.ceil(state.modules[key].span));ph.innerHTML=`<div class="stats-grid-placeholder-preview"><span>${moduleName}<br>Hier wird die Kachel einsortiert</span></div>`;ph.style.setProperty('--stats-placeholder-span',placeholderSpan);ph.style.setProperty('--stats-placeholder-rows',el.style.getPropertyValue('--stats-row-span')||3);ph.style.minHeight=rect.height+'px';el.before(ph);el.classList.add('stats-card-floating');document.body.appendChild(el);Object.assign(el.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});try{el.setPointerCapture(pointerId);}catch(e){}el.addEventListener('pointerup',finish,{once:true});el.addEventListener('pointercancel',finish,{once:true});};
+      const place=(left,top)=>{
+        const dragRect={left,top,right:left+rect.width,bottom:top+rect.height,width:rect.width,height:rect.height};
+        const intersection=Math.max(0,Math.min(dragRect.right,originalRect.right)-Math.max(dragRect.left,originalRect.left))*Math.max(0,Math.min(dragRect.bottom,originalRect.bottom)-Math.max(dragRect.top,originalRect.top));
+        if(intersection>=Math.min(dragRect.width*dragRect.height,originalRect.width*originalRect.height)*.38){
+          const nextKey=originalOrder.slice(originalOrder.indexOf(key)+1).find(candidate=>elementFor(candidate)?.parentElement===host);
+          const reference=nextKey?elementFor(nextKey):null,placement='origin';
+          if(placement!==lastPlacement&&reference!==ph){
+            const positions=captureCardPositions(host,el);host.insertBefore(ph,reference);lastPlacement=placement;animateCardReflow(positions);
+          }
+          return;
+        }
+        const boxes=Array.from(host.querySelectorAll(':scope>[data-stats-module]')).filter(card=>getComputedStyle(card).display!=='none').map(card=>({card,r:card.getBoundingClientRect()})).sort((a,b)=>Math.abs(a.r.top-b.r.top)>18?a.r.top-b.r.top:a.r.left-b.r.left),rows=[];
+        if(!boxes.length)return;
+        boxes.forEach(item=>{let row=rows.find(candidate=>Math.max(0,Math.min(candidate.bottom,item.r.bottom)-Math.max(candidate.top,item.r.top))>Math.min(candidate.bottom-candidate.top,item.r.height)*.35);if(!row){row={top:item.r.top,bottom:item.r.bottom,items:[]};rows.push(row);}row.top=Math.min(row.top,item.r.top);row.bottom=Math.max(row.bottom,item.r.bottom);row.items.push(item);});
+        rows.forEach(row=>{row.overlap=Math.max(0,Math.min(dragRect.bottom,row.bottom)-Math.max(dragRect.top,row.top));row.distance=Math.abs((dragRect.top+dragRect.bottom)/2-(row.top+row.bottom)/2);});
+        rows.sort((a,b)=>b.overlap-a.overlap||a.distance-b.distance);
+        const chosen=rows[0],centerX=(dragRect.left+dragRect.right)/2;
+        chosen.items.sort((a,b)=>a.r.left-b.r.left);
+        let target=chosen.items[chosen.items.length-1],before=false;
+        for(const item of chosen.items){if(centerX<item.r.left+item.r.width/2){target=item;before=true;break;}}
+        const placement=target.card.dataset.statsModule+':'+(before?'before':'after');
+        if(placement===lastPlacement)return;
+        const reference=before?target.card:target.card.nextSibling;
+        if(reference===ph||(!reference&&ph===host.lastElementChild)){lastPlacement=placement;return;}
+        const positions=captureCardPositions(host,el);host.insertBefore(ph,reference);lastPlacement=placement;animateCardReflow(positions);
+      };
+      const move=ev=>{if(active&&ev.buttons===0){finish();return;}if(!active){if(Math.hypot(ev.clientX-startX,ev.clientY-startY)<9)return;begin();}ev.preventDefault();const cardLeft=ev.clientX-offsetX,cardTop=ev.clientY-offsetY;el.style.left=cardLeft+'px';el.style.top=cardTop+'px';place(cardLeft,cardTop);};
       const finish=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);window.removeEventListener('blur',finish);document.removeEventListener('pointerup',finish,true);el.removeEventListener('pointerup',finish);el.removeEventListener('pointercancel',finish);if(!active)return;active=false;try{if(el.hasPointerCapture(pointerId))el.releasePointerCapture(pointerId);}catch(e){}const positions=captureCardPositions(host,el);host.insertBefore(el,ph);ph.remove();el.classList.remove('stats-card-floating');Object.assign(el.style,{left:'',top:'',width:'',height:''});state.order=Array.from(host.children).map(x=>x.dataset.statsModule).filter(Boolean);draggedKey='';save();apply();renderStatsLayoutEditor();animateCardReflow(positions);};
       window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',finish,{once:true});window.addEventListener('pointercancel',finish,{once:true});window.addEventListener('blur',finish,{once:true});document.addEventListener('pointerup',finish,true);
     });
