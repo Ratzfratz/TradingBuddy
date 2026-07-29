@@ -6123,6 +6123,24 @@ body.tb-compact-small{
     border-right:1px solid var(--bd);
     box-shadow:8px 0 22px rgba(0,0,0,.12);
     align-items:stretch;
+    isolation:isolate;
+    overflow:visible;
+  }
+  .bottom-stack::before{
+    content:'';
+    position:absolute;
+    top:0;
+    right:100%;
+    bottom:0;
+    width:72px;
+    z-index:-1;
+    pointer-events:none;
+    background:linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb,var(--app-chrome-bg) 36%,transparent) 48%,
+      var(--app-chrome-bg) 100%
+    );
   }
   .bottom-stack .bnav{
     order:1;
