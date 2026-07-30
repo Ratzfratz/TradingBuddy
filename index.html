@@ -6297,7 +6297,8 @@ body.tb-compact-small{
   body.page-tagebuch.journal-chrome-hidden .fab{transform:none!important;opacity:1!important}
   #trade-list{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-columns:repeat(2,minmax(0,620px));
+    justify-content:center;
     gap:12px;
     align-items:start;
   }
@@ -6347,6 +6348,11 @@ body.tb-compact-small{
     width:220px;
     max-width:220px;
     margin:0;
+  }
+}
+@media (min-width:1100px) and (max-width:1279px){
+  #trade-list{
+    grid-template-columns:minmax(0,620px);
   }
 }
 @media (min-width:900px){
@@ -20696,7 +20702,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   .stats-layout-toolbar-controls label>span{display:block;margin-bottom:5px;font-size:.58rem;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
   .stats-layout-toolbar-controls .s-btn{min-height:40px}
   #page-statistik{width:100%;margin-left:auto;margin-right:auto;transition:max-width .22s ease}
-  #view-stats{display:grid!important;grid-template-columns:repeat(var(--stats-effective-cols,var(--stats-layout-cols,2)),minmax(var(--stats-min-col,320px),1fr))!important;grid-auto-flow:dense;grid-auto-rows:102px;gap:16px!important;align-items:start!important}
+  #view-stats{display:grid!important;grid-template-columns:repeat(var(--stats-effective-cols,var(--stats-layout-cols,2)),minmax(0,1fr))!important;grid-auto-flow:dense;grid-auto-rows:102px;gap:16px!important;align-items:start!important}
   #view-stats>[data-stats-module]{box-sizing:border-box;grid-column:span var(--stats-module-span,1)!important;grid-row:span var(--stats-row-span,1)!important;height:var(--stats-card-height,220px)!important;min-height:var(--stats-card-height,220px);margin:0!important;min-width:0;overflow:hidden!important;overscroll-behavior:auto;touch-action:pan-y;overflow-wrap:anywhere}
   body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
   body.stats-layout-editing #view-stats{padding:8px;border-radius:12px;background-image:linear-gradient(to right,rgba(91,138,245,.09) 1px,transparent 1px),linear-gradient(to bottom,rgba(91,138,245,.07) 1px,transparent 1px);background-size:calc((100% - (var(--stats-effective-cols,var(--stats-layout-cols,2)) - 1)*16px)/var(--stats-effective-cols,var(--stats-layout-cols,2)) + 16px) 100%,100% 72px}
@@ -20824,7 +20830,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 <script>
 (function(){
   'use strict';
-  const STORAGE_KEY='tb_stats_layout_v1';
+  const STORAGE_KEY='tb_stats_layout_v2';
+  const LEGACY_STORAGE_KEY='tb_stats_layout_v1';
   const MODULES=[
     {key:'hero',name:'Gesamt P&L',selector:'#view-stats > .sec:first-child',span:.5},
     {key:'overview',name:'Übersicht',selector:'#view-stats > .sec:nth-child(2)',span:1},
@@ -20846,6 +20853,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   const HARD_MAX_SIZE_KEYS=new Set(['hero','charts','calendar']);
   const defaults=()=>({layoutVersion:6,columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2}]))});
   let state=defaults();
+  let activeStorageBucket='';
   let draggedKey='';
   const moduleElements={};
   let rowSyncFrame=0;
@@ -20871,8 +20879,48 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     if(Number(r.layoutVersion)!==6)MODULES.forEach(m=>{const saved=Number(r.modules?.[m.key]?.height);if(saved===LEGACY_HEIGHT_DEFAULTS[m.key]||saved===PREVIOUS_HEIGHT_DEFAULTS[m.key]||saved===VERSION_3_HEIGHT_DEFAULTS[m.key])d.modules[m.key].height=HEIGHT_DEFAULTS[m.key];});
     return d;
   }
-  function load(){try{state=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'));}catch(e){state=defaults();}save();}
-  function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
+  function storageBucket(){
+    const width=Math.round(window.innerWidth||document.documentElement.clientWidth||0);
+    if(width<720)return '';
+    if(width<900)return 'tablet';
+    if(width<1100)return 'desktop-compact';
+    if(width<1600)return 'desktop';
+    if(width<1800)return 'desktop-wide';
+    return 'desktop-ultrawide';
+  }
+  function readLayoutStore(){
+    try{
+      const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+      return raw&&typeof raw==='object'&&raw.layouts&&typeof raw.layouts==='object'
+        ? raw
+        : {storageVersion:1,layouts:{}};
+    }catch(e){
+      return {storageVersion:1,layouts:{}};
+    }
+  }
+  function load(){
+    const bucket=storageBucket();
+    activeStorageBucket=bucket;
+    if(!bucket){state=defaults();return;}
+    const store=readLayoutStore();
+    let saved=store.layouts[bucket];
+    if(!saved){
+      try{saved=JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY)||'null');}catch(e){saved=null;}
+    }
+    state=normalize(saved);
+    save();
+  }
+  function save(){
+    const bucket=storageBucket();
+    if(!bucket)return;
+    activeStorageBucket=bucket;
+    try{
+      const store=readLayoutStore();
+      store.storageVersion=1;
+      store.layouts[bucket]=state;
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(store));
+    }catch(e){}
+  }
   function bindElements(){MODULES.forEach(m=>{if(moduleElements[m.key])return;const found=document.querySelector(m.selector),el=m.parent&&found?found.closest('.sec'):found;moduleElements[m.key]=el;if(el)prepareCard(el,m.key);});}
   function captureCardPositions(host,except){return new Map(Array.from(host.querySelectorAll(':scope>[data-stats-module]')).filter(card=>card!==except&&getComputedStyle(card).display!=='none').map(card=>[card,card.getBoundingClientRect()]));}
   function animateCardReflow(before){requestAnimationFrame(()=>before.forEach((oldRect,card)=>{const next=card.getBoundingClientRect(),dx=oldRect.left-next.left,dy=oldRect.top-next.top;if(Math.abs(dx)<1&&Math.abs(dy)<1)return;card.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:280,easing:'cubic-bezier(.22,.72,.18,1)'});}));}
@@ -21018,6 +21066,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     });
   }
   function apply(){
+    if(storageBucket()!==activeStorageBucket)load();
     delete document.body.dataset.statsLayoutWidth;
     document.body.dataset.statsLayoutColumns=state.columns;
     const host=document.getElementById('view-stats');if(!host)return;if(!statsHostWidthObserver&&typeof ResizeObserver==='function'){lastObservedHostWidth=host.clientWidth;statsHostWidthObserver=new ResizeObserver(entries=>{const next=Math.round(entries[0]?.contentRect?.width||0);if(next&&Math.abs(next-lastObservedHostWidth)>6){lastObservedHostWidth=next;requestAnimationFrame(apply);}});statsHostWidthObserver.observe(host);}if(!statsContentObserver&&typeof MutationObserver==='function'){statsContentObserver=new MutationObserver(mutations=>{if(mutations.some(mutation=>mutation.type==='attributes'||mutation.type==='characterData'||Array.from(mutation.addedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))||Array.from(mutation.removedNodes).some(node=>node.nodeType===1&&!node.matches?.('.stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge'))))syncStatsRowSpans();});statsContentObserver.observe(host,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['open']});}const toolbar=document.getElementById('stats-layout-toolbar'),stack=document.getElementById('bottom-stack'),page=document.getElementById('page-statistik'),tablet=window.matchMedia('(min-width:720px)').matches;if(!tablet&&document.body.classList.contains('stats-layout-editing')){document.body.classList.remove('stats-layout-editing');const editButton=document.getElementById('stats-layout-edit-toggle');if(editButton){editButton.classList.remove('on');editButton.querySelector('span').textContent='Layout anpassen';}}if(toolbar){if(window.matchMedia('(min-width:1100px)').matches&&stack){if(toolbar.parentElement!==stack)stack.appendChild(toolbar);}else if(page&&toolbar.parentElement!==page)page.insertBefore(toolbar,host);}bindElements();const contentWidth=host.clientWidth,fine=contentWidth>=1050,requestedColumns=state.columns==='auto'?(fine?3:2):Number(state.columns),desired=fine?Math.max(2,requestedColumns)*2:requestedColumns,minCol=fine?150:320,maxCols=Math.max(1,Math.floor((contentWidth+16)/(minCol+16))),effectiveCols=Math.min(desired,maxCols);host.style.setProperty('--stats-effective-cols',effectiveCols);
