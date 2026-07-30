@@ -15241,6 +15241,19 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #settings-page-main .inp,#settings-page-main select.inp{min-height:38px;height:38px;padding-top:6px;padding-bottom:6px}
   #settings-page-main .tax-settings-hint,#settings-page-main .s-hint{margin-top:4px;line-height:1.35}
   #tax-settings-card .settings-money-field+.settings-group-label{margin-top:16px!important}
+  #tax-settings-card .settings-finance-fields{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));
+    gap:18px 24px;
+    align-items:start;
+  }
+  #tax-settings-card .settings-finance-column{min-width:0}
+  #tax-settings-card .settings-finance-column>.settings-group-label{margin-bottom:7px}
+  #tax-settings-card #tax-settings-pro-content{
+    margin-top:18px;
+    padding-top:14px;
+    border-top:1px solid var(--bd);
+  }
   #cloud-sync-card #zero-import-result+.settings-group-label{margin-top:16px!important}
   #tax-settings-card>div:has(>.s-toggle-row){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:2px 0 6px!important}
   #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0;justify-content:flex-start;gap:10px}
@@ -15404,21 +15417,26 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   </div>
 
     <div class="sec settings-card settings-card-depot settings-card-tax" style="margin-bottom:12px" id="tax-settings-card">
-    <div class="sec-title">Finanzen &amp; Steuern</div>
-    <div class="settings-group-label">Depot</div>
-    <div class="field settings-money-field" style="margin:0">
-      <label>Eingezahltes Kapital € <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-      <input class="inp" type="text" inputmode="decimal" id="s-depot-capital" placeholder="z.B. 10000" enterkeyhint="done" oninput="syncDepotCapital()">
-      <div class="tax-settings-hint">Basis für die Depot-Rendite in der Statistik.</div>
+    <div class="sec-title">Finanzen</div>
+    <div class="settings-finance-fields">
+      <div class="settings-finance-column">
+        <div class="settings-group-label">Depot</div>
+        <div class="field settings-money-field" style="margin:0">
+          <label>Eingezahltes Kapital € <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          <input class="inp" type="text" inputmode="decimal" id="s-depot-capital" placeholder="z.B. 10000" enterkeyhint="done" oninput="syncDepotCapital()">
+          <div class="tax-settings-hint">Basis für die Depot-Rendite in der Statistik.</div>
+        </div>
+      </div>
+      <div class="settings-finance-column settings-finance-tax" data-tb-feature-content="taxFeatures">
+        <div class="settings-group-label">Steuern</div>
+        <div class="field settings-money-field" style="margin:0">
+          <label>Sparerpauschbetrag €</label>
+          <input class="inp" type="text" inputmode="decimal" id="s-fsa" placeholder="1000" enterkeyhint="done" oninput="syncTaxSettings()">
+          <div class="tax-settings-hint">Noch nicht verbrauchter Freibetrag für Kapitalerträge.</div>
+        </div>
+      </div>
     </div>
     <div id="tax-settings-pro-content" data-tb-feature-content="taxFeatures">
-    <div class="settings-group-label">Steuern</div>
-
-    <div class="field settings-money-field" style="margin-bottom:10px">
-      <label>Sparerpauschbetrag €</label>
-      <input class="inp" type="text" inputmode="decimal" id="s-fsa" placeholder="1000" enterkeyhint="done" oninput="syncTaxSettings()">
-      <div class="tax-settings-hint">Noch nicht verbrauchter Freibetrag für Kapitalerträge.</div>
-    </div>
 
     <div style="margin-bottom:10px">
       <label class="s-toggle-row">
@@ -15479,7 +15497,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       </button>
       <button onclick="settingsGoMerge()" class="s-btn" style="justify-content:space-between">
         <span style="display:flex;align-items:center;gap:7px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 17L17 7M7 7h10v10"/><path d="M3 12h4M17 12h4"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5 4v3a5 5 0 0 0 5 5h8"/><path d="M5 20v-3a5 5 0 0 1 5-5"/><path d="m15 9 3 3-3 3"/></svg>
           Basiswerte
         </span>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -17135,7 +17153,7 @@ function tbApplyFeatureState(){
   });
   document.querySelectorAll('[data-tb-feature-content]').forEach(el=>{el.hidden=!tbHasFeature(el.dataset.tbFeatureContent);});
   const financeTitle=document.querySelector('#tax-settings-card>.sec-title');
-  if(financeTitle)financeTitle.textContent=tbHasFeature('taxFeatures')?'Finanzen & Steuern':'Finanzen';
+  if(financeTitle)financeTitle.textContent='Finanzen';
   const layoutButton=document.getElementById('stats-layout-edit-toggle');
   if(layoutButton&&!layoutButton.dataset.tbFeature)layoutButton.dataset.tbFeature='customStatsLayout';
 }
