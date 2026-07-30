@@ -6297,7 +6297,7 @@ body.tb-compact-small{
   body.page-tagebuch.journal-chrome-hidden .fab{transform:none!important;opacity:1!important}
   #trade-list{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,540px));
+    grid-template-columns:repeat(2,minmax(0,480px));
     justify-content:center;
     gap:12px;
     align-items:start;
@@ -6352,7 +6352,7 @@ body.tb-compact-small{
 }
 @media (min-width:1100px) and (max-width:1279px){
   #trade-list{
-    grid-template-columns:minmax(0,540px);
+    grid-template-columns:minmax(0,480px);
   }
 }
 @media (min-width:900px){
@@ -20735,15 +20735,15 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body.stats-layout-editing #view-stats>[data-stats-module].stats-size-snapping{z-index:20;overflow:hidden;transition:width .22s cubic-bezier(.22,.72,.18,1),height .22s cubic-bezier(.22,.72,.18,1),min-height .22s cubic-bezier(.22,.72,.18,1)!important}
   .stats-grid-placeholder{min-height:120px;grid-column-start:var(--stats-placeholder-start,auto)!important;grid-column-end:span var(--stats-placeholder-span,1)!important;grid-row:span var(--stats-placeholder-rows,3)!important;border:2px dashed var(--blue);border-radius:var(--r);background:rgba(91,138,245,.12);box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--blue) 8%,transparent);transition:min-height .15s}
   .stats-card-resize-handle{display:none;position:absolute;z-index:8;top:20%;right:-7px;width:14px;height:60%;cursor:ew-resize;touch-action:none}
-  .stats-card-resize-handle::before{content:'';position:absolute;top:50%;left:5px;width:4px;height:42px;max-height:70%;transform:translateY(-50%);border-radius:4px;background:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--s1) 85%,transparent)}
+  .stats-card-resize-handle::before{content:'';position:absolute;top:50%;left:6px;width:2px;height:42px;max-height:70%;transform:translateY(-50%);border-radius:2px;background:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--s1) 85%,transparent)}
   .stats-card-height-handle{display:none;position:absolute;z-index:8;left:20%;bottom:-7px;width:60%;height:14px;cursor:ns-resize;touch-action:none}
   body.stats-layout-editing .stats-card-resize-handle{right:0}
   body.stats-layout-editing .stats-card-height-handle{bottom:0}
-  .stats-card-height-handle::before{content:'';position:absolute;left:50%;top:5px;width:42px;height:4px;transform:translateX(-50%);border-radius:4px;background:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--s1) 85%,transparent)}
+  .stats-card-height-handle::before{content:'';position:absolute;left:50%;top:6px;width:42px;height:2px;transform:translateX(-50%);border-radius:2px;background:var(--green);box-shadow:0 0 0 2px color-mix(in srgb,var(--s1) 85%,transparent)}
   .stats-card-size-badge{display:none;position:absolute;z-index:7;right:10px;bottom:9px;padding:3px 6px;border:1px solid var(--bd);border-radius:7px;background:var(--s2);color:var(--muted);font:700 .55rem var(--f);pointer-events:none}
   body.stats-layout-editing .stats-card-resize-handle,body.stats-layout-editing .stats-card-height-handle,body.stats-layout-editing .stats-card-size-badge{display:block}
-  body.stats-layout-editing #view-stats>[data-stats-width-fixed="true"]>.stats-card-resize-handle,
-  body.stats-layout-editing #view-stats>[data-stats-height-fixed="true"]>.stats-card-height-handle{display:none!important}
+  body.stats-layout-editing #view-stats>[data-stats-width-fixed]>.stats-card-resize-handle,
+  body.stats-layout-editing #view-stats>[data-stats-height-fixed]>.stats-card-height-handle{display:none!important}
   #view-stats>[data-stats-module].stats-module-hidden{display:none!important}
   body[data-stats-layout-columns="1"]{--stats-layout-cols:1}
   body[data-stats-layout-columns="2"]{--stats-layout-cols:2}
@@ -20849,6 +20849,61 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   .stats-chart-tab.tb-feature-has-badge{padding:18px 8px 0}
   .stats-chart-tab[data-tb-feature]>.tb-plan-badge{top:4px;right:50%;transform:translateX(50%);font-size:.45rem;padding:3px 5px}
   .tb-card-plan-badge{right:10px;top:8px}
+}
+</style>
+<style id="settings-finance-responsive">
+#tax-settings-card .settings-finance-fields{
+  display:grid;
+  grid-template-columns:1fr;
+  row-gap:30px;
+}
+#tax-settings-card .settings-finance-column{min-width:0}
+#tax-settings-card .settings-finance-column>.settings-group-label{margin-bottom:7px}
+#tax-settings-card .settings-finance-tax{padding-top:4px}
+@media (min-width:900px){
+  #tax-settings-card .settings-finance-fields{
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:18px 24px;
+  }
+  #tax-settings-card .settings-finance-tax{padding-top:0}
+}
+</style>
+<style id="settings-alignment-fixes">
+@media (min-width:600px){
+  #settings-page-main .theme-choice{
+    display:grid!important;
+    grid-template-columns:max-content max-content;
+    place-content:center;
+    align-items:center!important;
+    column-gap:7px!important;
+    text-align:center!important;
+  }
+  #settings-page-main .theme-choice-swatches,
+  #settings-page-main .theme-choice-name{
+    margin:0!important;
+    justify-self:center;
+  }
+  #settings-page-main .settings-info-card{
+    position:relative;
+  }
+  #settings-page-main .settings-info-actions{
+    align-self:stretch;
+  }
+  #settings-page-main .settings-info-actions .settings-info-row{
+    height:100%;
+    align-self:stretch;
+    border-left:0!important;
+  }
+  #settings-page-main .settings-info-actions .settings-info-row::before{
+    content:'';
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:-32px;
+    width:1px;
+    background:var(--bd);
+    pointer-events:none;
+  }
 }
 </style>
 <style id="journal-desktop-view-modes">
@@ -21244,8 +21299,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   'use strict';
   const JOURNAL_VIEW_KEY='tb_journal_view_v1';
   function savedView(){
-    try{return localStorage.getItem(JOURNAL_VIEW_KEY)==='list'?'list':'cards';}
-    catch(error){return 'cards';}
+    try{return localStorage.getItem(JOURNAL_VIEW_KEY)==='cards'?'cards':'list';}
+    catch(error){return 'list';}
   }
   function applyJournalView(){
     const desktop=window.matchMedia('(min-width:1280px)').matches;
