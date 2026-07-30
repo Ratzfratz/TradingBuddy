@@ -6821,6 +6821,10 @@ body.tb-compact-small{
     <div class="journal-filter-head" id="journal-filter-head">
       <div class="journal-filter-title-row">
         <div class="journal-filter-title">Filter</div>
+        <div class="journal-view-toggle" role="group" aria-label="Tagebuchansicht" onclick="event.stopPropagation()">
+          <button type="button" id="journal-view-cards" onclick="setJournalView('cards')" aria-label="Kartenansicht"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg><span>Karten</span></button>
+          <button type="button" id="journal-view-list" onclick="setJournalView('list')" aria-label="Listenansicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r=".8" fill="currentColor" stroke="none"/></svg><span>Liste</span></button>
+        </div>
       </div>
       <div class="journal-filter-controls">
         <button class="filter-reset" onclick="setFilter('all');event.stopPropagation()" id="f-all">Alle zurücksetzen</button>
@@ -6833,10 +6837,6 @@ body.tb-compact-small{
             <option value="pnl-desc">Gewinn: höchster zuerst</option>
             <option value="pnl-asc">Gewinn: niedrigster zuerst</option>
           </select>
-        </div>
-        <div class="journal-view-toggle" role="group" aria-label="Tagebuchansicht" onclick="event.stopPropagation()">
-          <button type="button" id="journal-view-cards" onclick="setJournalView('cards')" aria-label="Kartenansicht"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg><span>Karten</span></button>
-          <button type="button" id="journal-view-list" onclick="setJournalView('list')" aria-label="Listenansicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r=".8" fill="currentColor" stroke="none"/></svg><span>Liste</span></button>
         </div>
       </div>
     </div>
@@ -12532,6 +12532,7 @@ function tradeCardHtml(trade, showActions = true) {
     ? `${formatGermanDate(trade.entryDate) || '—'} → ${formatGermanDate(trade.exitDate)}`
     : (formatGermanDate(trade.entryDate) || '—');
   const displayUnderlying = isDerivativeTrade(trade) ? tradeDerivativeDisplayName(trade) : tradeDisplayUnderlyingName(trade);
+  const fullUnderlyingName = String(trade.underlyingName || trade.productName || displayUnderlying || '').trim();
   const expiryCompact = formatGermanDate(trade.expiry);
   const productSummary = [trade.wkn ? 'WKN ' + trade.wkn : '', expiryCompact ? 'Fälligkeit ' + expiryCompact : ''].filter(Boolean).join(' · ');
   const productDetails = (trade.productName || trade.underlyingSymbol || trade.underlyingName || productSummary)
@@ -12572,6 +12573,7 @@ function tradeCardHtml(trade, showActions = true) {
   return `<div class="trade-card ${trade.outcome} asset-${cardAssetType}" data-trade-id="${trade.id}">
     <div class="tc-top">
       <div class="tc-titlewrap">
+        <span class="tc-list-fullname">${mergeEscapeHtml(fullUnderlyingName)}</span>
         <span class="tc-ticker">${mergeEscapeHtml(displayUnderlying)}</span>
         <span class="tc-badges">${tradeBadgeHtml(trade)}</span>
       </div>
@@ -20907,10 +20909,22 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 }
 </style>
 <style id="journal-desktop-view-modes">
+.tc-list-fullname{display:none}
 .journal-view-toggle{display:none}
+@media (min-width:1100px){
+  .bottom-stack::before{display:none!important}
+}
 @media (min-width:1280px){
+  body.page-tagebuch .journal-filter-head{
+    grid-template-columns:260px minmax(0,1fr) 40px!important;
+  }
+  body.page-tagebuch .journal-filter-title-row{
+    display:flex;
+    align-items:center;
+    gap:16px;
+  }
   body.page-tagebuch .journal-filter-controls{
-    grid-template-columns:minmax(150px,190px) minmax(240px,300px) 176px!important;
+    grid-template-columns:minmax(150px,190px) minmax(240px,300px)!important;
   }
   .journal-view-toggle{
     display:grid;
@@ -20957,7 +20971,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   body.journal-list-view #trade-list>.trade-card{
     display:grid;
-    grid-template-columns:minmax(220px,1.2fr) minmax(320px,2fr) minmax(150px,.8fr);
+    grid-template-columns:minmax(260px,1.35fr) minmax(350px,2fr) minmax(150px,.8fr) auto;
     align-items:center;
     gap:12px;
     height:auto!important;
@@ -20965,7 +20979,42 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     padding:9px 12px;
   }
   body.journal-list-view #trade-list .tc-top{
+    display:contents;
+  }
+  body.journal-list-view #trade-list .tc-titlewrap{
+    grid-column:1;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:2px 8px;
     min-width:0;
+  }
+  body.journal-list-view #trade-list .tc-list-fullname{
+    display:block;
+    grid-column:1/-1;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--text);
+    font-size:.82rem;
+    font-weight:750;
+  }
+  body.journal-list-view #trade-list .tc-ticker{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:var(--muted);
+    font-size:.62rem;
+    font-weight:650;
+  }
+  body.journal-list-view #trade-list .tc-badges{
+    justify-self:start;
+  }
+  body.journal-list-view #trade-list .tc-actions{
+    grid-column:4;
+    justify-self:end;
     margin:0;
   }
   body.journal-list-view #trade-list .tc-product-details,
@@ -20973,6 +21022,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     display:none;
   }
   body.journal-list-view #trade-list .tc-grid{
+    grid-column:2;
     display:grid;
     grid-template-columns:repeat(5,minmax(0,1fr));
     gap:4px 12px;
@@ -20988,6 +21038,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     border:0;
   }
   body.journal-list-view #trade-list .tc-pnl{
+    grid-column:3;
     min-width:0;
     margin:0;
     padding:0;
