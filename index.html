@@ -21364,9 +21364,11 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     return naturalHeight;
   }
   function syncStatsRowSpans(){
+    if(document.querySelector('#view-stats>.stats-size-preview,#view-stats>.stats-size-snapping'))return;
     if(rowSyncFrame)return;
     rowSyncFrame=requestAnimationFrame(()=>{
       rowSyncFrame=0;
+      if(document.querySelector('#view-stats>.stats-size-preview,#view-stats>.stats-size-snapping'))return;
       if(!window.matchMedia('(min-width:900px)').matches)return;
       MODULES.forEach(m=>{
         const el=elementFor(m.key);
