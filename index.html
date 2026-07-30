@@ -973,6 +973,7 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 .nt-clear:active{background:rgba(240,92,122,.18)}
 .nt-clear-action{display:none}
 .nt-choice-stack{display:contents}
+.nt-direction-inactive{display:none}
 .nt-asset-sel{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:0}
 .nt-asset-sel .asset-btn{width:100%;height:42px;min-height:42px;padding:0 6px;border-width:1.5px;background:var(--s1);display:flex;align-items:center;justify-content:center;line-height:1.15}
 .nt-mini-hint{font-size:.62rem;color:var(--muted);line-height:1.45;margin-top:8px;opacity:.78}
@@ -5951,6 +5952,11 @@ body.tb-compact-small{
   .bnav-w{max-width:620px;margin-left:auto;margin-right:auto}
   .calc-dock .calc-btn{max-width:780px;margin-left:auto;margin-right:auto}
   .fab{right:max(20px,calc(50% - 390px))}
+  #nt-direction-box.nt-direction-inactive{
+    display:block;
+    visibility:hidden;
+    pointer-events:none;
+  }
 }
 
 @media (min-width:720px) and (max-width:1099px){
@@ -12585,13 +12591,13 @@ function tradeCardHtml(trade, showActions = true) {
     ${productDetails}
 
     <div class="tc-grid">
-      <div class="tc-cell"><span class="tc-k">Einstieg</span><span class="tc-v">${trade.entry !== null ? fmt(trade.entry) + '\u202f€' : '—'}</span></div>
-      <div class="tc-cell"><span class="tc-k">Ausstieg</span><span class="tc-v">${trade.exit !== null ? fmt(trade.exit) + '\u202f€' : '—'}</span></div>
-      <div class="tc-cell"><span class="tc-k">Anzahl</span><span class="tc-v">${fmtCount(trade.count)}</span></div>
+      <div class="tc-cell tc-entry"><span class="tc-k">Einstieg</span><span class="tc-v">${trade.entry !== null ? fmt(trade.entry) + '\u202f€' : '—'}</span></div>
+      <div class="tc-cell tc-exit"><span class="tc-k">Ausstieg</span><span class="tc-v">${trade.exit !== null ? fmt(trade.exit) + '\u202f€' : '—'}</span></div>
+      <div class="tc-cell tc-count"><span class="tc-k">Anzahl</span><span class="tc-v">${fmtCount(trade.count)}</span></div>
       ${isDerivativeTrade(trade) && trade.strike !== null
-        ? `<div class="tc-cell"><span class="tc-k">${normalizedAssetType(trade) === 'ko' ? 'KO-Schwelle' : 'Strike'}</span><span class="tc-v">${fmt(trade.strike)}\u202f${trade.strikeCurrency==='USD'?'$':'€'}</span></div>`
+        ? `<div class="tc-cell tc-strike"><span class="tc-k">${normalizedAssetType(trade) === 'ko' ? 'KO-Schwelle' : 'Strike'}</span><span class="tc-v">${fmt(trade.strike)}\u202f${trade.strikeCurrency==='USD'?'$':'€'}</span></div>`
         : ''}
-      <div class="tc-cell tc-cell-wide"><span class="tc-k">Zeitraum</span><span class="tc-v">${dateText}</span></div>
+      <div class="tc-cell tc-cell-wide tc-period"><span class="tc-k">Zeitraum</span><span class="tc-v">${dateText}</span></div>
     </div>
 
     <div class="tc-pnl">
@@ -13828,7 +13834,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="sec" id="nt-entry-card">
-    <div class="sec-title" id="nt-entry-title">Einstieg &amp; Produktdetails</div>
+    <div class="sec-title" id="nt-entry-title">Einstieg</div>
     <div class="t-row" id="nt-deriv-fetch-row" style="align-items:end;margin-bottom:8px">
       <div class="field" id="field-nt-wkn" style="margin-bottom:0"><label style="display:flex;justify-content:space-between"><span id="f-wkn-label">WKN / ISIN</span><span id="f-wkn-optional" style="font-weight:400;color:var(--muted);font-size:.7em">optional</span></label><input class="inp" type="text" id="f-wkn" placeholder="z.B. HD8M7P oder DE000..." style="text-transform:uppercase;letter-spacing:.05em;font-family:monospace" maxlength="12" enterkeyhint="done" oninput="this.value=this.value.toUpperCase()"></div>
       <button class="t-btn" id="nt-deriv-fetch-btn" data-tb-feature="autoProductData" style="display:none" onclick="requestDerivativeDetailsForTrade()">Daten abrufen</button>
@@ -14254,11 +14260,17 @@ function setAssetType(type){
   }
   // Faktor: hat Richtung (Long/Short), aber keine Produktdetails (Strike/Expiry/Spot).
   var pd=document.getElementById('nt-product-details');if(pd)pd.style.display=(noD||isFaktor)?'none':'';
-  var entryTitle=document.getElementById('nt-entry-title');if(entryTitle)entryTitle.textContent=(noD||isFaktor)?'Einstieg':'Einstieg & Produktdetails';
-  // Richtungsbox: bei Faktor sichtbar (Long/Short), bei Aktie/ETF/Crypto aus.
-  var db=document.getElementById('nt-direction-box');if(db)db.style.display=noD?'none':'';
+  var entryTitle=document.getElementById('nt-entry-title');if(entryTitle)entryTitle.textContent='Einstieg';
+  // Die Richtungsbox behält ihren Platz, damit das Desktop-Raster beim
+  // Klassenwechsel nicht springt. Für richtungslose Klassen ist sie inaktiv.
+  var db=document.getElementById('nt-direction-box');
+  if(db){
+    db.classList.toggle('nt-direction-inactive',noD);
+    db.setAttribute('aria-hidden',noD?'true':'false');
+    if('inert' in db)db.inert=noD;
+  }
   var ts=document.getElementById('nt-type-sel');
-  if(ts)ts.style.display=noD?'none':'';
+  if(ts)ts.style.display='';
   // Long/Short-Beschriftung für Faktor, Call/Put sonst
   var callBtn=document.getElementById('ft-call'), putBtn=document.getElementById('ft-put');
   if(callBtn)callBtn.textContent=isFaktor?'▲ LONG':'▲ CALL';
@@ -21016,7 +21028,9 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 @media (min-width:1280px){
   body.page-tagebuch .journal-filter-head{
     grid-template-columns:110px minmax(0,1fr) 40px!important;
+    column-gap:14px!important;
   }
+  body.page-tagebuch .journal-filter-head::after{margin-left:0}
   body.page-tagebuch .journal-filter-title-row{
     display:flex;
     align-items:center;
@@ -21031,12 +21045,12 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   body.journal-list-view #trade-list>.trade-card{
     display:grid;
-    grid-template-columns:minmax(250px,1.25fr) minmax(420px,2.2fr) minmax(150px,.8fr) auto;
+    grid-template-columns:260px minmax(0,1fr) 142px 116px;
     align-items:center;
-    gap:12px;
+    gap:10px;
     height:auto!important;
-    min-height:104px;
-    padding:11px 12px;
+    min-height:88px;
+    padding:8px 10px;
   }
   body.journal-list-view #trade-list .tc-top{
     display:contents;
@@ -21044,9 +21058,9 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body.journal-list-view #trade-list .tc-titlewrap{
     grid-column:1;
     display:grid;
-    grid-template-columns:154px minmax(0,1fr);
+    grid-template-columns:86px minmax(0,1fr);
     align-items:center;
-    gap:4px 10px;
+    gap:3px 8px;
     min-width:0;
   }
   body.journal-list-view #trade-list .tc-list-fullname{
@@ -21056,7 +21070,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     white-space:normal;
     line-height:1.25;
     color:var(--text);
-    font-size:.9rem;
+    font-size:.94rem;
     font-weight:750;
   }
   body.journal-list-view #trade-list .tc-ticker{
@@ -21065,13 +21079,24 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     text-overflow:ellipsis;
     white-space:nowrap;
     color:var(--muted);
-    font-size:.68rem;
+    font-size:.72rem;
     font-weight:650;
   }
   body.journal-list-view #trade-list .tc-badges{
     grid-column:2;
+    display:grid;
+    grid-template-columns:40px 54px 64px;
+    align-items:center;
+    gap:4px;
     justify-self:start;
     min-width:0;
+  }
+  body.journal-list-view #trade-list .tc-badges>.tc-type{
+    margin-left:0!important;
+    justify-self:start;
+  }
+  body.journal-list-view #trade-list .tc-badges>.tc-wkn-badge{
+    grid-column:3;
   }
   body.journal-list-view #trade-list .tc-actions{
     grid-column:4;
@@ -21085,11 +21110,16 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body.journal-list-view #trade-list .tc-grid{
     grid-column:2;
     display:grid;
-    grid-template-columns:repeat(6,minmax(0,1fr));
-    gap:6px 10px;
+    grid-template-columns:64px 64px 54px 78px minmax(150px,1fr);
+    gap:4px 8px;
     min-width:0;
     margin:0;
   }
+  body.journal-list-view #trade-list .tc-entry{grid-column:1}
+  body.journal-list-view #trade-list .tc-exit{grid-column:2}
+  body.journal-list-view #trade-list .tc-count{grid-column:3}
+  body.journal-list-view #trade-list .tc-strike{grid-column:4}
+  body.journal-list-view #trade-list .tc-period{grid-column:5}
   body.journal-list-view #trade-list .tc-cell,
   body.journal-list-view #trade-list .tc-cell-wide{
     grid-column:auto;
@@ -21097,19 +21127,19 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     flex-direction:column;
     align-items:flex-start;
     justify-content:center;
-    gap:3px;
+    gap:2px;
     min-width:0;
     padding:0;
     margin:0;
     border:0;
-    font-size:.68rem;
+    font-size:.74rem;
   }
   body.journal-list-view #trade-list .tc-cell-wide{
-    grid-column:span 2;
+    grid-column:auto;
   }
   body.journal-list-view #trade-list .tc-k{
     color:var(--muted);
-    font-size:.57rem;
+    font-size:.61rem;
     font-weight:650;
     line-height:1.15;
   }
@@ -21119,7 +21149,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     text-overflow:clip;
     white-space:nowrap;
     color:var(--text);
-    font-size:.7rem;
+    font-size:.75rem;
     font-weight:700;
   }
   body.journal-list-view #trade-list .tc-pnl{
@@ -21135,11 +21165,11 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     border:0;
   }
   body.journal-list-view #trade-list .tc-invested-main{
-    font-size:.62rem;
+    font-size:.67rem;
     white-space:nowrap;
   }
   body.journal-list-view #trade-list .tc-pnl-side{
-    font-size:.86rem;
+    font-size:.92rem;
     white-space:nowrap;
   }
 }
