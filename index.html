@@ -6297,7 +6297,7 @@ body.tb-compact-small{
   body.page-tagebuch.journal-chrome-hidden .fab{transform:none!important;opacity:1!important}
   #trade-list{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,620px));
+    grid-template-columns:repeat(2,minmax(0,540px));
     justify-content:center;
     gap:12px;
     align-items:start;
@@ -6352,7 +6352,7 @@ body.tb-compact-small{
 }
 @media (min-width:1100px) and (max-width:1279px){
   #trade-list{
-    grid-template-columns:minmax(0,620px);
+    grid-template-columns:minmax(0,540px);
   }
 }
 @media (min-width:900px){
@@ -6833,6 +6833,10 @@ body.tb-compact-small{
             <option value="pnl-desc">Gewinn: höchster zuerst</option>
             <option value="pnl-asc">Gewinn: niedrigster zuerst</option>
           </select>
+        </div>
+        <div class="journal-view-toggle" role="group" aria-label="Tagebuchansicht" onclick="event.stopPropagation()">
+          <button type="button" id="journal-view-cards" onclick="setJournalView('cards')" aria-label="Kartenansicht"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="7" rx="1.5"/></svg><span>Karten</span></button>
+          <button type="button" id="journal-view-list" onclick="setJournalView('list')" aria-label="Listenansicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r=".8" fill="currentColor" stroke="none"/></svg><span>Liste</span></button>
         </div>
       </div>
     </div>
@@ -20829,6 +20833,95 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   .tb-card-plan-badge{right:10px;top:8px}
 }
 </style>
+<style id="journal-desktop-view-modes">
+.journal-view-toggle{display:none}
+@media (min-width:1280px){
+  body.page-tagebuch .journal-filter-controls{
+    grid-template-columns:minmax(150px,190px) minmax(240px,300px) 176px!important;
+  }
+  .journal-view-toggle{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    height:36px;
+    padding:3px;
+    gap:3px;
+    border:1px solid var(--bd);
+    border-radius:8px;
+    background:var(--s2);
+  }
+  .journal-view-toggle button{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    min-width:0;
+    padding:0 7px;
+    border:0;
+    border-radius:5px;
+    background:transparent;
+    color:var(--muted);
+    font:700 .61rem var(--f);
+    cursor:pointer;
+  }
+  .journal-view-toggle button svg{
+    width:14px;
+    height:14px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .journal-view-toggle button.on{
+    background:var(--s1);
+    color:var(--blue);
+    box-shadow:0 1px 4px rgba(0,0,0,.12);
+  }
+  body.journal-list-view #trade-list{
+    grid-template-columns:minmax(0,1100px)!important;
+    justify-content:center;
+    gap:7px;
+  }
+  body.journal-list-view #trade-list>.trade-card{
+    display:grid;
+    grid-template-columns:minmax(220px,1.2fr) minmax(320px,2fr) minmax(150px,.8fr);
+    align-items:center;
+    gap:12px;
+    height:auto!important;
+    min-height:82px;
+    padding:9px 12px;
+  }
+  body.journal-list-view #trade-list .tc-top{
+    min-width:0;
+    margin:0;
+  }
+  body.journal-list-view #trade-list .tc-product-details,
+  body.journal-list-view #trade-list .tc-tags-details{
+    display:none;
+  }
+  body.journal-list-view #trade-list .tc-grid{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:4px 12px;
+    min-width:0;
+    margin:0;
+  }
+  body.journal-list-view #trade-list .tc-cell,
+  body.journal-list-view #trade-list .tc-cell-wide{
+    grid-column:auto;
+    min-width:0;
+    padding:0;
+    margin:0;
+    border:0;
+  }
+  body.journal-list-view #trade-list .tc-pnl{
+    min-width:0;
+    margin:0;
+    padding:0;
+    border:0;
+  }
+}
+</style>
 <script>
 (function(){
   'use strict';
@@ -21126,6 +21219,33 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{apply();renderStatsLayoutEditor();bindStatsPageWheel();});else{apply();renderStatsLayoutEditor();bindStatsPageWheel();}
   window.addEventListener('resize',apply,{passive:true});
+})();
+</script>
+<script>
+(function(){
+  'use strict';
+  const JOURNAL_VIEW_KEY='tb_journal_view_v1';
+  function savedView(){
+    try{return localStorage.getItem(JOURNAL_VIEW_KEY)==='list'?'list':'cards';}
+    catch(error){return 'cards';}
+  }
+  function applyJournalView(){
+    const desktop=window.matchMedia('(min-width:1280px)').matches;
+    const mode=desktop?savedView():'cards';
+    document.body.classList.toggle('journal-list-view',mode==='list');
+    const cards=document.getElementById('journal-view-cards');
+    const list=document.getElementById('journal-view-list');
+    if(cards){cards.classList.toggle('on',mode==='cards');cards.setAttribute('aria-pressed',String(mode==='cards'));}
+    if(list){list.classList.toggle('on',mode==='list');list.setAttribute('aria-pressed',String(mode==='list'));}
+  }
+  window.setJournalView=function(mode){
+    const next=mode==='list'?'list':'cards';
+    try{localStorage.setItem(JOURNAL_VIEW_KEY,next);}catch(error){}
+    applyJournalView();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyJournalView);
+  else applyJournalView();
+  window.addEventListener('resize',applyJournalView,{passive:true});
 })();
 </script>
 
