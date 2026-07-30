@@ -15323,8 +15323,16 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #nt-body{
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
     align-items:stretch;
+    align-content:start!important;
+    grid-template-rows:52px 500px 210px auto!important;
   }
-  #nt-body>.overlay-sticky-head{grid-column:1/-1;grid-row:1}
+  #nt-body>.overlay-sticky-head{
+    grid-column:1/-1;
+    grid-row:1;
+    height:52px!important;
+    min-height:52px!important;
+    align-self:start;
+  }
   .nt-choice-stack{
     display:flex;
     flex-direction:column;
@@ -15332,7 +15340,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     gap:14px;
     min-width:0;
     grid-column:1;
-    grid-row:2 / span 2;
+    grid-row:2;
   }
   .nt-choice-stack>.sec{
     height:auto!important;
@@ -15340,12 +15348,12 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     margin:0!important;
   }
   #nt-asset-card,#nt-direction-box{grid-column:auto;grid-row:auto}
-  #nt-entry-card{grid-column:2;grid-row:2 / span 2}
-  #nt-plan-card{grid-column:3;grid-row:2 / span 2}
-  #nt-exit-card{grid-column:1;grid-row:4}
-  #nt-result-card{grid-column:2;grid-row:4}
-  #nt-notes-card{grid-column:3;grid-row:4}
-  #nt-review-card{grid-column:1/-1;grid-row:5}
+  #nt-entry-card{grid-column:2;grid-row:2;height:100%!important}
+  #nt-plan-card{grid-column:3;grid-row:2;height:100%!important}
+  #nt-exit-card{grid-column:1;grid-row:3;height:100%!important}
+  #nt-result-card{grid-column:2;grid-row:3;height:100%!important}
+  #nt-notes-card{grid-column:3;grid-row:3;height:100%!important}
+  #nt-review-card{grid-column:1/-1;grid-row:4}
   #settings-sh{
     height:92vh!important;
     max-height:1040px!important;
@@ -21027,13 +21035,22 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 }
 @media (min-width:1280px){
   body.page-tagebuch .journal-filter-head{
-    grid-template-columns:110px minmax(0,1fr) 40px!important;
+    grid-template-columns:110px minmax(0,1fr)!important;
     column-gap:14px!important;
   }
-  body.page-tagebuch .journal-filter-head::after{margin-left:0}
+  body.page-tagebuch .journal-filter-head::after{display:none!important}
   body.page-tagebuch .journal-filter-title-row{
     display:flex;
     align-items:center;
+    gap:7px;
+  }
+  body.page-tagebuch .journal-filter-title-row::after{
+    content:'';
+    width:16px;
+    height:16px;
+    flex:0 0 16px;
+    background:center/15px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7a99' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    transform:rotate(var(--jf-chevron-rotation,180deg));
   }
   body.page-tagebuch .journal-filter-controls{
     grid-template-columns:minmax(150px,190px) minmax(240px,300px)!important;
@@ -21041,16 +21058,16 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body.journal-list-view #trade-list{
     grid-template-columns:minmax(0,1100px)!important;
     justify-content:center;
-    gap:7px;
+    gap:5px;
   }
   body.journal-list-view #trade-list>.trade-card{
     display:grid;
     grid-template-columns:260px minmax(0,1fr) 142px 116px;
     align-items:center;
-    gap:10px;
+    gap:9px;
     height:auto!important;
-    min-height:88px;
-    padding:8px 10px;
+    min-height:76px;
+    padding:6px 9px;
   }
   body.journal-list-view #trade-list .tc-top{
     display:contents;
@@ -21060,7 +21077,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     display:grid;
     grid-template-columns:86px minmax(0,1fr);
     align-items:center;
-    gap:3px 8px;
+    gap:2px 8px;
     min-width:0;
   }
   body.journal-list-view #trade-list .tc-list-fullname{
@@ -21158,7 +21175,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     flex-direction:column;
     align-items:flex-end;
     justify-content:center;
-    gap:5px;
+    gap:3px;
     min-width:0;
     margin:0;
     padding:0;
