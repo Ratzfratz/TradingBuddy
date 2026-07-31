@@ -612,6 +612,8 @@ tr.hl-t td:first-child{color:var(--green);font-weight:700}
 .tc-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin-bottom:8px}
 .tc-cell{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.7rem;min-width:0}
 .tc-cell-wide{grid-column:1 / -1;padding-top:3px;margin-top:1px;border-top:1px solid var(--bd)}
+.tc-list-value{display:none}
+.tc-list-metrics{display:none}
 .tc-k{color:var(--muted);flex-shrink:0}
 .tc-v{color:var(--text);font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tc-m{font-size:.65rem;color:var(--muted)}.tc-m span{color:var(--text);font-weight:500}
@@ -12586,12 +12588,19 @@ function tradeCardHtml(trade, showActions = true) {
         <span class="tc-ticker">${mergeEscapeHtml(displayUnderlying)}</span>
         <span class="tc-badges">${tradeBadgeHtml(trade)}</span>
       </div>
+      <div class="tc-list-metrics" aria-label="Trade-Kennwerte">
+        <span class="tc-list-metric"><span class="tc-k">Einstieg</span><span class="tc-v">${trade.entry !== null ? fmt(trade.entry) + '\u202f€' : '—'}</span></span>
+        <span class="tc-list-metric"><span class="tc-k">Ausstieg</span><span class="tc-v">${trade.exit !== null ? fmt(trade.exit) + '\u202f€' : '—'}</span></span>
+        <span class="tc-list-metric"><span class="tc-k">Anzahl</span><span class="tc-v">${fmtCount(trade.count)}</span></span>
+        <span class="tc-list-metric tc-list-period"><span class="tc-k">Zeitraum</span><span class="tc-v">${dateText}</span></span>
+        <span class="tc-list-metric"><span class="tc-k">Wert</span><span class="tc-v">${fmt(Number(trade.capital || 0))}\u202f€</span></span>
+      </div>
       ${actions}
     </div>
 
     ${productDetails}
 
-    <div class="tc-grid">
+    <div class="tc-grid${isDerivativeTrade(trade) && trade.strike !== null ? ' has-strike' : ''}">
       <div class="tc-cell tc-entry"><span class="tc-k">Einstieg</span><span class="tc-v">${trade.entry !== null ? fmt(trade.entry) + '\u202f€' : '—'}</span></div>
       <div class="tc-cell tc-exit"><span class="tc-k">Ausstieg</span><span class="tc-v">${trade.exit !== null ? fmt(trade.exit) + '\u202f€' : '—'}</span></div>
       <div class="tc-cell tc-count"><span class="tc-k">Anzahl</span><span class="tc-v">${fmtCount(trade.count)}</span></div>
@@ -12599,6 +12608,7 @@ function tradeCardHtml(trade, showActions = true) {
         ? `<div class="tc-cell tc-strike"><span class="tc-k">${normalizedAssetType(trade) === 'ko' ? 'KO-Schwelle' : 'Strike'}</span><span class="tc-v">${fmt(trade.strike)}\u202f${trade.strikeCurrency==='USD'?'$':'€'}</span></div>`
         : ''}
       <div class="tc-cell tc-cell-wide tc-period"><span class="tc-k">Zeitraum</span><span class="tc-v">${dateText}</span></div>
+      <div class="tc-cell tc-list-value"><span class="tc-k">Wert</span><span class="tc-v">${fmt(Number(trade.capital || 0))}\u202f€</span></div>
     </div>
 
     <div class="tc-pnl">
@@ -21135,22 +21145,23 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   body.journal-list-view #trade-list>.trade-card{
     display:grid;
-    grid-template-columns:260px minmax(0,1fr) 142px 116px;
-    align-items:start;
+    grid-template-columns:260px minmax(0,1fr) 112px 116px;
+    align-items:center;
     gap:9px;
     height:auto!important;
-    min-height:64px;
-    padding:6px 9px;
+    min-height:48px!important;
+    padding:5px 9px!important;
   }
   body.journal-list-view #trade-list .tc-top{
     display:contents;
   }
   body.journal-list-view #trade-list .tc-titlewrap{
     grid-column:1;
+    grid-row:1;
     display:grid;
     grid-template-columns:86px minmax(0,1fr);
     align-items:center;
-    align-self:start;
+    align-self:center;
     gap:2px 8px;
     min-width:0;
   }
@@ -21191,7 +21202,8 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   body.journal-list-view #trade-list .tc-actions{
     grid-column:4;
-    align-self:start;
+    grid-row:1;
+    align-self:center;
     justify-self:end;
     margin:0;
   }
@@ -21199,21 +21211,47 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   body.journal-list-view #trade-list .tc-tags-details{
     display:none;
   }
-  body.journal-list-view #trade-list .tc-grid{
+  body.journal-list-view #trade-list .tc-list-metrics{
     grid-column:2;
+    grid-row:1;
     display:grid;
-    grid-template-columns:64px 64px 54px 78px minmax(150px,1fr);
-    gap:4px 8px;
-    align-self:start;
+    grid-template-columns:72px 72px 62px minmax(150px,1fr) 94px;
+    align-items:center;
+    gap:10px;
     min-width:0;
     margin:0;
-    padding-top:1px;
+  }
+  body.journal-list-view #trade-list .tc-list-metric{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    gap:2px;
+    min-width:0;
+  }
+  body.journal-list-view #trade-list .tc-list-period .tc-v{
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  body.journal-list-view #trade-list .tc-grid{
+    display:none!important;
   }
   body.journal-list-view #trade-list .tc-entry{grid-column:1}
   body.journal-list-view #trade-list .tc-exit{grid-column:2}
   body.journal-list-view #trade-list .tc-count{grid-column:3}
-  body.journal-list-view #trade-list .tc-strike{grid-column:4}
-  body.journal-list-view #trade-list .tc-period{grid-column:5}
+  body.journal-list-view #trade-list .tc-period{grid-column:4}
+  body.journal-list-view #trade-list .tc-list-value{
+    display:flex;
+    grid-column:5;
+  }
+  body.journal-list-view #trade-list .tc-grid.has-strike{
+    grid-template-columns:64px 64px 54px 78px minmax(118px,1fr) minmax(88px,auto);
+  }
+  body.journal-list-view #trade-list .tc-grid.has-strike .tc-strike{grid-column:4}
+  body.journal-list-view #trade-list .tc-grid.has-strike .tc-period{grid-column:5}
+  body.journal-list-view #trade-list .tc-grid.has-strike .tc-list-value{
+    grid-column:6;
+  }
   body.journal-list-view #trade-list .tc-cell,
   body.journal-list-view #trade-list .tc-cell-wide{
     grid-column:auto;
@@ -21248,11 +21286,12 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
   body.journal-list-view #trade-list .tc-pnl{
     grid-column:3;
+    grid-row:1;
     display:flex;
     flex-direction:column;
     align-items:flex-end;
-    align-self:start;
-    justify-content:flex-start;
+    align-self:center;
+    justify-content:center;
     gap:3px;
     min-width:0;
     margin:0;
@@ -21260,8 +21299,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     border:0;
   }
   body.journal-list-view #trade-list .tc-invested-main{
-    font-size:.67rem;
-    white-space:nowrap;
+    display:none!important;
   }
   body.journal-list-view #trade-list .tc-pnl-side{
     font-size:.92rem;
