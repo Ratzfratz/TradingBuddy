@@ -15062,7 +15062,6 @@ function renderTaxOverview(){
       </div>
     </div>
 
-    ${hasEtf?`<div class="tax-status warn"><span class="tax-status-dot"></span><span>ETF sind vereinfacht berechnet: pauschal 30 % Teilfreistellung, ohne Vorabpauschale. Mit der Steuerbescheinigung prüfen.</span></div>`:''}
     ${cryptoOpenTax?`<div class="tax-status warn"><span class="tax-status-dot"></span><span>Für die Krypto-Steuerschätzung fehlt dein persönlicher Steuersatz.</span></div>`:''}
 
     <details class="tax-details">
@@ -15126,8 +15125,9 @@ function renderTaxOverview(){
     <details class="tax-details">
       <summary>Grenzen der Schätzung</summary>
       <div class="tax-details-body tax-estimate-limits">
-        ${(fifo.skipped>0||fifo.unmatchedQty>0)?`<div class="tax-note warn" style="margin-top:0">Einzelne Datensätze konnten nicht vollständig per FIFO zugeordnet werden. Prüfe Datum, Anzahl und Kennung.</div>`:''}
-        <div class="tax-note info" style="margin-top:${(fifo.skipped>0||fifo.unmatchedQty>0)?'8px':'0'}">FIFO wird je Depot/Wallet und Kennung berechnet. Nicht enthalten sind ETF-Vorabpauschalen, Ausschüttungen, Dividenden, Zinsen, Quellensteuer, frühere Verlustvorträge und nicht erfasste Geschäfte.</div>
+        ${hasEtf?`<div class="tax-note warn" style="margin-top:0">ETF sind vereinfacht berechnet: pauschal 30 % Teilfreistellung, ohne Vorabpauschale. Mit der Steuerbescheinigung prüfen.</div>`:''}
+        ${(fifo.skipped>0||fifo.unmatchedQty>0)?`<div class="tax-note warn" style="margin-top:${hasEtf?'8px':'0'}">Einzelne Datensätze konnten nicht vollständig per FIFO zugeordnet werden. Prüfe Datum, Anzahl und Kennung.</div>`:''}
+        <div class="tax-note info" style="margin-top:${(hasEtf||fifo.skipped>0||fifo.unmatchedQty>0)?'8px':'0'}">FIFO wird je Depot/Wallet und Kennung berechnet. Nicht enthalten sind ETF-Vorabpauschalen, Ausschüttungen, Dividenden, Zinsen, Quellensteuer, frühere Verlustvorträge und nicht erfasste Geschäfte.</div>
       </div>
     </details>
   `;
@@ -21267,6 +21267,26 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     width:32px!important;
     min-width:32px!important;
     height:32px!important;
+  }
+}
+</style>
+<style id="journal-desktop-card-row-alignment">
+@media (min-width:1280px){
+  body.page-tagebuch.journal-list-view #trade-list>.trade-card{
+    align-items:start!important;
+    min-height:56px!important;
+    padding-top:5px!important;
+    padding-bottom:5px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-titlewrap,
+  body.page-tagebuch.journal-list-view #trade-list .tc-grid{
+    align-self:start;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-grid{
+    padding-top:2px;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-pnl{
+    align-self:center;
   }
 }
 </style>
