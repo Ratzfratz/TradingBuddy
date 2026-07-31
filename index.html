@@ -1308,6 +1308,7 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 .tax-note.warn{background:rgba(245,197,66,.07);border-color:rgba(245,197,66,.22);color:var(--gold);margin-bottom:0}
 .tax-note.info{background:rgba(91,138,245,.06);border-color:rgba(91,138,245,.2);color:var(--muted)}
 .tax-estimate-limits .tax-note{padding:0;border:0;border-radius:0;background:transparent}
+.tax-estimate-limits .tax-status{margin:0 0 9px}
 .tax-empty{text-align:center;padding:18px 8px;color:var(--muted);font-size:.74rem;line-height:1.5}
 .tax-positive{color:var(--green)!important}.tax-negative{color:var(--red)!important}.tax-neutral{color:var(--muted)!important}
 .tax-value-primary{color:var(--text)!important}
@@ -15063,7 +15064,6 @@ function renderTaxOverview(){
       </div>
     </div>
 
-    ${hasEtf?`<div class="tax-status warn"><span class="tax-status-dot"></span><span>ETF sind vereinfacht berechnet: pauschal 30 % Teilfreistellung, ohne Vorabpauschale. Mit der Steuerbescheinigung prüfen.</span></div>`:''}
     ${cryptoOpenTax?`<div class="tax-status warn"><span class="tax-status-dot"></span><span>Für die Krypto-Steuerschätzung fehlt dein persönlicher Steuersatz.</span></div>`:''}
 
     <details class="tax-details">
@@ -15124,9 +15124,10 @@ function renderTaxOverview(){
       </div>
     </details>`:''}
 
-    <details class="tax-details">
+    <details class="tax-details" open>
       <summary>Grenzen der Schätzung</summary>
       <div class="tax-details-body tax-estimate-limits">
+        ${hasEtf?`<div class="tax-status warn"><span class="tax-status-dot"></span><span>ETF sind vereinfacht berechnet: pauschal 30 % Teilfreistellung, ohne Vorabpauschale. Mit der Steuerbescheinigung prüfen.</span></div>`:''}
         ${(fifo.skipped>0||fifo.unmatchedQty>0)?`<div class="tax-note warn" style="margin-top:0">Einzelne Datensätze konnten nicht vollständig per FIFO zugeordnet werden. Prüfe Datum, Anzahl und Kennung.</div>`:''}
         <div class="tax-note info" style="margin-top:${(fifo.skipped>0||fifo.unmatchedQty>0)?'8px':'0'}">FIFO wird je Depot/Wallet und Kennung berechnet. Nicht enthalten sind ETF-Vorabpauschalen, Ausschüttungen, Dividenden, Zinsen, Quellensteuer, frühere Verlustvorträge und nicht erfasste Geschäfte.</div>
       </div>
