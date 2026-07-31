@@ -1239,10 +1239,9 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 .year-select-active .cs-chevron{color:var(--blue)!important}
 :root.light-theme .stats-year-control.is-active .cs-trigger,:root.light-theme .year-select-active .cs-trigger{border-color:var(--blue)!important;background:rgba(91,138,245,.1)!important;color:var(--blue)!important}
 :root.light-theme .stats-year-control.is-active .cs-chevron,:root.light-theme .year-select-active .cs-chevron{color:var(--blue)!important}
-.stats-overview-details{margin:2px 0 0!important;border:1px solid var(--bd);border-radius:7px;background:var(--s2);overflow:hidden}
-.stats-overview-details summary{padding:10px;color:var(--muted);font-size:.65rem}
-.stats-overview-details[open] summary{border-bottom:1px solid var(--bd)}
-.stats-overview-details .tax-details-body{padding:9px 10px 10px}
+.stats-overview-details{margin:2px 0 0!important;border:1px solid var(--bd);border-radius:9px;background:var(--s2);overflow:hidden}
+.stats-overview-details-title{padding:9px 10px 6px;color:var(--muted);font-size:.64rem;font-weight:700}
+.stats-overview-details .tax-details-body{padding:2px 10px 10px}
 .tax-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:.63rem;color:var(--muted);line-height:1.4}
 .tax-settings-link{flex-shrink:0;border:0;background:none;color:var(--blue);font-family:var(--f);font-size:.65rem;font-weight:700;cursor:pointer;padding:4px 0}
 .tax-hero{background:linear-gradient(135deg,rgba(91,138,245,.10),rgba(34,211,160,.07));border:1px solid rgba(91,138,245,.25);border-radius:10px;padding:14px;margin-bottom:8px}
@@ -1364,7 +1363,7 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 .stats-calendar-trade:first-of-type{border-top:0}
 .stats-calendar-trade span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:360px){.stats-calendar-weekdays,.stats-calendar-grid{gap:3px}.stats-calendar-day,.stats-calendar-empty{min-height:52px}.stats-calendar-day{padding:4px 2px}.stats-calendar-pnl{font-size:.6rem}}
-#page-statistik .stats-overview-details summary{color:var(--muted)!important;font-size:.64rem!important;font-weight:600!important}
+#page-statistik .stats-overview-details-title{color:var(--muted)!important;font-size:.64rem!important;font-weight:700!important}
 #page-statistik .stats-overview-details .tax-row-label{color:var(--muted)}
 #page-statistik .stats-overview-details .tax-row-value{font-size:.68rem;font-weight:650}
 #page-statistik .tag-analysis-name{color:var(--muted);font-weight:600}
@@ -6976,9 +6975,9 @@ body.tb-compact-small{
       <div class="stat"><div class="stat-val c-red" id="st-worst">—</div><div class="stat-label">Schlechtester</div></div>
     </div>
 
-    <!-- Aufklappbar: Details -->
-    <details class="tax-details stats-overview-details">
-      <summary>Details</summary>
+    <!-- Dauerhaft sichtbare Details -->
+    <div class="stats-overview-details">
+      <div class="stats-overview-details-title">Details</div>
       <div class="tax-details-body">
         <div class="tax-row">
           <span class="tax-row-label">Gewinne / Verluste</span>
@@ -6990,7 +6989,7 @@ body.tb-compact-small{
         <div class="tax-row"><span class="tax-row-label">Ø Investition / Trade</span><span class="tax-row-value" id="st-avg-inv">—</span></div>
         <div class="tax-row" id="st-strat-row" style="display:none"><span class="tax-row-label">Beste Strategie</span><span class="tax-row-value c-green" id="st-best-strat">—</span></div>
       </div>
-    </details>
+    </div>
   </div>
 
   <div class="sec stats-chart-section" id="st-chart-section">
@@ -21191,6 +21190,86 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   }
 }
 </style>
+<style id="journal-desktop-density-fix">
+@media (min-width:1280px){
+  body.page-tagebuch .journal-filter-panel{
+    top:8px!important;
+  }
+  body.page-tagebuch #journal-glass-layer{
+    height:calc(var(--jf-panel-height) + 8px)!important;
+  }
+  body.page-tagebuch #page-tagebuch{
+    padding-top:calc(var(--jf-panel-height) + 14px)!important;
+  }
+  body.page-tagebuch .journal-filter-head{
+    box-sizing:border-box;
+    min-height:50px;
+    padding-top:8px!important;
+    padding-bottom:8px!important;
+    overflow:visible;
+  }
+  body.page-tagebuch .journal-filter-controls,
+  body.page-tagebuch .journal-filter-controls>*{
+    min-width:0;
+  }
+
+  body.page-tagebuch.journal-list-view #trade-list{
+    grid-template-columns:minmax(0,1240px)!important;
+    gap:4px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list>.trade-card{
+    grid-template-columns:minmax(300px,340px) minmax(0,1fr) 150px 104px!important;
+    gap:6px!important;
+    min-height:64px!important;
+    height:auto!important;
+    padding:5px 8px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-titlewrap{
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:1px 7px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-list-fullname{
+    line-height:1.15!important;
+    overflow-wrap:anywhere;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-ticker{
+    overflow:visible!important;
+    text-overflow:clip!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere;
+    line-height:1.2!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-badges{
+    display:flex!important;
+    flex-wrap:wrap;
+    gap:3px!important;
+    justify-self:end!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-badges>.tc-wkn-badge{
+    grid-column:auto;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-grid{
+    grid-template-columns:64px 64px 54px 78px minmax(130px,1fr)!important;
+    gap:2px 7px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-cell,
+  body.page-tagebuch.journal-list-view #trade-list .tc-cell-wide{
+    gap:1px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-pnl{
+    gap:1px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-actions{
+    gap:4px!important;
+  }
+  body.page-tagebuch.journal-list-view #trade-list .tc-actions .btn-sm,
+  body.page-tagebuch.journal-list-view #trade-list .tc-actions .btn-danger{
+    width:32px!important;
+    min-width:32px!important;
+    height:32px!important;
+  }
+}
+</style>
 <script>
 (function(){
   'use strict';
@@ -21199,9 +21278,9 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   const MODULES=[
     {key:'hero',name:'Gesamt P&L',selector:'#view-stats > .sec:first-child',span:.5},
     {key:'overview',name:'Übersicht',selector:'#view-stats > .sec:nth-child(2)',span:1},
-    {key:'charts',name:'Performance-Diagramme',selector:'#st-chart-section',span:2},
+    {key:'charts',name:'Performance-Diagramme',selector:'#st-chart-section',span:1},
     {key:'calendar',name:'Tagesansicht',selector:'#st-calendar-section',span:2},
-    {key:'insights',name:'Idee & Ausführung',selector:'#st-journal-insights',span:3},
+    {key:'insights',name:'Idee & Ausführung',selector:'#st-journal-insights',span:2},
     {key:'top',name:'Top Basiswerte',selector:'#st-tickers',parent:true,span:1},
     {key:'worst',name:'Schlechteste Basiswerte',selector:'#st-worst-tickers',parent:true,span:1},
     {key:'history',name:'P&L Verlauf',selector:'#st-monthly',parent:true,span:1},
@@ -21211,9 +21290,10 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   const VERSION_3_HEIGHT_DEFAULTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
   const PREVIOUS_HEIGHT_DEFAULTS={hero:1,overview:2,charts:2,calendar:2,insights:2,top:1,worst:1,history:1,tax:2};
   const LEGACY_HEIGHT_DEFAULTS={hero:1,overview:3,charts:3,calendar:3,insights:3,top:2,worst:2,history:2,tax:3};
-  const MIN_SIZES={hero:[.5,.5],overview:[1,2],charts:[1,2],calendar:[1,2],insights:[.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[.5,2]};
-  const MAX_SPANS={hero:.5,charts:2,calendar:2};
-  const MAX_HEIGHTS={hero:.5,overview:2,charts:2,calendar:2,insights:3,top:2,worst:2,history:2,tax:3};
+  const MIN_SIZES={hero:[.5,.5],overview:[1,2],charts:[1,2],calendar:[1,2],insights:[1,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[.5,2]};
+  const MAX_SPANS={hero:.5,charts:1,calendar:2,insights:2};
+  const MAX_HEIGHTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:2,worst:2,history:2,tax:3};
+  const ALLOWED_SPANS={charts:[1],insights:[1,2]};
   const HARD_MAX_SIZE_KEYS=new Set(['hero','charts','calendar']);
   const defaults=()=>({layoutVersion:6,columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2,columnStart:0}]))});
   function largeDisplayDefaults(){
@@ -21222,7 +21302,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     const sizes={
       hero:[.5,.5],
       overview:[1,2],
-      charts:[1.5,2],
+      charts:[1,2],
       top:[.5,1.5],
       calendar:[1.5,2],
       history:[1,2],
@@ -21246,6 +21326,16 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   let statsHostWidthObserver=null,lastObservedHostWidth=0;
   let statsContentObserver=null;
   const statsRowObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>syncStatsRowSpans()):null;
+  function allowedSpansFor(key){
+    if(ALLOWED_SPANS[key])return ALLOWED_SPANS[key];
+    const min=(MIN_SIZES[key]||[1,.5])[0],max=MAX_SPANS[key]||3;
+    return [.5,1,1.5,2,3].filter(value=>value>=min&&value<=max);
+  }
+  function snapModuleSpan(key,value){
+    const allowed=allowedSpansFor(key);
+    const target=Number(value);
+    return allowed.reduce((best,current)=>Math.abs(current-target)<Math.abs(best-target)?current:best,allowed[0]);
+  }
   function normalize(raw){
     const d=defaults(),r=raw&&typeof raw==='object'?raw:{};
     d.columns=['auto','1','2','3','6'].includes(String(r.columns))?String(r.columns):d.columns;
@@ -21257,7 +21347,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
         const savedSpan=Number(x.span),savedHeight=Number(x.height);
         const validSpan=Number.isFinite(savedSpan)&&savedSpan>=.5&&savedSpan<=3?savedSpan:m.span;
         d.modules[m.key].visible=x.visible!==false;
-        d.modules[m.key].span=Math.min(maxSpan,Math.max(min[0],validSpan));
+        d.modules[m.key].span=snapModuleSpan(m.key,Math.min(maxSpan,Math.max(min[0],validSpan)));
         d.modules[m.key].height=Math.min(maxHeight,Math.max(min[1],Number.isFinite(savedHeight)&&savedHeight>=.5&&savedHeight<=3&&Number.isInteger(savedHeight*2)?savedHeight:d.modules[m.key].height));
         d.modules[m.key].columnStart=Number.isInteger(Number(x.columnStart))?Math.max(0,Math.min(6,Number(x.columnStart))):0;
         if(m.key==='insights')d.modules[m.key].height=Math.ceil(d.modules[m.key].height);
@@ -21423,17 +21513,18 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
       e.preventDefault();e.stopPropagation();handle.setPointerCapture(e.pointerId);
       const host=document.getElementById('view-stats'),style=getComputedStyle(host),cols=Math.max(1,style.gridTemplateColumns.split(' ').length),fine=cols>=6,gap=parseFloat(style.columnGap)||0,colWidth=(host.clientWidth-gap*(cols-1))/cols,startX=e.clientX,startWidth=el.getBoundingClientRect().width,baseMin=(MIN_SIZES[key]||[1,1])[0],maxSpan=MAX_SPANS[key]||3,minUnits=fine?baseMin*2:Math.ceil(baseMin),maxUnits=Math.max(minUnits,Math.min(cols,fine?Math.round(maxSpan*2):Math.ceil(maxSpan))),minWidth=colWidth*minUnits+gap*(minUnits-1),maxWidth=colWidth*maxUnits+gap*(maxUnits-1);
       if(maxUnits<=minUnits){try{handle.releasePointerCapture(e.pointerId);}catch(error){}return;}
-      let preview=Math.min(maxSpan,Math.max(baseMin,state.modules[key].span));
+      let preview=snapModuleSpan(key,Math.min(maxSpan,Math.max(baseMin,state.modules[key].span)));
       el.classList.add('stats-size-preview');
       const move=ev=>{
         const width=Math.max(minWidth,Math.min(maxWidth,startWidth+ev.clientX-startX)),units=Math.max(minUnits,Math.min(maxUnits,Math.round((width+gap)/(colWidth+gap))));
-        preview=fine?units/2:Math.min(maxSpan,units);
-        el.style.width=width+'px';
-        badge.textContent=(fine?units+'/6':preview+' Sp.')+' × '+state.modules[key].height;
+        preview=snapModuleSpan(key,fine?units/2:Math.min(maxSpan,units));
+        const previewUnits=Math.max(1,Math.min(cols,fine?Math.round(preview*2):Math.ceil(preview)));
+        el.style.width=(colWidth*previewUnits+gap*(previewUnits-1))+'px';
+        badge.textContent=(fine?previewUnits+'/6':preview+' Sp.')+' × '+state.modules[key].height;
       };
       const up=()=>{
         handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);
-        state.modules[key].span=Math.min(maxSpan,Math.max(baseMin,preview));
+        state.modules[key].span=snapModuleSpan(key,Math.min(maxSpan,Math.max(baseMin,preview)));
         el.classList.remove('stats-size-preview');el.classList.add('stats-size-snapping');
         const units=fine?state.modules[key].span*2:Math.ceil(state.modules[key].span),target=colWidth*Math.min(units,cols)+gap*(Math.min(units,cols)-1);
         requestAnimationFrame(()=>{el.style.width=target+'px';});
@@ -21483,13 +21574,13 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
     const desktop=window.matchMedia('(min-width:900px)').matches;
     const activeOrder=tablet?state.order:MODULES.map(m=>m.key);
     const fineGrid=effectiveCols>=6;
-    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],maxSpan=MAX_SPANS[key]||3,maxHeight=MAX_HEIGHTS[key]||3,rawLevel=Math.min(maxHeight,Math.max(min[1],state.modules[key].height)),level=key==='insights'?Math.ceil(rawLevel):rawLevel,storedSpan=Math.min(maxSpan,Math.max(min[0],state.modules[key].span)),visualSpan=fineGrid?storedSpan:Math.max(Math.ceil(min[0]),Math.ceil(storedSpan)),requestedSpan=fineGrid?Math.round(visualSpan*2):Math.ceil(visualSpan),displaySpan=Math.min(effectiveCols,requestedSpan),minWidthUnits=fineGrid?min[0]*2:Math.ceil(min[0]),maxWidthUnits=Math.min(effectiveCols,fineGrid?Math.round(maxSpan*2):Math.ceil(maxSpan)),savedStart=Math.max(0,Number(state.modules[key].columnStart)||0),displayStart=savedStart?Math.min(savedStart,Math.max(1,effectiveCols-displaySpan+1)):0,heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].span=storedSpan;state.modules[key].height=level;state.modules[key].columnStart=displayStart;el.dataset.statsModule=key;el.toggleAttribute('data-stats-width-fixed',maxWidthUnits<=minWidthUnits);el.toggleAttribute('data-stats-height-fixed',maxHeight<=min[1]);el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);if(displayStart)el.style.setProperty('--stats-module-start',displayStart);else el.style.removeProperty('--stats-module-start');el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fineGrid?displaySpan+'/'+effectiveCols:displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();if(desktop&&typeof currentPage!=='undefined'&&currentPage==='statistik')requestAnimationFrame(()=>{try{renderStats();}catch(e){}});
+    activeOrder.forEach(key=>{const el=elementFor(key);if(!el)return;const min=MIN_SIZES[key]||[1,.5],maxSpan=MAX_SPANS[key]||3,maxHeight=MAX_HEIGHTS[key]||3,rawLevel=Math.min(maxHeight,Math.max(min[1],state.modules[key].height)),level=key==='insights'?Math.ceil(rawLevel):rawLevel,storedSpan=snapModuleSpan(key,Math.min(maxSpan,Math.max(min[0],state.modules[key].span))),visualSpan=fineGrid?storedSpan:Math.max(Math.ceil(min[0]),Math.ceil(storedSpan)),requestedSpan=fineGrid?Math.round(visualSpan*2):Math.ceil(visualSpan),displaySpan=Math.min(effectiveCols,requestedSpan),minWidthUnits=fineGrid?min[0]*2:Math.ceil(min[0]),maxWidthUnits=Math.min(effectiveCols,fineGrid?Math.round(maxSpan*2):Math.ceil(maxSpan)),savedStart=Math.max(0,Number(state.modules[key].columnStart)||0),displayStart=savedStart?Math.min(savedStart,Math.max(1,effectiveCols-displaySpan+1)):0,heightPx=Math.round(level*236-16),badge=el.querySelector('.stats-card-size-badge');state.modules[key].span=storedSpan;state.modules[key].height=level;state.modules[key].columnStart=displayStart;el.dataset.statsModule=key;el.toggleAttribute('data-stats-width-fixed',allowedSpansFor(key).length<=1||maxWidthUnits<=minWidthUnits);el.toggleAttribute('data-stats-height-fixed',maxHeight<=min[1]);el.draggable=false;if(key==='calendar'&&desktop)el.open=true;el.style.setProperty('--stats-module-span',displaySpan);if(displayStart)el.style.setProperty('--stats-module-start',displayStart);else el.style.removeProperty('--stats-module-start');el.style.setProperty('--stats-card-height',heightPx+'px');if(badge)badge.textContent=(fineGrid?displaySpan+'/'+effectiveCols:displaySpan+' Sp.')+' × '+level;el.classList.toggle('stats-module-hidden',desktop&&!state.modules[key].visible);host.appendChild(el);});syncStatsRowSpans();if(desktop&&typeof currentPage!=='undefined'&&currentPage==='statistik')requestAnimationFrame(()=>{try{renderStats();}catch(e){}});
   }
   function sizeLabel(n){return n===.5?'½ Spalte':n===1?'1 Spalte':n===1.5?'1½ Spalten':n===2?'2 Spalten':'Volle Reihe';}
   window.renderStatsLayoutEditor=function(){
     const list=document.getElementById('stats-layout-module-list-direct');if(!list)return;
     const columns=document.getElementById('stats-layout-columns-direct');if(columns)columns.value=state.columns;
-    list.innerHTML=state.order.map(key=>{const m=MODULES.find(x=>x.key===key),cfg=state.modules[key],min=(MIN_SIZES[key]||[1,.5])[0],max=MAX_SPANS[key]||3,spanOptions=[.5,1,1.5,2,3].filter(n=>n>=min&&n<=max);return `<div class="stats-layout-module-row" draggable="true" data-layout-key="${key}"><span class="stats-layout-drag" title="Ziehen">⋮⋮</span><span class="stats-layout-module-name">${m.name}</span><select class="inp stats-layout-module-size" aria-label="Breite von ${m.name}" onchange="setStatsModuleSpan('${key}',this.value)">${spanOptions.map(n=>`<option value="${n}"${cfg.span===n?' selected':''}>${sizeLabel(n)}</option>`).join('')}</select><label class="stats-layout-visible"><input type="checkbox" ${cfg.visible?'checked':''} onchange="setStatsModuleVisible('${key}',this.checked)"> Anzeigen</label></div>`;}).join('');
+    list.innerHTML=state.order.map(key=>{const m=MODULES.find(x=>x.key===key),cfg=state.modules[key],spanOptions=allowedSpansFor(key);return `<div class="stats-layout-module-row" draggable="true" data-layout-key="${key}"><span class="stats-layout-drag" title="Ziehen">⋮⋮</span><span class="stats-layout-module-name">${m.name}</span><select class="inp stats-layout-module-size" aria-label="Breite von ${m.name}" onchange="setStatsModuleSpan('${key}',this.value)">${spanOptions.map(n=>`<option value="${n}"${cfg.span===n?' selected':''}>${sizeLabel(n)}</option>`).join('')}</select><label class="stats-layout-visible"><input type="checkbox" ${cfg.visible?'checked':''} onchange="setStatsModuleVisible('${key}',this.checked)"> Anzeigen</label></div>`;}).join('');
     list.querySelectorAll('.stats-layout-module-row').forEach(row=>{
       row.addEventListener('dragstart',e=>{draggedKey=row.dataset.layoutKey;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
       row.addEventListener('dragend',()=>{row.classList.remove('dragging');draggedKey='';});
@@ -21499,7 +21590,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   };
   window.toggleStatsLayoutEditing=function(){if(typeof tbRequireFeature==='function'&&!tbRequireFeature('customStatsLayout'))return;if(!window.matchMedia('(min-width:720px)').matches)return;const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
   window.updateStatsLayoutOption=function(key,value){if(key==='columns')state.columns=value;save();apply();};
-  window.setStatsModuleSpan=function(key,value){if(state.modules[key]){const min=(MIN_SIZES[key]||[1,.5])[0],max=MAX_SPANS[key]||3;state.modules[key].span=Math.min(max,Math.max(min,Number(value)||1));}save();apply();};
+  window.setStatsModuleSpan=function(key,value){if(state.modules[key])state.modules[key].span=snapModuleSpan(key,value);save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
   window.resetStatsLayout=function(){if(typeof tbRequireFeature==='function'&&!tbRequireFeature('customStatsLayout'))return;state=window.matchMedia('(min-width:1600px)').matches?largeDisplayDefaults():defaults();save();apply();renderStatsLayoutEditor();};
   load();
