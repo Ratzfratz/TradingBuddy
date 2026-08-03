@@ -1,0 +1,49 @@
+name: Deploy Trading Buddy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v6
+
+      - name: GitHub Pages vorbereiten
+        uses: actions/configure-pages@v5
+
+      - name: Pages-Artefakt aus der Android-Hauptdatei erstellen
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site/icons
+          cp app/src/main/assets/index.html _site/index.html
+          cp appwrite-sdk.js app-symbol.png favicon.ico manifest.json sw.js _site/
+          cp -a icons/. _site/icons/
+          touch _site/.nojekyll
+
+      - name: Pages-Artefakt hochladen
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: GitHub Pages veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
