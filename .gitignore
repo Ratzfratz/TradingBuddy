@@ -18,8 +18,15 @@ local.properties
 # API-Keys etc.
 secrets.properties
 
-# Lokales Android-Studio-Projekt bleibt lokal.
-/app/
+# Das Android-Studio-Projekt bleibt lokal; nur die kanonische Web-App wird versioniert.
+/app/*
+!/app/src/
+/app/src/*
+!/app/src/main/
+/app/src/main/*
+!/app/src/main/assets/
+/app/src/main/assets/*
+!/app/src/main/assets/index.html
 /gradle/
 /gradlew
 /gradlew.bat
