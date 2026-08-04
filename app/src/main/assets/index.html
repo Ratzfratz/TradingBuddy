@@ -12554,9 +12554,8 @@ function tradeCardHtml(trade, showActions = true) {
     ? `<span style="color:${Number(trade.ret) >= 0 ? 'var(--green)' : 'var(--red)'}"> (${fmtPct(Number(trade.ret))})</span>`
     : '';
 
-  const dateText = trade.exitDate
-    ? `${formatGermanDate(trade.entryDate) || '—'} → ${formatGermanDate(trade.exitDate)}`
-    : (formatGermanDate(trade.entryDate) || '—');
+  const purchaseDateText = formatGermanDate(trade.entryDate) || '—';
+  const saleDateText = trade.exitDate ? formatGermanDate(trade.exitDate) : '—';
   const displayUnderlying = isDerivativeTrade(trade) ? tradeDerivativeDisplayName(trade) : tradeDisplayUnderlyingName(trade);
   const fullUnderlyingName = tradeDisplayUnderlyingName(trade);
   const expiryCompact = formatGermanDate(trade.expiry);
@@ -12607,8 +12606,10 @@ function tradeCardHtml(trade, showActions = true) {
         <span class="tc-list-metric"><span class="tc-k">Einstieg</span><span class="tc-v">${trade.entry !== null ? fmt(trade.entry) + '\u202f€' : '—'}</span></span>
         <span class="tc-list-metric"><span class="tc-k">Ausstieg</span><span class="tc-v">${trade.exit !== null ? fmt(trade.exit) + '\u202f€' : '—'}</span></span>
         <span class="tc-list-metric"><span class="tc-k">Anzahl</span><span class="tc-v">${fmtCount(trade.count)}</span></span>
-        <span class="tc-list-metric tc-list-period"><span class="tc-k">Zeitraum</span><span class="tc-v">${dateText}</span></span>
-        <span class="tc-list-metric"><span class="tc-k">Wert</span><span class="tc-v">${fmt(Number(trade.capital || 0))}\u202f€</span></span>
+        <span class="tc-list-metric tc-list-purchase"><span class="tc-k">Kauf</span><span class="tc-v">${purchaseDateText}</span></span>
+        <span class="tc-list-metric tc-list-sale"><span class="tc-k">Verkauf</span><span class="tc-v">${saleDateText}</span></span>
+        ${isDerivativeTrade(trade) ? `<span class="tc-list-metric tc-list-strike"><span class="tc-k">${normalizedAssetType(trade) === 'ko' ? 'KO-Schwelle' : 'Strike'}</span><span class="tc-v">${tradeDerivativeStrikeLabel(trade) || '—'}</span></span><span class="tc-list-metric tc-list-expiry"><span class="tc-k">Fälligkeit</span><span class="tc-v">${expiryCompact || '—'}</span></span>` : ''}
+        <span class="tc-list-metric tc-list-value-metric"><span class="tc-k">Wert</span><span class="tc-v">${fmt(Number(trade.capital || 0))}\u202f€</span></span>
       </div>
       ${actions}
     </div>
@@ -12622,7 +12623,9 @@ function tradeCardHtml(trade, showActions = true) {
       ${isDerivativeTrade(trade) && trade.strike !== null
         ? `<div class="tc-cell tc-strike"><span class="tc-k">${normalizedAssetType(trade) === 'ko' ? 'KO-Schwelle' : 'Strike'}</span><span class="tc-v">${fmt(trade.strike)}\u202f${trade.strikeCurrency==='USD'?'$':'€'}</span></div>`
         : ''}
-      <div class="tc-cell tc-cell-wide tc-period"><span class="tc-k">Zeitraum</span><span class="tc-v">${dateText}</span></div>
+      <div class="tc-cell tc-period"><span class="tc-k">Kauf</span><span class="tc-v">${purchaseDateText}</span></div>
+      <div class="tc-cell tc-period"><span class="tc-k">Verkauf</span><span class="tc-v">${saleDateText}</span></div>
+      ${isDerivativeTrade(trade) ? `<div class="tc-cell tc-expiry"><span class="tc-k">Fälligkeit</span><span class="tc-v">${expiryCompact || '—'}</span></div>` : ''}
       <div class="tc-cell tc-list-value"><span class="tc-k">Wert</span><span class="tc-v">${fmt(Number(trade.capital || 0))}\u202f€</span></div>
     </div>
 
@@ -21461,6 +21464,68 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
     justify-content:flex-end!important;
   }
   body.journal-list-view #trade-list .tc-list-metric:not(:last-child)::after{margin:0 4px}
+}
+</style>
+<style id="journal-list-layout-fixes">
+.journal-filter-panel,
+.journal-filter-head,
+.journal-filter-controls,
+.journal-filter-controls > *,
+.journal-sort-slot,
+.journal-sort-slot > .cs-wrap{
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+.journal-filter-controls{overflow:visible}
+.journal-filter-panel .filter-reset,
+.journal-filter-panel .journal-sort-select,
+.journal-filter-panel .cs-trigger{min-width:0;max-width:100%}
+
+@media (min-width:1280px){
+  body.page-tagebuch .journal-filter-panel,
+  body.page-tagebuch #journal-glass-layer{
+    right:max(0px,calc((100vw - var(--tb-large-content))/2 + var(--tb-main-right)))!important;
+    width:auto!important;
+    max-width:none!important;
+  }
+  body.page-tagebuch .journal-filter-controls{
+    width:100%!important;
+    grid-template-columns:minmax(0,220px) minmax(0,340px)!important;
+  }
+  body.journal-list-view #trade-list{grid-template-columns:minmax(0,1375px)!important}
+  body.journal-list-view #trade-list>.trade-card{
+    grid-template-columns:260px minmax(0,1fr) 112px 116px;
+  }
+  body.journal-list-view #trade-list .tc-titlewrap{grid-template-columns:minmax(0,1fr)}
+  body.journal-list-view #trade-list .tc-list-fullname{
+    grid-column:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  body.journal-list-view #trade-list .tc-ticker{display:none!important}
+  body.journal-list-view #trade-list .tc-badges{
+    grid-column:1;
+    display:flex;
+    grid-template-columns:none;
+  }
+  body.journal-list-view #trade-list .tc-badges>.tc-wkn-badge{grid-column:auto}
+  body.journal-list-view #trade-list .tc-list-metrics{
+    grid-template-columns:50px 50px 44px 70px 70px 60px 72px minmax(65px,1fr);
+    gap:6px;
+  }
+  body.journal-list-view #trade-list .tc-list-strike,
+  body.journal-list-view #trade-list .tc-list-expiry{display:flex}
+  body.journal-list-view #trade-list .tc-list-value-metric{grid-column:8}
+}
+@media (min-width:1600px){
+  body.journal-list-view #trade-list>.trade-card{
+    grid-template-columns:325px minmax(0,1fr) 190px 150px;
+  }
+  body.journal-list-view #trade-list .tc-list-metrics{
+    grid-template-columns:66px 66px 56px 86px 86px minmax(72px,90px) minmax(82px,96px) minmax(82px,1fr);
+    gap:8px;
+  }
 }
 </style>
 <script>
