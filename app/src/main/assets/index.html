@@ -1243,8 +1243,9 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 :root.light-theme .stats-year-control.is-active .cs-chevron,:root.light-theme .year-select-active .cs-chevron{color:var(--blue)!important}
 .stats-overview-details{margin:2px 0 0!important;border:1px solid var(--bd);border-radius:7px;background:var(--s2);overflow:hidden}
 .stats-overview-details summary{padding:10px;color:var(--muted);font-size:.65rem}
-.stats-overview-details[open] summary{border-bottom:1px solid var(--bd)}
-.stats-overview-details .tax-details-body{padding:9px 10px 10px}
+.stats-overview-details[open]{background:color-mix(in srgb,var(--s2) 82%,var(--blue) 18%);border-color:color-mix(in srgb,var(--bd) 72%,var(--blue) 28%)}
+.stats-overview-details[open] summary{border-bottom:1px solid var(--bd);color:var(--text)!important}
+.stats-overview-details .tax-details-body{padding:9px 10px 10px;display:grid;gap:0}
 .tax-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:.63rem;color:var(--muted);line-height:1.4}
 .tax-settings-link{flex-shrink:0;border:0;background:none;color:var(--blue);font-family:var(--f);font-size:.65rem;font-weight:700;cursor:pointer;padding:4px 0}
 .tax-hero{background:linear-gradient(135deg,rgba(91,138,245,.10),rgba(34,211,160,.07));border:1px solid rgba(91,138,245,.25);border-radius:10px;padding:14px;margin-bottom:8px}
@@ -21496,6 +21497,7 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
   body.journal-list-view #trade-list{grid-template-columns:minmax(0,1375px)!important}
   body.journal-list-view #trade-list>.trade-card{
     grid-template-columns:260px minmax(0,1fr) 112px 116px;
+    column-gap:18px;
   }
   body.journal-list-view #trade-list .tc-titlewrap{grid-template-columns:minmax(0,1fr)}
   body.journal-list-view #trade-list .tc-list-fullname{
@@ -21511,8 +21513,9 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
   }
   body.journal-list-view #trade-list .tc-badges>.tc-wkn-badge{grid-column:auto}
   body.journal-list-view #trade-list .tc-list-metrics{
-    grid-template-columns:50px 50px 44px 70px 70px 60px 72px minmax(65px,1fr);
-    gap:6px;
+    grid-template-columns:56px 56px 48px 76px 76px 66px 78px minmax(72px,1fr);
+    column-gap:10px;
+    row-gap:4px;
   }
   body.journal-list-view #trade-list .tc-list-strike,
   body.journal-list-view #trade-list .tc-list-expiry{display:flex}
@@ -21520,11 +21523,13 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
 }
 @media (min-width:1600px){
   body.journal-list-view #trade-list>.trade-card{
-    grid-template-columns:325px minmax(0,1fr) 190px 150px;
+    grid-template-columns:325px minmax(0,1fr) 185px 128px;
+    column-gap:18px;
   }
   body.journal-list-view #trade-list .tc-list-metrics{
     grid-template-columns:66px 66px 56px 86px 86px minmax(72px,90px) minmax(82px,96px) minmax(82px,1fr);
-    gap:8px;
+    column-gap:11px;
+    row-gap:4px;
   }
 }
 </style>
@@ -21551,7 +21556,9 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
   const MIN_SIZES={hero:[.5,.5],overview:[1,2],charts:[1,2],calendar:[1,2],insights:[.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[.5,2]};
   const MAX_SPANS={hero:.5,charts:2,calendar:2,top:1,worst:1,history:1};
   const MAX_HEIGHTS={hero:.5,overview:2,charts:2,calendar:2,insights:3,top:1.5,worst:1.5,history:1.5,tax:3};
-  const HARD_MAX_SIZE_KEYS=new Set(['hero','charts','calendar','top','worst','history']);
+  /* Rankings grow with their content. Only genuinely fixed visual modules keep
+     a hard height cap; otherwise rows can be clipped by the dashboard grid. */
+  const HARD_MAX_SIZE_KEYS=new Set(['hero','charts','calendar']);
   const defaults=()=>({layoutVersion:6,columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2,columnStart:0}]))});
   function largeDisplayDefaults(){
     const layout=defaults();
@@ -21651,7 +21658,18 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
   function animatePlaceholderReflow(placeholder,oldRect){requestAnimationFrame(()=>{if(!placeholder?.isConnected||!oldRect)return;const next=placeholder.getBoundingClientRect(),dx=oldRect.left-next.left,dy=oldRect.top-next.top;if(Math.abs(dx)<1&&Math.abs(dy)<1)return;placeholder.getAnimations().forEach(animation=>animation.cancel());placeholder.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:280,easing:'cubic-bezier(.22,.72,.18,1)'});});}
   function prepareCard(el,key){
     if(el.dataset.statsPrepared)return;el.dataset.statsPrepared='1';if(statsRowObserver)statsRowObserver.observe(el);
-    el.addEventListener('toggle',()=>requestAnimationFrame(syncStatsRowSpans),true);
+    let detailsReflowBefore=null;
+    el.addEventListener('pointerdown',event=>{
+      if(event.target.closest('summary'))detailsReflowBefore=captureCardPositions(document.getElementById('view-stats'),el);
+    },true);
+    el.addEventListener('toggle',()=>{
+      syncStatsRowSpans();
+      if(detailsReflowBefore){
+        const before=detailsReflowBefore;
+        detailsReflowBefore=null;
+        requestAnimationFrame(()=>requestAnimationFrame(()=>animateCardReflow(before)));
+      }
+    },true);
     const handle=document.createElement('span');handle.className='stats-card-resize-handle';handle.title='Breite ziehen';el.appendChild(handle);const heightHandle=document.createElement('span');heightHandle.className='stats-card-height-handle';heightHandle.title='Höhe ziehen';el.appendChild(heightHandle);const badge=document.createElement('span');badge.className='stats-card-size-badge';el.appendChild(badge);
     el.addEventListener('pointerdown',e=>{
       if(!document.body.classList.contains('stats-layout-editing')||e.button!==0||e.target.closest('button,input,select,a,summary,.stats-card-resize-handle,.stats-card-height-handle'))return;
