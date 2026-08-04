@@ -21798,6 +21798,18 @@ body.journal-list-view #trade-list .tc-pnl-status{
 body.journal-list-view #trade-list .tc-pnl-status{
   font-size:.82rem!important;
 }
+/* Stable distance from outcome to actions at every width. The action column is
+   left-aligned so a missing calculator button adds space after, not before, it. */
+body.journal-list-view #trade-list>.trade-card{
+  column-gap:16px!important;
+}
+body.journal-list-view #trade-list .tc-pnl{
+  justify-self:end!important;
+}
+body.journal-list-view #trade-list .tc-actions{
+  justify-self:stretch!important;
+  justify-content:flex-start!important;
+}
 </style>
 <script>
 (function(){
