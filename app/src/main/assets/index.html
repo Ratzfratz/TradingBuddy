@@ -21595,7 +21595,7 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
    Use a two-row card in the intermediate range so P&L never overlaps value. */
 @media (min-width:1280px) and (max-width:1699px){
   body.journal-list-view #trade-list>.trade-card{
-    grid-template-columns:minmax(0,1fr) auto auto!important;
+    grid-template-columns:minmax(0,1fr) 175px 142px!important;
     grid-template-areas:"title pnl actions" "metrics metrics metrics"!important;
     gap:6px 16px!important;
     padding-top:7px!important;
@@ -21646,7 +21646,7 @@ body.journal-list-view #trade-list .tc-pnl-return{
   }
   body.journal-list-view #trade-list>.trade-card{
     display:grid!important;
-    grid-template-columns:minmax(0,1fr) minmax(120px,auto) auto!important;
+    grid-template-columns:minmax(0,1fr) 175px 142px!important;
     grid-template-areas:"title pnl actions" "metrics metrics metrics"!important;
     gap:6px 12px!important;
     width:100%!important;
@@ -21701,7 +21701,11 @@ body.journal-list-view #trade-list .tc-pnl-return{
 }
 
 @media (max-width:767px){
-  body.journal-list-view #trade-list>.trade-card{border-radius:7px!important}
+  body.journal-list-view #trade-list>.trade-card{
+    grid-template-columns:minmax(0,1fr) 112px 104px!important;
+    grid-template-areas:"title pnl actions" "metrics metrics metrics"!important;
+    border-radius:7px!important;
+  }
   body.journal-list-view #trade-list .tc-list-metrics{
     display:grid!important;
     grid-template-columns:repeat(4,minmax(0,1fr))!important;
@@ -21777,6 +21781,14 @@ body.journal-list-view #trade-list .tc-pnl-side{
 body.journal-list-view #trade-list .tc-pnl-result{
   grid-row:1!important;
   align-self:center!important;
+}
+body.journal-list-view #trade-list .tc-pnl-label{
+  grid-row:1!important;
+  align-self:center!important;
+  color:var(--muted)!important;
+  font-size:.56rem!important;
+  font-weight:650!important;
+  line-height:1!important;
 }
 body.journal-list-view #trade-list .tc-pnl-return,
 body.journal-list-view #trade-list .tc-pnl-status{
