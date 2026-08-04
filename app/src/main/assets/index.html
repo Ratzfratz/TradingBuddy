@@ -21580,16 +21580,48 @@ body.journal-list-view #trade-list .tc-ticker-duplicate{display:none!important}
   body.journal-list-view #trade-list .tc-list-metric:not(:last-child)::after{display:none!important}
   body.journal-list-view #trade-list .tc-list-value-metric{grid-column:auto!important}
   body.journal-list-view #trade-list .tc-k{
-    font-size:.49rem!important;
-    line-height:1!important;
+    font-size:.56rem!important;
+    line-height:1.1!important;
   }
   body.journal-list-view #trade-list .tc-v{
     max-width:100%!important;
-    font-size:.59rem!important;
-    line-height:1.15!important;
+    font-size:.68rem!important;
+    line-height:1.2!important;
     overflow:hidden!important;
     text-overflow:ellipsis!important;
   }
+}
+/* With a desktop sidebar, viewport width is not the same as usable card width.
+   Use a two-row card in the intermediate range so P&L never overlaps value. */
+@media (min-width:1280px) and (max-width:1699px){
+  body.journal-list-view #trade-list>.trade-card{
+    grid-template-columns:minmax(0,1fr) auto auto!important;
+    grid-template-areas:"title pnl actions" "metrics metrics metrics"!important;
+    gap:6px 16px!important;
+    padding-top:7px!important;
+    padding-bottom:7px!important;
+  }
+  body.journal-list-view #trade-list .tc-titlewrap{grid-area:title!important}
+  body.journal-list-view #trade-list .tc-list-metrics{
+    grid-area:metrics!important;
+    grid-template-columns:62px 62px 54px 84px 84px 76px 88px minmax(84px,1fr)!important;
+    column-gap:14px!important;
+    padding-top:6px!important;
+    border-top:1px solid var(--bd)!important;
+  }
+  body.journal-list-view #trade-list .tc-list-metric{
+    min-width:0!important;
+  }
+  body.journal-list-view #trade-list .tc-list-metric .tc-v{
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body.journal-list-view #trade-list .tc-pnl{
+    grid-area:pnl!important;
+    min-width:175px!important;
+  }
+  body.journal-list-view #trade-list .tc-actions{grid-area:actions!important}
 }
 </style>
 <script>
