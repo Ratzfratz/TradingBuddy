@@ -6680,6 +6680,7 @@ body.tb-compact-small{
 .tp-shell{width:min(100%,1100px);margin:0 auto;display:grid;gap:14px}
 .tp-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;padding:18px;border:1px solid var(--bd);border-radius:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 10%,var(--s1)),color-mix(in srgb,var(--green) 8%,var(--s1)));box-shadow:var(--shadow)}
 .tp-eyebrow{font-size:.58rem;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--blue)}
+.tp-hero-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}.tp-status{padding:4px 8px;border-radius:999px;background:var(--s3);color:var(--muted);font-size:.55rem;font-weight:800;text-transform:uppercase;letter-spacing:.55px}.tp-status.active{background:rgba(34,211,160,.12);color:var(--green)}
 .tp-hero h1{margin:5px 0 6px;font-size:1.35rem;line-height:1.15;color:var(--text)}
 .tp-hero p{margin:0;max-width:680px;font-size:.7rem;line-height:1.5;color:var(--muted)}
 .tp-progress{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--green) var(--tp-progress,0%),var(--s3) 0);position:relative}
@@ -6687,6 +6688,8 @@ body.tb-compact-small{
 .tp-progress-value{position:relative;text-align:center;font-size:1.15rem;font-weight:800;color:var(--text)}
 .tp-progress-value small{display:block;margin-top:2px;font-size:.48rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
 .tp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+#tp-editor>.tp-card:nth-child(1){order:1}#tp-editor>.tp-card:nth-child(2){order:3}#tp-editor>.tp-card:nth-child(3){order:2}#tp-editor>.tp-card:nth-child(4){order:4}#tp-editor>.tp-card:nth-child(5){order:5}#tp-editor>.tp-card:nth-child(6){order:6}
+.tp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.tp-summary-card{padding:14px;border:1px solid var(--bd);border-radius:11px;background:var(--s1);box-shadow:var(--shadow);min-width:0}.tp-summary-card strong{display:block;margin-bottom:8px;font-size:.7rem;color:var(--text)}.tp-summary-list{display:grid;gap:6px}.tp-summary-row{display:flex;justify-content:space-between;gap:10px;font-size:.61rem;line-height:1.35}.tp-summary-row span:first-child{color:var(--muted)}.tp-summary-row span:last-child{color:var(--text);font-weight:700;text-align:right;overflow-wrap:anywhere}.tp-summary-rules{margin:0;padding-left:17px;color:var(--text);font-size:.62rem;line-height:1.55}.tp-mode-switch{display:flex;gap:6px;margin-left:auto}.tp-mode-btn{height:32px;padding:0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);color:var(--muted);font:700 .58rem var(--f);cursor:pointer}.tp-mode-btn.on{border-color:var(--blue);background:rgba(91,138,245,.11);color:var(--blue)}
 .tp-card{padding:16px;border:1px solid var(--bd);border-radius:12px;background:var(--s1);box-shadow:var(--shadow);min-width:0}
 .tp-card-wide{grid-column:1/-1}
 .tp-card-title{display:flex;align-items:center;gap:9px;margin-bottom:13px;font-size:.78rem;font-weight:800;color:var(--text)}
@@ -6707,8 +6710,11 @@ body.tb-compact-small{
 .tp-actions{position:sticky;bottom:calc(var(--bottom-stack-height) + 8px);z-index:25;display:flex;justify-content:flex-end;gap:8px;padding:8px;border:1px solid color-mix(in srgb,var(--bd) 75%,transparent);border-radius:12px;background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(14px);box-shadow:0 8px 26px rgba(0,0,0,.15)}
 .tp-save{min-width:190px;height:44px;border:0;border-radius:9px;background:linear-gradient(135deg,var(--green),var(--blue));color:#fff;font:800 .7rem var(--f);cursor:pointer}
 .tp-reset{height:44px;padding:0 15px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .65rem var(--f);cursor:pointer}
+.tp-edit{height:44px;padding:0 17px;border:1px solid var(--blue);border-radius:9px;background:rgba(91,138,245,.11);color:var(--blue);font:800 .67rem var(--f);cursor:pointer}.tp-cancel{height:44px;padding:0 15px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .65rem var(--f);cursor:pointer}
 .tp-saved{align-self:center;margin-right:auto;font-size:.62rem;font-weight:700;color:var(--green);opacity:0;transition:opacity .2s}.tp-saved.show{opacity:1}
-@media (max-width:719px){.bnav-w{grid-template-columns:repeat(5,minmax(0,1fr))}.tp-shell{gap:10px}.tp-hero{grid-template-columns:minmax(0,1fr) 76px;padding:14px;gap:10px}.tp-progress{width:72px;height:72px}.tp-progress-value{font-size:.9rem}.tp-grid{grid-template-columns:1fr;gap:10px}.tp-card-wide{grid-column:auto}.tp-card{padding:13px}.tp-fields{grid-template-columns:1fr 1fr}.tp-actions{bottom:calc(var(--bottom-stack-height) + 5px)}.tp-save{min-width:0;flex:1}.tp-reset{padding:0 10px}.tp-saved{display:none}}
+body.tp-guided [data-tp-advanced]{display:none!important}
+@media (max-width:900px){.tp-summary{grid-template-columns:1fr 1fr}.tp-summary-card:last-child{grid-column:1/-1}}
+@media (max-width:719px){.bnav-w{grid-template-columns:repeat(5,minmax(0,1fr))}.tp-shell{gap:10px}.tp-hero{grid-template-columns:minmax(0,1fr) 76px;padding:14px;gap:10px}.tp-progress{width:72px;height:72px}.tp-progress-value{font-size:.9rem}.tp-grid{grid-template-columns:1fr;gap:10px}.tp-card-wide{grid-column:auto}.tp-card{padding:13px}.tp-fields{grid-template-columns:1fr 1fr}.tp-actions{bottom:calc(var(--bottom-stack-height) + 5px)}.tp-save{min-width:0;flex:1}.tp-reset{padding:0 10px}.tp-saved{display:none}.tp-summary{grid-template-columns:1fr}.tp-summary-card:last-child{grid-column:auto}.tp-mode-switch{width:100%;margin:7px 0 0}.tp-mode-btn{flex:1}}
 @media (max-width:420px){.tp-hero{grid-template-columns:1fr}.tp-progress{display:none}.tp-fields{grid-template-columns:1fr}.tp-field-wide{grid-column:auto}.bni{font-size:.46rem!important}}
 </style>
 </head>
@@ -6960,14 +6966,20 @@ body.tb-compact-small{
   <div class="tp-shell">
     <section class="tp-hero">
       <div>
-        <div class="tp-eyebrow">Mein Regelwerk</div>
+        <div class="tp-hero-meta"><div class="tp-eyebrow">Mein Regelwerk</div><span class="tp-status" id="tp-status">Entwurf</span><div class="tp-mode-switch"><button class="tp-mode-btn on" id="tp-mode-guided" type="button" onclick="setTradingPlanMode('guided')">Geführt</button><button class="tp-mode-btn" id="tp-mode-advanced" type="button" onclick="setTradingPlanMode('advanced')">Erweitert</button></div></div>
         <h1>Persönlicher Tradingplan</h1>
         <p>Definiere, wie du handelst, welches Risiko du akzeptierst und wann du bewusst nicht handelst. Der Plan ist dein Rahmen – nicht das Ergebnis eines einzelnen Trades.</p>
       </div>
-      <div class="tp-progress" id="tp-progress"><div class="tp-progress-value"><span id="tp-progress-value">0%</span><small>vollständig</small></div></div>
+      <div class="tp-progress" id="tp-progress"><div class="tp-progress-value"><span id="tp-progress-value">0%</span><small>Kernpunkte</small></div></div>
     </section>
 
-    <div class="tp-grid">
+    <div class="tp-summary hidden" id="tp-summary">
+      <section class="tp-summary-card"><strong>Mein Rahmen</strong><div class="tp-summary-list" id="tp-summary-profile"></div></section>
+      <section class="tp-summary-card"><strong>Risiko &amp; Stop</strong><div class="tp-summary-list" id="tp-summary-risk"></div></section>
+      <section class="tp-summary-card"><strong>Meine wichtigsten Regeln</strong><ul class="tp-summary-rules" id="tp-summary-rules"></ul></section>
+    </div>
+
+    <div class="tp-grid" id="tp-editor">
       <section class="tp-card">
         <div class="tp-card-title"><span>01</span>Identität &amp; Ziele</div>
         <div class="tp-fields">
@@ -6975,6 +6987,20 @@ body.tb-compact-small{
           <div class="tp-field"><label for="tp-horizon">Zeithorizont</label><select id="tp-horizon" data-tp-field><option value="">Bitte wählen</option><option>Intraday</option><option>Mehrere Tage</option><option>Mehrere Wochen</option><option>Mehrere Monate</option></select></div>
           <div class="tp-field tp-field-wide"><label for="tp-goal">Mein übergeordnetes Ziel</label><textarea id="tp-goal" data-tp-field placeholder="Was möchtest du mit deinem Trading erreichen – und woran erkennst du Fortschritt?"></textarea></div>
           <div class="tp-field tp-field-wide"><label for="tp-markets">Märkte &amp; Produkte</label><input id="tp-markets" data-tp-field placeholder="z. B. Aktien, ETFs, Optionsscheine auf liquide US-Werte"></div>
+        </div>
+      </section>
+
+      <section class="tp-card" data-tp-advanced>
+        <div class="tp-card-title"><span>+</span>Erweitertes Risikomanagement</div>
+        <div class="tp-fields">
+          <div class="tp-field"><span>Tradingkapital</span><div class="tp-unit"><input id="tp-capital" data-tp-field type="number" min="0" step="100" inputmode="decimal"><span>€</span></div></div>
+          <div class="tp-field"><span>Max. Positionsgröße</span><div class="tp-unit"><input id="tp-position-size" data-tp-field type="number" min="0" step="1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field"><span>Max. Portfolio-Heat</span><div class="tp-unit"><input id="tp-portfolio-heat" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field"><span>Mindest-CRV</span><div class="tp-unit"><input id="tp-min-crv" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>: 1</span></div></div>
+          <div class="tp-field"><label for="tp-pause-duration">Dauer der Handelspause</label><input id="tp-pause-duration" data-tp-field placeholder="z. B. bis zum nächsten Handelstag"></div>
+          <div class="tp-field"><label for="tp-restart-rule">Bedingung für Wiederaufnahme</label><input id="tp-restart-rule" data-tp-field placeholder="z. B. Review abgeschlossen"></div>
+          <div class="tp-field tp-field-wide"><label for="tp-event-risk">Ereignis- und Overnight-Regeln</label><textarea id="tp-event-risk" data-tp-field placeholder="Quartalszahlen, Wirtschaftsdaten, Gaps, Wochenendrisiko …"></textarea></div>
+          <div class="tp-field tp-field-wide"><label for="tp-management">Positionsmanagement</label><textarea id="tp-management" data-tp-field placeholder="Teilverkäufe, Nachziehen des Stops, Scale-in/out, Zeitstop …"></textarea></div>
         </div>
       </section>
 
@@ -7022,8 +7048,10 @@ body.tb-compact-small{
 
     <div class="tp-actions">
       <span class="tp-saved" id="tp-saved">Tradingplan gespeichert</span>
-      <button class="tp-reset" type="button" onclick="resetTradingPlan()">Zurücksetzen</button>
-      <button class="tp-save" type="button" onclick="saveTradingPlan(true)">Tradingplan speichern</button>
+      <button class="tp-edit" id="tp-edit" type="button" onclick="setTradingPlanEditing(true)">Plan bearbeiten</button>
+      <button class="tp-reset hidden" id="tp-reset" type="button" onclick="resetTradingPlan()">Zurücksetzen</button>
+      <button class="tp-cancel hidden" id="tp-cancel" type="button" onclick="setTradingPlanEditing(false,true)">Abbrechen</button>
+      <button class="tp-save hidden" id="tp-save" type="button" onclick="saveTradingPlan(true)">Plan aktivieren</button>
     </div>
   </div>
 </div>
@@ -22296,37 +22324,99 @@ body.journal-list-view #trade-list .tc-actions{
   'use strict';
   const TRADING_PLAN_KEY='tb_trading_plan_v1';
   let tradingPlanBound=false;
+  let tradingPlanEditing=true;
+  let tradingPlanMode='guided';
   let savedTimer=0;
   function planFields(){return Array.from(document.querySelectorAll('#page-tradingplan [data-tp-field]'));}
   function readPlan(){
     try{return JSON.parse(localStorage.getItem(TRADING_PLAN_KEY)||'{}')||{};}catch(error){return {};}
   }
-  function collectPlan(){
-    const data={updatedAt:new Date().toISOString()};
+  function collectPlan(previous){
+    const data={...(previous||{}),updatedAt:new Date().toISOString(),mode:tradingPlanMode,status:'active'};
     planFields().forEach(field=>{data[field.id]=field.type==='checkbox'?field.checked:String(field.value||'').trim();});
     return data;
   }
-  function updateTradingPlanProgress(){
-    const core=['tp-style','tp-horizon','tp-goal','tp-markets','tp-risk-trade','tp-risk-day','tp-risk-week','tp-max-open','tp-stop-policy','tp-loss-streak','tp-setups','tp-entry-rules','tp-exit-rules','tp-before','tp-after','tp-emergency'];
-    const filled=core.reduce((sum,id)=>sum+(String(document.getElementById(id)?.value||'').trim()?1:0),0);
+  function progressValue(){
+    const core=['tp-style','tp-goal','tp-markets','tp-risk-trade','tp-risk-day','tp-stop-policy','tp-setups','tp-exit-rules','tp-emergency'];
+    const advanced=['tp-capital','tp-position-size','tp-portfolio-heat','tp-min-crv','tp-pause-duration','tp-restart-rule'];
+    const relevant=tradingPlanMode==='advanced'?core.concat(advanced):core;
+    const filled=relevant.reduce((sum,id)=>sum+(String(document.getElementById(id)?.value||'').trim()?1:0),0);
     const mindset=['tp-rule-losses','tp-rule-fomo','tp-rule-revenge','tp-rule-stop'].some(id=>document.getElementById(id)?.checked)?1:0;
-    const personal=String(document.getElementById('tp-personal-rules')?.value||'').trim()?1:0;
-    const percent=Math.round((filled+mindset+personal)/(core.length+2)*100);
+    return Math.round((filled+mindset)/(relevant.length+1)*100);
+  }
+  function updateTradingPlanProgress(){
+    const percent=progressValue();
     const progress=document.getElementById('tp-progress');
     const value=document.getElementById('tp-progress-value');
     if(progress)progress.style.setProperty('--tp-progress',percent+'%');
     if(value)value.textContent=percent+'%';
+    return percent;
   }
-  window.saveTradingPlan=function(showFeedback){
-    try{localStorage.setItem(TRADING_PLAN_KEY,JSON.stringify(collectPlan()));}catch(error){}
+  function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
+  function summaryRow(label,value){return `<div class="tp-summary-row"><span>${esc(label)}</span><span>${esc(value||'—')}</span></div>`;}
+  function stopLabel(value){return {real:'Echter Stop',mental:'Mentaler Stop mit Kurs',choice:'Je Setup echt oder mental',exception:'Begründete Ausnahmen'}[value]||'—';}
+  function renderSummary(data){
+    const profile=document.getElementById('tp-summary-profile'),risk=document.getElementById('tp-summary-risk'),rules=document.getElementById('tp-summary-rules');
+    if(profile)profile.innerHTML=summaryRow('Tradingstil',data['tp-style'])+summaryRow('Zeithorizont',data['tp-horizon'])+summaryRow('Märkte',data['tp-markets'])+summaryRow('Ziel',data['tp-goal']);
+    if(risk)risk.innerHTML=summaryRow('Risiko / Trade',data['tp-risk-trade']?data['tp-risk-trade']+' %':'')+summaryRow('Tageslimit',data['tp-risk-day']?data['tp-risk-day']+' %':'')+summaryRow('Wochenlimit',data['tp-risk-week']?data['tp-risk-week']+' %':'')+summaryRow('Stop',stopLabel(data['tp-stop-policy']))+(data.mode==='advanced'?summaryRow('Portfolio-Heat',data['tp-portfolio-heat']?data['tp-portfolio-heat']+' %':''): '');
+    const selected=[];
+    if(data['tp-rule-losses'])selected.push('Regelkonforme Verluste werden akzeptiert.');
+    if(data['tp-rule-fomo'])selected.push('Kein Einstieg aus FOMO.');
+    if(data['tp-rule-revenge'])selected.push('Kein Revenge-Trading.');
+    if(data['tp-rule-stop'])selected.push('Stop nicht nachteilig verschieben.');
+    String(data['tp-personal-rules']||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,4).forEach(x=>selected.push(x));
+    if(rules)rules.innerHTML=(selected.length?selected:['Noch keine Kernregel festgelegt.']).map(rule=>`<li>${esc(rule)}</li>`).join('');
+  }
+  function applyEditingState(){
+    const hasPlan=Object.keys(readPlan()).some(key=>key.startsWith('tp-'));
+    const edit=tradingPlanEditing||!hasPlan;
+    document.getElementById('tp-editor')?.classList.toggle('hidden',!edit);
+    document.getElementById('tp-summary')?.classList.toggle('hidden',edit);
+    document.getElementById('tp-edit')?.classList.toggle('hidden',edit);
+    document.getElementById('tp-reset')?.classList.toggle('hidden',!edit);
+    document.getElementById('tp-cancel')?.classList.toggle('hidden',!edit||!hasPlan);
+    document.getElementById('tp-save')?.classList.toggle('hidden',!edit);
+    const status=document.getElementById('tp-status');
+    if(status){status.textContent=hasPlan&&!edit?'Aktiv':'Entwurf';status.classList.toggle('active',hasPlan&&!edit);}
+  }
+  window.setTradingPlanMode=function(mode){
+    tradingPlanMode=mode==='advanced'?'advanced':'guided';
+    document.body.classList.toggle('tp-guided',tradingPlanMode==='guided');
+    document.getElementById('tp-mode-guided')?.classList.toggle('on',tradingPlanMode==='guided');
+    document.getElementById('tp-mode-advanced')?.classList.toggle('on',tradingPlanMode==='advanced');
     updateTradingPlanProgress();
+  };
+  window.setTradingPlanEditing=function(editing,reload){
+    tradingPlanEditing=!!editing;
+    if(reload)renderTradingPlan(true);
+    else applyEditingState();
+  };
+  function commitPlan(showFeedback){
+    const previous=readPlan();
+    const data=collectPlan(previous);
+    data.version=Math.max(0,Number(previous.version)||0)+1;
+    data.activatedAt=new Date().toISOString();
+    try{localStorage.setItem(TRADING_PLAN_KEY,JSON.stringify(data));}catch(error){}
+    tradingPlanEditing=false;
+    renderSummary(data);
+    applyEditingState();
     if(showFeedback){
       const saved=document.getElementById('tp-saved');
       if(saved){saved.classList.add('show');clearTimeout(savedTimer);savedTimer=setTimeout(()=>saved.classList.remove('show'),2200);}
     }
+  }
+  window.saveTradingPlan=function(showFeedback){
+    const percent=updateTradingPlanProgress();
+    if(percent<60&&typeof showConfirm==='function'){
+      showConfirm('Wichtige Teile deines Tradingplans fehlen noch. Trotzdem als aktive Version speichern?',()=>commitPlan(showFeedback));
+      return;
+    }
+    commitPlan(showFeedback);
   };
-  window.renderTradingPlan=function(){
+  window.renderTradingPlan=function(keepEditing){
     const data=readPlan();
+    tradingPlanMode=data.mode==='advanced'?'advanced':'guided';
+    setTradingPlanMode(tradingPlanMode);
     planFields().forEach(field=>{
       if(!Object.prototype.hasOwnProperty.call(data,field.id))return;
       if(field.type==='checkbox')field.checked=!!data[field.id];
@@ -22336,16 +22426,21 @@ body.journal-list-view #trade-list .tc-actions{
       tradingPlanBound=true;
       planFields().forEach(field=>{
         const eventName=field.type==='checkbox'||field.tagName==='SELECT'?'change':'input';
-        field.addEventListener(eventName,()=>saveTradingPlan(false));
+        field.addEventListener(eventName,updateTradingPlanProgress);
       });
     }
+    renderSummary(data);
+    if(!keepEditing)tradingPlanEditing=!Object.keys(data).some(key=>key.startsWith('tp-'));
     updateTradingPlanProgress();
+    applyEditingState();
   };
   window.resetTradingPlan=function(){
     const reset=()=>{
       try{localStorage.removeItem(TRADING_PLAN_KEY);}catch(error){}
       planFields().forEach(field=>{if(field.type==='checkbox')field.checked=false;else field.value='';});
+      tradingPlanEditing=true;
       updateTradingPlanProgress();
+      applyEditingState();
     };
     if(typeof showConfirm==='function')showConfirm('Tradingplan wirklich vollständig zurücksetzen?',reset);
     else reset();
