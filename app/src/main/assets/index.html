@@ -21719,6 +21719,73 @@ body.journal-list-view #trade-list .tc-pnl-return{
   body.journal-list-view #trade-list .tc-list-metric:not(:last-child)::after{display:none!important}
   body.journal-list-view #trade-list .tc-pnl-side{font-size:.78rem!important}
 }
+/* Canonical list typography: breakpoints change placement, never type styling. */
+body.journal-list-view #trade-list,
+body.journal-list-view #trade-list button,
+body.journal-list-view #trade-list span{
+  font-family:var(--f)!important;
+}
+body.journal-list-view #trade-list .tc-list-fullname{
+  font-size:.86rem!important;
+  font-weight:750!important;
+  line-height:1.18!important;
+  letter-spacing:0!important;
+}
+body.journal-list-view #trade-list .tc-k{
+  font-size:.59rem!important;
+  font-weight:650!important;
+  line-height:1.1!important;
+  letter-spacing:0!important;
+}
+body.journal-list-view #trade-list .tc-v{
+  font-size:.72rem!important;
+  font-weight:700!important;
+  line-height:1.16!important;
+  letter-spacing:0!important;
+}
+body.journal-list-view #trade-list .tc-type,
+body.journal-list-view #trade-list .tc-type.dir,
+body.journal-list-view #trade-list .tc-wkn-badge{
+  font-size:.58rem!important;
+  font-weight:700!important;
+  line-height:1.15!important;
+  letter-spacing:0!important;
+}
+body.journal-list-view #trade-list .tc-pnl-side,
+body.journal-list-view #trade-list .tc-pnl-side .tc-pnl-val,
+body.journal-list-view #trade-list .tc-pnl-status{
+  font-size:.88rem!important;
+  font-weight:750!important;
+  line-height:1.05!important;
+  letter-spacing:0!important;
+}
+body.journal-list-view #trade-list .tc-pnl-return{
+  font-size:.66rem!important;
+  font-weight:750!important;
+  line-height:1.05!important;
+}
+/* Fixed result rhythm at every breakpoint: amount on line one, return or
+   open status on line two. Open trades deliberately leave line one empty. */
+body.journal-list-view #trade-list .tc-pnl-side{
+  display:grid!important;
+  grid-template-rows:1em 1em!important;
+  justify-items:end!important;
+  align-items:center!important;
+  row-gap:2px!important;
+  min-height:calc(2em + 2px)!important;
+}
+body.journal-list-view #trade-list .tc-pnl-result{
+  grid-row:1!important;
+  align-self:center!important;
+}
+body.journal-list-view #trade-list .tc-pnl-return,
+body.journal-list-view #trade-list .tc-pnl-status{
+  grid-row:2!important;
+  align-self:center!important;
+}
+body.journal-list-view #trade-list .tc-pnl-status{
+  font-size:.82rem!important;
+}
 </style>
 <script>
 (function(){
