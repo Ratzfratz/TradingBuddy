@@ -6689,7 +6689,7 @@ body.tb-compact-small{
 .tp-progress-value small{display:block;margin-top:2px;font-size:.48rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
 .tp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 #tp-editor>.tp-card:nth-child(1){order:1}#tp-editor>.tp-card:nth-child(2){order:3}#tp-editor>.tp-card:nth-child(3){order:2}#tp-editor>.tp-card:nth-child(4){order:4}#tp-editor>.tp-card:nth-child(5){order:5}#tp-editor>.tp-card:nth-child(6){order:6}
-.tp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.tp-summary-card{padding:14px;border:1px solid var(--bd);border-radius:11px;background:var(--s1);box-shadow:var(--shadow);min-width:0}.tp-summary-card strong{display:block;margin-bottom:8px;font-size:.7rem;color:var(--text)}.tp-summary-list{display:grid;gap:6px}.tp-summary-row{display:flex;justify-content:space-between;gap:10px;font-size:.61rem;line-height:1.35}.tp-summary-row span:first-child{color:var(--muted)}.tp-summary-row span:last-child{color:var(--text);font-weight:700;text-align:right;overflow-wrap:anywhere}.tp-summary-rules{margin:0;padding-left:17px;color:var(--text);font-size:.62rem;line-height:1.55}.tp-mode-switch{display:flex;gap:6px;margin-left:auto}.tp-mode-btn{height:32px;padding:0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);color:var(--muted);font:700 .58rem var(--f);cursor:pointer}.tp-mode-btn.on{border-color:var(--blue);background:rgba(91,138,245,.11);color:var(--blue)}
+.tp-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tp-summary-card{padding:14px;border:1px solid var(--bd);border-radius:11px;background:var(--s1);box-shadow:var(--shadow);min-width:0}.tp-summary-card strong{display:block;margin-bottom:8px;font-size:.7rem;color:var(--text)}.tp-summary-list{display:grid;gap:6px}.tp-summary-row{display:flex;justify-content:space-between;gap:10px;font-size:.61rem;line-height:1.35}.tp-summary-row span:first-child{color:var(--muted)}.tp-summary-row span:last-child{color:var(--text);font-weight:700;text-align:right;overflow-wrap:anywhere}.tp-summary-rules{margin:0;padding-left:17px;color:var(--text);font-size:.62rem;line-height:1.55}.tp-mode-switch{display:flex;gap:6px;margin-left:auto}.tp-mode-btn{height:32px;padding:0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);color:var(--muted);font:700 .58rem var(--f);cursor:pointer}.tp-mode-btn.on{border-color:var(--blue);background:rgba(91,138,245,.11);color:var(--blue)}
 .tp-card{padding:16px;border:1px solid var(--bd);border-radius:12px;background:var(--s1);box-shadow:var(--shadow);min-width:0}
 .tp-card-wide{grid-column:1/-1}
 .tp-card-title{display:flex;align-items:center;gap:9px;margin-bottom:13px;font-size:.78rem;font-weight:800;color:var(--text)}
@@ -6714,7 +6714,7 @@ body.tb-compact-small{
 .tp-saved{align-self:center;margin-right:auto;font-size:.62rem;font-weight:700;color:var(--green);opacity:0;transition:opacity .2s}.tp-saved.show{opacity:1}
 .nt-plan-checklist{margin:10px 0;padding:10px;border:1px solid var(--bd);border-radius:9px;background:var(--s2)}.nt-plan-checklist-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}.nt-plan-checklist-head strong{font-size:.65rem;color:var(--text)}.nt-plan-checklist-head span{font-size:.58rem;font-weight:800;color:var(--blue)}.nt-plan-checklist-items{display:grid;gap:6px}.nt-plan-check-item{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:start;padding:7px 8px;border:1px solid var(--bd);border-radius:7px;background:var(--s1);font-size:.62rem;line-height:1.35;color:var(--text);cursor:pointer}.nt-plan-check-item input{width:16px;height:16px;margin:0;accent-color:var(--green)}.invested-plan-ok{color:var(--green)!important}.invested-plan-warn{color:var(--red)!important}
 body.tp-guided [data-tp-advanced]{display:none!important}
-@media (max-width:900px){.tp-summary{grid-template-columns:1fr 1fr}.tp-summary-card:last-child{grid-column:1/-1}}
+@media (max-width:900px){.tp-summary{grid-template-columns:1fr 1fr}}
 @media (max-width:719px){.bnav-w{grid-template-columns:repeat(5,minmax(0,1fr))}.tp-shell{gap:10px}.tp-hero{grid-template-columns:minmax(0,1fr) 76px;padding:14px;gap:10px}.tp-progress{width:72px;height:72px}.tp-progress-value{font-size:.9rem}.tp-grid{grid-template-columns:1fr;gap:10px}.tp-card-wide{grid-column:auto}.tp-card{padding:13px}.tp-fields{grid-template-columns:1fr 1fr}.tp-actions{bottom:calc(var(--bottom-stack-height) + 5px)}.tp-save{min-width:0;flex:1}.tp-reset{padding:0 10px}.tp-saved{display:none}.tp-summary{grid-template-columns:1fr}.tp-summary-card:last-child{grid-column:auto}.tp-mode-switch{width:100%;margin:7px 0 0}.tp-mode-btn{flex:1}}
 @media (max-width:420px){.tp-hero{grid-template-columns:1fr}.tp-progress{display:none}.tp-fields{grid-template-columns:1fr}.tp-field-wide{grid-column:auto}.bni{font-size:.46rem!important}}
 </style>
@@ -6977,6 +6977,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
     <div class="tp-summary hidden" id="tp-summary">
       <section class="tp-summary-card"><strong>Mein Rahmen</strong><div class="tp-summary-list" id="tp-summary-profile"></div></section>
       <section class="tp-summary-card"><strong>Risiko &amp; Stop</strong><div class="tp-summary-list" id="tp-summary-risk"></div></section>
+      <section class="tp-summary-card"><strong>Setup &amp; Checkliste</strong><div class="tp-summary-list" id="tp-summary-setup"></div><ul class="tp-summary-rules" id="tp-summary-checklist"></ul></section>
       <section class="tp-summary-card"><strong>Meine wichtigsten Regeln</strong><ul class="tp-summary-rules" id="tp-summary-rules"></ul></section>
     </div>
 
@@ -22431,9 +22432,12 @@ body.journal-list-view #trade-list .tc-actions{
   function styleLabel(value){return {day:'Daytrading',swing:'Swing-Trading',position:'Positionstrading',mixed:'Gemischt'}[value]||value||'—';}
   function horizonLabel(value){return {intraday:'Intraday',days:'Mehrere Tage',weeks:'Mehrere Wochen',months:'Mehrere Monate'}[value]||value||'—';}
   function renderSummary(data){
-    const profile=document.getElementById('tp-summary-profile'),risk=document.getElementById('tp-summary-risk'),rules=document.getElementById('tp-summary-rules');
+    const profile=document.getElementById('tp-summary-profile'),risk=document.getElementById('tp-summary-risk'),setup=document.getElementById('tp-summary-setup'),checklist=document.getElementById('tp-summary-checklist'),rules=document.getElementById('tp-summary-rules');
     if(profile)profile.innerHTML=summaryRow('Tradingstil',styleLabel(data['tp-style']))+summaryRow('Zeithorizont',horizonLabel(data['tp-horizon']))+summaryRow('Märkte',data['tp-markets'])+summaryRow('Ziel',data['tp-goal']);
     if(risk)risk.innerHTML=summaryRow('Risiko / Trade',data['tp-risk-trade']?data['tp-risk-trade']+' %':'')+summaryRow('Kapital / Trade',data['tp-capital-use']?data['tp-capital-use']+' %':'')+summaryRow('Tageslimit',data['tp-risk-day']?data['tp-risk-day']+' %':'')+summaryRow('Wochenlimit',data['tp-risk-week']?data['tp-risk-week']+' %':'')+summaryRow('Stop',stopLabel(data['tp-stop-policy']))+(data.mode==='advanced'?summaryRow('Portfolio-Heat',data['tp-portfolio-heat']?data['tp-portfolio-heat']+' %':''): '');
+    if(setup)setup.innerHTML=summaryRow('Mein Setup',data['tp-setups']);
+    const setupChecks=checklistLines(data);
+    if(checklist)checklist.innerHTML=(setupChecks.length?setupChecks:['Noch keine Checkliste angelegt.']).map(item=>`<li>${esc(item)}</li>`).join('');
     const selected=[];
     if(data['tp-rule-losses'])selected.push('Regelkonforme Verluste werden akzeptiert.');
     if(data['tp-rule-fomo'])selected.push('Kein Einstieg aus FOMO.');
