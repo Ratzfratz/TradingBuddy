@@ -6707,6 +6707,7 @@ body.tb-compact-small{
 .tp-check{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);cursor:pointer}
 .tp-check input{width:16px;height:16px;margin:1px 0 0;accent-color:var(--green)}
 .tp-check strong{display:block;font-size:.67rem;color:var(--text);line-height:1.25}.tp-check small{display:block;margin-top:2px;font-size:.56rem;line-height:1.35;color:var(--muted)}
+.tp-checklist-help{font-size:.61rem;line-height:1.45;color:var(--muted);margin-bottom:4px}.tp-checklist-editor{display:grid;gap:7px}.tp-checklist-editor-empty{padding:11px;border:1px dashed var(--bd);border-radius:8px;text-align:center;font-size:.61rem;color:var(--muted)}.tp-checklist-edit-row{display:grid;grid-template-columns:20px minmax(0,1fr) 38px;gap:7px;align-items:center;padding:6px;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}.tp-checklist-edit-row::before{content:'✓';display:grid;place-items:center;width:18px;height:18px;border:1px solid var(--bd);border-radius:5px;color:var(--muted);font-size:.62rem}.tp-checklist-edit-row input{height:36px!important;border:0!important;background:transparent!important;padding:6px!important;box-shadow:none!important}.tp-checklist-remove{width:36px;height:36px;border:1px solid var(--bd);border-radius:7px;background:var(--s3);color:var(--muted);font:800 1rem var(--f);cursor:pointer}.tp-checklist-remove:hover{border-color:var(--red);color:var(--red)}.tp-checklist-add{align-self:flex-start;height:38px;margin-top:2px;padding:0 12px;border:1px solid var(--blue);border-radius:8px;background:rgba(91,138,245,.1);color:var(--blue);font:800 .62rem var(--f);cursor:pointer}.tp-checklist-storage{display:none!important}
 .tp-actions{position:sticky;bottom:calc(var(--bottom-stack-height) + 8px);z-index:25;display:flex;justify-content:flex-end;gap:8px;padding:8px;border:1px solid color-mix(in srgb,var(--bd) 75%,transparent);border-radius:12px;background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(14px);box-shadow:0 8px 26px rgba(0,0,0,.15)}
 .tp-save{min-width:190px;height:44px;border:0;border-radius:9px;background:linear-gradient(135deg,var(--green),var(--blue));color:#fff;font:800 .7rem var(--f);cursor:pointer}
 .tp-reset{height:44px;padding:0 15px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .65rem var(--f);cursor:pointer}
@@ -7023,7 +7024,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
         <div class="tp-card-title"><span>03</span>Einstieg &amp; Ausstieg</div>
         <div class="tp-fields">
           <div class="tp-field tp-field-wide"><label for="tp-setups">Mein Setup / meine Strategie</label><input id="tp-setups" data-tp-field placeholder="z. B. Pullback im intakten Aufwärtstrend"></div>
-          <div class="tp-field tp-field-wide"><label for="tp-setup-checklist">Checkliste vor der Ausführung</label><textarea id="tp-setup-checklist" data-tp-field placeholder="Ein Punkt pro Zeile, z. B.\nTrend ist eindeutig\nEinstiegssignal ist bestätigt\nStop und Ziel sind festgelegt\nKeine wichtigen Termine unmittelbar bevor"></textarea></div>
+          <div class="tp-field tp-field-wide"><span>Checkliste für neue Trades</span><div class="tp-checklist-help">Lege konkrete Prüfpunkte fest. Sie erscheinen bei jedem neuen Trade direkt unter dem Setup zum Abhaken.</div><div class="tp-checklist-editor" id="tp-checklist-editor"></div><div class="tp-checklist-editor-empty" id="tp-checklist-editor-empty">Noch kein Prüfpunkt angelegt.</div><button class="tp-checklist-add" type="button" onclick="addTradingPlanChecklistItem()">+ Prüfpunkt hinzufügen</button><textarea class="tp-checklist-storage" id="tp-setup-checklist" data-tp-field aria-hidden="true" tabindex="-1"></textarea></div>
           <div class="tp-field tp-field-wide"><label for="tp-entry-rules">Einstiegsregeln</label><textarea id="tp-entry-rules" data-tp-field placeholder="z. B. kein Einstieg nach impulsiver Bewegung, Bestätigung abwarten"></textarea></div>
           <div class="tp-field tp-field-wide"><label for="tp-exit-rules">Ausstiegsregeln</label><textarea id="tp-exit-rules" data-tp-field placeholder="Wann wird ein Gewinn realisiert, ein Stop nachgezogen oder ein Trade beendet?"></textarea></div>
         </div>
@@ -22361,6 +22362,32 @@ body.journal-list-view #trade-list .tc-actions{
   }
   window.getActiveTradingPlan=function(){return readPlan();};
   function checklistLines(data){return String((data||readPlan())['tp-setup-checklist']||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean).slice(0,20);}
+  function updateChecklistEditorEmpty(){
+    const editor=document.getElementById('tp-checklist-editor'),empty=document.getElementById('tp-checklist-editor-empty');
+    if(empty)empty.classList.toggle('hidden',!!editor?.children.length);
+  }
+  function syncTradingPlanChecklistEditor(){
+    const storage=document.getElementById('tp-setup-checklist');
+    if(!storage)return;
+    storage.value=Array.from(document.querySelectorAll('#tp-checklist-editor input')).map(input=>input.value.trim()).filter(Boolean).slice(0,20).join('\n');
+    updateChecklistEditorEmpty();
+    updateTradingPlanProgress();
+  }
+  function createTradingPlanChecklistRow(value,focus){
+    const editor=document.getElementById('tp-checklist-editor');
+    if(!editor)return;
+    if(editor.children.length>=20){if(typeof showSmallToast==='function')showSmallToast('Maximal 20 Prüfpunkte möglich.');return;}
+    const row=document.createElement('div');row.className='tp-checklist-edit-row';
+    const input=document.createElement('input');input.type='text';input.value=value||'';input.maxLength=120;input.placeholder='z. B. Stop und Kursziel sind festgelegt';input.setAttribute('aria-label','Prüfpunkt');input.addEventListener('input',syncTradingPlanChecklistEditor);
+    const remove=document.createElement('button');remove.type='button';remove.className='tp-checklist-remove';remove.textContent='×';remove.setAttribute('aria-label','Prüfpunkt entfernen');remove.addEventListener('click',()=>{row.remove();syncTradingPlanChecklistEditor();});
+    row.append(input,remove);editor.appendChild(row);updateChecklistEditorEmpty();if(focus)input.focus();
+  }
+  function renderTradingPlanChecklistEditor(data){
+    const editor=document.getElementById('tp-checklist-editor');
+    if(!editor)return;
+    editor.innerHTML='';checklistLines(data).forEach(line=>createTradingPlanChecklistRow(line,false));updateChecklistEditorEmpty();
+  }
+  window.addTradingPlanChecklistItem=function(){createTradingPlanChecklistRow('',true);};
   window.updateTradePlanChecklistProgress=function(){
     const boxes=Array.from(document.querySelectorAll('#nt-plan-checklist-items input[type="checkbox"]'));
     const checked=boxes.filter(box=>box.checked).length;
@@ -22519,6 +22546,7 @@ body.journal-list-view #trade-list .tc-actions{
       if(field.type==='checkbox')field.checked=!!data[field.id];
       else field.value=data[field.id]??'';
     });
+    renderTradingPlanChecklistEditor(data);
     if(!tradingPlanBound){
       tradingPlanBound=true;
       planFields().forEach(field=>{
@@ -22535,6 +22563,7 @@ body.journal-list-view #trade-list .tc-actions{
     const reset=()=>{
       try{localStorage.removeItem(TRADING_PLAN_KEY);}catch(error){}
       planFields().forEach(field=>{if(field.type==='checkbox')field.checked=false;else field.value='';});
+      renderTradingPlanChecklistEditor({});
       tradingPlanEditing=true;
       updateTradingPlanProgress();
       applyEditingState();
