@@ -6968,9 +6968,9 @@ body.tp-guided [data-tp-advanced]{display:none!important}
   <div class="tp-shell">
     <section class="tp-hero">
       <div>
-        <div class="tp-hero-meta"><div class="tp-eyebrow">Mein Regelwerk</div><span class="tp-status" id="tp-status">Entwurf</span><div class="tp-mode-switch"><button class="tp-mode-btn on" id="tp-mode-guided" type="button" onclick="setTradingPlanMode('guided')">Geführt</button><button class="tp-mode-btn" id="tp-mode-advanced" type="button" onclick="setTradingPlanMode('advanced')">Erweitert</button></div></div>
-        <h1>Persönlicher Tradingplan</h1>
-        <p>Definiere, wie du handelst, welches Risiko du akzeptierst und wann du bewusst nicht handelst. Der Plan ist dein Rahmen – nicht das Ergebnis eines einzelnen Trades.</p>
+        <div class="tp-hero-meta"><div class="tp-eyebrow">Mein Regelwerk</div><span class="tp-status" id="tp-status">Entwurf</span><div class="tp-mode-switch"><button class="tp-mode-btn on" id="tp-mode-guided" type="button" onclick="setTradingPlanMode('guided')">Kompakt</button><button class="tp-mode-btn" id="tp-mode-advanced" type="button" onclick="setTradingPlanMode('advanced')">Erweitert</button></div></div>
+        <h1>Mein Tradingplan</h1>
+        <p>Lege nur die Regeln fest, die dir vor und während eines Trades wirklich helfen.</p>
       </div>
       <div class="tp-progress" id="tp-progress"><div class="tp-progress-value"><span id="tp-progress-value">0%</span><small>Kernpunkte</small></div></div>
     </section>
@@ -6984,11 +6984,11 @@ body.tp-guided [data-tp-advanced]{display:none!important}
 
     <div class="tp-grid" id="tp-editor">
       <section class="tp-card">
-        <div class="tp-card-title"><span>01</span>Identität &amp; Ziele</div>
+        <div class="tp-card-title"><span>01</span>Handelsrahmen</div>
         <div class="tp-fields">
           <div class="tp-field"><label for="tp-style">Tradingstil</label><select id="tp-style" data-tp-field onchange="updateTradingPlanHorizon()"><option value="">Bitte wählen</option><option value="day">Daytrading</option><option value="swing">Swing-Trading</option><option value="position">Positionstrading</option><option value="mixed">Gemischt</option></select></div>
           <div class="tp-field"><label for="tp-horizon">Typischer Zeithorizont</label><select id="tp-horizon" data-tp-field><option value="">Bitte zuerst Tradingstil wählen</option></select></div>
-          <div class="tp-field tp-field-wide"><label for="tp-goal">Mein übergeordnetes Ziel</label><textarea id="tp-goal" data-tp-field placeholder="Was möchtest du mit deinem Trading erreichen – und woran erkennst du Fortschritt?"></textarea></div>
+          <div class="tp-field tp-field-wide" data-tp-advanced><label for="tp-goal">Mein übergeordnetes Ziel</label><textarea id="tp-goal" data-tp-field placeholder="Was möchtest du mit deinem Trading erreichen – und woran erkennst du Fortschritt?"></textarea></div>
           <div class="tp-field tp-field-wide"><label for="tp-markets">Märkte &amp; Produkte</label><input id="tp-markets" data-tp-field placeholder="z. B. Aktien, ETFs, Optionsscheine auf liquide US-Werte"></div>
         </div>
       </section>
@@ -7010,28 +7010,28 @@ body.tp-guided [data-tp-advanced]{display:none!important}
       <section class="tp-card">
         <div class="tp-card-title"><span>02</span>Risikorahmen</div>
         <div class="tp-fields">
-          <div class="tp-field"><span>Max. Risiko / Trade</span><div class="tp-unit"><input id="tp-risk-trade" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
-          <div class="tp-field"><span>Max. eingesetztes Kapital / Trade</span><div class="tp-unit"><input id="tp-capital-use" data-tp-field type="number" min="0" max="100" step="1" inputmode="decimal"><span>%</span></div></div>
-          <div class="tp-field"><span>Max. Tagesverlust</span><div class="tp-unit"><input id="tp-risk-day" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
-          <div class="tp-field"><span>Max. Wochenverlust</span><div class="tp-unit"><input id="tp-risk-week" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
-          <div class="tp-field"><span>Max. offene Positionen</span><div class="tp-unit"><input id="tp-max-open" data-tp-field type="number" min="1" step="1" inputmode="numeric"><span>Trades</span></div></div>
+          <div class="tp-field"><span>Max. Verlust am Stop / Trade</span><div class="tp-unit"><input id="tp-risk-trade" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field"><span>Max. Kapital in einer Position</span><div class="tp-unit"><input id="tp-capital-use" data-tp-field type="number" min="0" max="100" step="1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field" data-tp-advanced><span>Max. Tagesverlust</span><div class="tp-unit"><input id="tp-risk-day" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field" data-tp-advanced><span>Max. Wochenverlust</span><div class="tp-unit"><input id="tp-risk-week" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field" data-tp-advanced><span>Max. offene Positionen</span><div class="tp-unit"><input id="tp-max-open" data-tp-field type="number" min="1" step="1" inputmode="numeric"><span>Trades</span></div></div>
           <div class="tp-field tp-field-wide"><label for="tp-stop-policy">Stop-Loss-Grundsatz</label><select id="tp-stop-policy" data-tp-field><option value="">Bitte wählen</option><option value="real">Jeder Trade erhält einen echten Stop</option><option value="mental">Mentaler Stop mit festem Kurs</option><option value="choice">Je Setup bewusst echt oder mental</option><option value="exception">Ausnahmen müssen begründet werden</option></select></div>
-          <div class="tp-field tp-field-wide"><label for="tp-loss-streak">Pause nach Verlustserie</label><select id="tp-loss-streak" data-tp-field><option value="">Bitte wählen</option><option value="2">Nach 2 Verlusten</option><option value="3">Nach 3 Verlusten</option><option value="4">Nach 4 Verlusten</option><option value="5">Nach 5 Verlusten</option></select></div>
+          <div class="tp-field tp-field-wide" data-tp-advanced><label for="tp-loss-streak">Pause nach Verlustserie</label><select id="tp-loss-streak" data-tp-field><option value="">Bitte wählen</option><option value="2">Nach 2 Verlusten</option><option value="3">Nach 3 Verlusten</option><option value="4">Nach 4 Verlusten</option><option value="5">Nach 5 Verlusten</option></select></div>
         </div>
       </section>
 
       <section class="tp-card">
-        <div class="tp-card-title"><span>03</span>Einstieg &amp; Ausstieg</div>
+        <div class="tp-card-title"><span>03</span>Setup vor dem Trade</div>
         <div class="tp-fields">
           <div class="tp-field tp-field-wide"><label for="tp-setups">Mein Setup / meine Strategie</label><input id="tp-setups" data-tp-field placeholder="z. B. Pullback im intakten Aufwärtstrend"></div>
           <div class="tp-field tp-field-wide"><span>Checkliste für neue Trades</span><div class="tp-checklist-help">Lege konkrete Prüfpunkte fest. Sie erscheinen bei jedem neuen Trade direkt unter dem Setup zum Abhaken.</div><div class="tp-checklist-editor" id="tp-checklist-editor"></div><div class="tp-checklist-editor-empty" id="tp-checklist-editor-empty">Noch kein Prüfpunkt angelegt.</div><button class="tp-checklist-add" type="button" onclick="addTradingPlanChecklistItem()">+ Prüfpunkt hinzufügen</button><textarea class="tp-checklist-storage" id="tp-setup-checklist" data-tp-field aria-hidden="true" tabindex="-1"></textarea></div>
-          <div class="tp-field tp-field-wide"><label for="tp-entry-rules">Einstiegsregeln</label><textarea id="tp-entry-rules" data-tp-field placeholder="z. B. kein Einstieg nach impulsiver Bewegung, Bestätigung abwarten"></textarea></div>
-          <div class="tp-field tp-field-wide"><label for="tp-exit-rules">Ausstiegsregeln</label><textarea id="tp-exit-rules" data-tp-field placeholder="Wann wird ein Gewinn realisiert, ein Stop nachgezogen oder ein Trade beendet?"></textarea></div>
+          <div class="tp-field tp-field-wide" data-tp-advanced><label for="tp-entry-rules">Ausführliche Einstiegsregeln</label><textarea id="tp-entry-rules" data-tp-field placeholder="z. B. kein Einstieg nach impulsiver Bewegung, Bestätigung abwarten"></textarea></div>
+          <div class="tp-field tp-field-wide" data-tp-advanced><label for="tp-exit-rules">Ausführliche Ausstiegsregeln</label><textarea id="tp-exit-rules" data-tp-field placeholder="Wann wird ein Gewinn realisiert, ein Stop nachgezogen oder ein Trade beendet?"></textarea></div>
         </div>
       </section>
 
       <section class="tp-card">
-        <div class="tp-card-title"><span>04</span>Psychologie &amp; Verhalten</div>
+        <div class="tp-card-title"><span>04</span>Disziplin</div>
         <div class="tp-checks">
           <label class="tp-check"><input id="tp-rule-losses" data-tp-field type="checkbox"><span><strong>Verluste gehören zum Trading</strong><small>Ein regelkonformer Verlust ist kein Fehler und muss nicht sofort zurückgewonnen werden.</small></span></label>
           <label class="tp-check"><input id="tp-rule-fomo" data-tp-field type="checkbox"><span><strong>Kein Einstieg aus FOMO</strong><small>Verpasste Chancen werden nicht verfolgt. Der nächste gute Trade kommt.</small></span></label>
@@ -7040,7 +7040,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
         </div>
       </section>
 
-      <section class="tp-card tp-card-wide">
+      <section class="tp-card tp-card-wide" data-tp-advanced>
         <div class="tp-card-title"><span>05</span>Routine &amp; Notfallplan</div>
         <div class="tp-fields">
           <div class="tp-field"><label for="tp-before">Vor dem Handel</label><textarea id="tp-before" data-tp-field placeholder="Marktlage, Termine, offene Risiken, mentale Verfassung …"></textarea></div>
@@ -22438,9 +22438,7 @@ body.journal-list-view #trade-list .tc-actions{
     return data;
   }
   function progressValue(){
-    const core=['tp-style','tp-horizon','tp-goal','tp-markets','tp-risk-trade','tp-capital-use','tp-risk-day','tp-stop-policy','tp-setups','tp-setup-checklist','tp-exit-rules','tp-emergency'];
-    const advanced=['tp-capital','tp-total-allocation','tp-portfolio-heat','tp-min-crv','tp-pause-duration','tp-restart-rule'];
-    const relevant=tradingPlanMode==='advanced'?core.concat(advanced):core;
+    const relevant=['tp-style','tp-horizon','tp-markets','tp-risk-trade','tp-capital-use','tp-stop-policy','tp-setups','tp-setup-checklist'];
     const filled=relevant.reduce((sum,id)=>sum+(String(document.getElementById(id)?.value||'').trim()?1:0),0);
     const mindset=['tp-rule-losses','tp-rule-fomo','tp-rule-revenge','tp-rule-stop'].some(id=>document.getElementById(id)?.checked)?1:0;
     return Math.round((filled+mindset)/(relevant.length+1)*100);
@@ -22460,8 +22458,8 @@ body.journal-list-view #trade-list .tc-actions{
   function horizonLabel(value){return {intraday:'Intraday',days:'Mehrere Tage',weeks:'Mehrere Wochen',months:'Mehrere Monate'}[value]||value||'—';}
   function renderSummary(data){
     const profile=document.getElementById('tp-summary-profile'),risk=document.getElementById('tp-summary-risk'),setup=document.getElementById('tp-summary-setup'),checklist=document.getElementById('tp-summary-checklist'),rules=document.getElementById('tp-summary-rules');
-    if(profile)profile.innerHTML=summaryRow('Tradingstil',styleLabel(data['tp-style']))+summaryRow('Zeithorizont',horizonLabel(data['tp-horizon']))+summaryRow('Märkte',data['tp-markets'])+summaryRow('Ziel',data['tp-goal']);
-    if(risk)risk.innerHTML=summaryRow('Risiko / Trade',data['tp-risk-trade']?data['tp-risk-trade']+' %':'')+summaryRow('Kapital / Trade',data['tp-capital-use']?data['tp-capital-use']+' %':'')+summaryRow('Tageslimit',data['tp-risk-day']?data['tp-risk-day']+' %':'')+summaryRow('Wochenlimit',data['tp-risk-week']?data['tp-risk-week']+' %':'')+summaryRow('Stop',stopLabel(data['tp-stop-policy']))+(data.mode==='advanced'?summaryRow('Portfolio-Heat',data['tp-portfolio-heat']?data['tp-portfolio-heat']+' %':''): '');
+    if(profile)profile.innerHTML=summaryRow('Tradingstil',styleLabel(data['tp-style']))+summaryRow('Zeithorizont',horizonLabel(data['tp-horizon']))+summaryRow('Märkte',data['tp-markets'])+(data.mode==='advanced'&&data['tp-goal']?summaryRow('Ziel',data['tp-goal']):'');
+    if(risk)risk.innerHTML=summaryRow('Verlust am Stop',data['tp-risk-trade']?data['tp-risk-trade']+' %':'')+summaryRow('Positionsgröße',data['tp-capital-use']?data['tp-capital-use']+' %':'')+summaryRow('Stop',stopLabel(data['tp-stop-policy']))+(data.mode==='advanced'?(data['tp-risk-day']?summaryRow('Tageslimit',data['tp-risk-day']+' %'):'')+(data['tp-risk-week']?summaryRow('Wochenlimit',data['tp-risk-week']+' %'):'')+(data['tp-portfolio-heat']?summaryRow('Portfolio-Heat',data['tp-portfolio-heat']+' %'):''):'');
     if(setup)setup.innerHTML=summaryRow('Mein Setup',data['tp-setups']);
     const setupChecks=checklistLines(data);
     if(checklist)checklist.innerHTML=(setupChecks.length?setupChecks:['Noch keine Checkliste angelegt.']).map(item=>`<li>${esc(item)}</li>`).join('');
