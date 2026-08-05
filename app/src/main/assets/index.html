@@ -6712,6 +6712,7 @@ body.tb-compact-small{
 .tp-reset{height:44px;padding:0 15px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .65rem var(--f);cursor:pointer}
 .tp-edit{height:44px;padding:0 17px;border:1px solid var(--blue);border-radius:9px;background:rgba(91,138,245,.11);color:var(--blue);font:800 .67rem var(--f);cursor:pointer}.tp-cancel{height:44px;padding:0 15px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);color:var(--muted);font:700 .65rem var(--f);cursor:pointer}
 .tp-saved{align-self:center;margin-right:auto;font-size:.62rem;font-weight:700;color:var(--green);opacity:0;transition:opacity .2s}.tp-saved.show{opacity:1}
+.nt-plan-checklist{margin:10px 0;padding:10px;border:1px solid var(--bd);border-radius:9px;background:var(--s2)}.nt-plan-checklist-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}.nt-plan-checklist-head strong{font-size:.65rem;color:var(--text)}.nt-plan-checklist-head span{font-size:.58rem;font-weight:800;color:var(--blue)}.nt-plan-checklist-items{display:grid;gap:6px}.nt-plan-check-item{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:start;padding:7px 8px;border:1px solid var(--bd);border-radius:7px;background:var(--s1);font-size:.62rem;line-height:1.35;color:var(--text);cursor:pointer}.nt-plan-check-item input{width:16px;height:16px;margin:0;accent-color:var(--green)}.invested-plan-ok{color:var(--green)!important}.invested-plan-warn{color:var(--red)!important}
 body.tp-guided [data-tp-advanced]{display:none!important}
 @media (max-width:900px){.tp-summary{grid-template-columns:1fr 1fr}.tp-summary-card:last-child{grid-column:1/-1}}
 @media (max-width:719px){.bnav-w{grid-template-columns:repeat(5,minmax(0,1fr))}.tp-shell{gap:10px}.tp-hero{grid-template-columns:minmax(0,1fr) 76px;padding:14px;gap:10px}.tp-progress{width:72px;height:72px}.tp-progress-value{font-size:.9rem}.tp-grid{grid-template-columns:1fr;gap:10px}.tp-card-wide{grid-column:auto}.tp-card{padding:13px}.tp-fields{grid-template-columns:1fr 1fr}.tp-actions{bottom:calc(var(--bottom-stack-height) + 5px)}.tp-save{min-width:0;flex:1}.tp-reset{padding:0 10px}.tp-saved{display:none}.tp-summary{grid-template-columns:1fr}.tp-summary-card:last-child{grid-column:auto}.tp-mode-switch{width:100%;margin:7px 0 0}.tp-mode-btn{flex:1}}
@@ -6983,8 +6984,8 @@ body.tp-guided [data-tp-advanced]{display:none!important}
       <section class="tp-card">
         <div class="tp-card-title"><span>01</span>Identität &amp; Ziele</div>
         <div class="tp-fields">
-          <div class="tp-field"><label for="tp-style">Tradingstil</label><select id="tp-style" data-tp-field><option value="">Bitte wählen</option><option>Swing-Trading</option><option>Daytrading</option><option>Positionstrading</option><option>Gemischt</option></select></div>
-          <div class="tp-field"><label for="tp-horizon">Zeithorizont</label><select id="tp-horizon" data-tp-field><option value="">Bitte wählen</option><option>Intraday</option><option>Mehrere Tage</option><option>Mehrere Wochen</option><option>Mehrere Monate</option></select></div>
+          <div class="tp-field"><label for="tp-style">Tradingstil</label><select id="tp-style" data-tp-field onchange="updateTradingPlanHorizon()"><option value="">Bitte wählen</option><option value="day">Daytrading</option><option value="swing">Swing-Trading</option><option value="position">Positionstrading</option><option value="mixed">Gemischt</option></select></div>
+          <div class="tp-field"><label for="tp-horizon">Typischer Zeithorizont</label><select id="tp-horizon" data-tp-field><option value="">Bitte zuerst Tradingstil wählen</option></select></div>
           <div class="tp-field tp-field-wide"><label for="tp-goal">Mein übergeordnetes Ziel</label><textarea id="tp-goal" data-tp-field placeholder="Was möchtest du mit deinem Trading erreichen – und woran erkennst du Fortschritt?"></textarea></div>
           <div class="tp-field tp-field-wide"><label for="tp-markets">Märkte &amp; Produkte</label><input id="tp-markets" data-tp-field placeholder="z. B. Aktien, ETFs, Optionsscheine auf liquide US-Werte"></div>
         </div>
@@ -6994,7 +6995,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
         <div class="tp-card-title"><span>+</span>Erweitertes Risikomanagement</div>
         <div class="tp-fields">
           <div class="tp-field"><span>Tradingkapital</span><div class="tp-unit"><input id="tp-capital" data-tp-field type="number" min="0" step="100" inputmode="decimal"><span>€</span></div></div>
-          <div class="tp-field"><span>Max. Positionsgröße</span><div class="tp-unit"><input id="tp-position-size" data-tp-field type="number" min="0" step="1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field"><span>Max. insgesamt investiert</span><div class="tp-unit"><input id="tp-total-allocation" data-tp-field type="number" min="0" max="100" step="1" inputmode="decimal"><span>%</span></div></div>
           <div class="tp-field"><span>Max. Portfolio-Heat</span><div class="tp-unit"><input id="tp-portfolio-heat" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
           <div class="tp-field"><span>Mindest-CRV</span><div class="tp-unit"><input id="tp-min-crv" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>: 1</span></div></div>
           <div class="tp-field"><label for="tp-pause-duration">Dauer der Handelspause</label><input id="tp-pause-duration" data-tp-field placeholder="z. B. bis zum nächsten Handelstag"></div>
@@ -7008,6 +7009,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
         <div class="tp-card-title"><span>02</span>Risikorahmen</div>
         <div class="tp-fields">
           <div class="tp-field"><span>Max. Risiko / Trade</span><div class="tp-unit"><input id="tp-risk-trade" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
+          <div class="tp-field"><span>Max. eingesetztes Kapital / Trade</span><div class="tp-unit"><input id="tp-capital-use" data-tp-field type="number" min="0" max="100" step="1" inputmode="decimal"><span>%</span></div></div>
           <div class="tp-field"><span>Max. Tagesverlust</span><div class="tp-unit"><input id="tp-risk-day" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
           <div class="tp-field"><span>Max. Wochenverlust</span><div class="tp-unit"><input id="tp-risk-week" data-tp-field type="number" min="0" step="0.1" inputmode="decimal"><span>%</span></div></div>
           <div class="tp-field"><span>Max. offene Positionen</span><div class="tp-unit"><input id="tp-max-open" data-tp-field type="number" min="1" step="1" inputmode="numeric"><span>Trades</span></div></div>
@@ -7019,7 +7021,8 @@ body.tp-guided [data-tp-advanced]{display:none!important}
       <section class="tp-card">
         <div class="tp-card-title"><span>03</span>Einstieg &amp; Ausstieg</div>
         <div class="tp-fields">
-          <div class="tp-field tp-field-wide"><label for="tp-setups">Erlaubte Setups</label><textarea id="tp-setups" data-tp-field placeholder="Welche klaren Bedingungen müssen für einen Einstieg erfüllt sein?"></textarea></div>
+          <div class="tp-field tp-field-wide"><label for="tp-setups">Mein Setup / meine Strategie</label><input id="tp-setups" data-tp-field placeholder="z. B. Pullback im intakten Aufwärtstrend"></div>
+          <div class="tp-field tp-field-wide"><label for="tp-setup-checklist">Checkliste vor der Ausführung</label><textarea id="tp-setup-checklist" data-tp-field placeholder="Ein Punkt pro Zeile, z. B.\nTrend ist eindeutig\nEinstiegssignal ist bestätigt\nStop und Ziel sind festgelegt\nKeine wichtigen Termine unmittelbar bevor"></textarea></div>
           <div class="tp-field tp-field-wide"><label for="tp-entry-rules">Einstiegsregeln</label><textarea id="tp-entry-rules" data-tp-field placeholder="z. B. kein Einstieg nach impulsiver Bewegung, Bestätigung abwarten"></textarea></div>
           <div class="tp-field tp-field-wide"><label for="tp-exit-rules">Ausstiegsregeln</label><textarea id="tp-exit-rules" data-tp-field placeholder="Wann wird ein Gewinn realisiert, ein Stop nachgezogen oder ein Trade beendet?"></textarea></div>
         </div>
@@ -9690,6 +9693,8 @@ function normalizeTrade(raw, index = 0) {
     planStop: numberOrNull(raw && raw.planStop),
     planTarget: numberOrNull(raw && raw.planTarget),
     planThesis: String((raw && raw.planThesis) || ''),
+    planChecklist: Array.isArray(raw && raw.planChecklist) ? raw.planChecklist.map(item=>({label:String((item&&item.label)||'').trim(),checked:!!(item&&item.checked)})).filter(item=>item.label).slice(0,20) : [],
+    tradingPlanVersion: Math.max(0,Number(raw && raw.tradingPlanVersion)||0),
     ideaTags: normalizeTagIds(raw && raw.ideaTags),
     resultTags: normalizeTagIds(raw && raw.resultTags),
     planAdherence: ['yes','partial','no'].includes(raw && raw.planAdherence) ? raw.planAdherence : '',
@@ -11665,6 +11670,7 @@ function formSnapshot() {
   values.formPlanAdherence = formPlanAdherence;
   values.formExpectationMet = formExpectationMet;
   values.formAttachments = formAttachments.map(item => item.dataUrl || item.fileId || item.name || '');
+  values.formPlanChecklist = typeof collectTradePlanChecklist==='function'?collectTradePlanChecklist():[];
   values.editId = editId;
 
   return JSON.stringify(values);
@@ -11720,6 +11726,7 @@ function calcPnl() {
   if (investedField) {
     investedField.value = invested !== null ? formatDecimalInput(invested, 2) : '';
   }
+  if(typeof updateInvestedCapitalPercent==='function')updateInvestedCapitalPercent(invested);
   updateComputedFieldState();
 
   if (entry === null || exit === null || count === null || entry === 0) {
@@ -11777,6 +11784,8 @@ function resetForm(setToday = true) {
   renderFormAttachment();
   setFormType('call');
   setOutcome('open');
+  if(typeof renderTradePlanChecklist==='function')renderTradePlanChecklist([]);
+  if(typeof updateInvestedCapitalPercent==='function')updateInvestedCapitalPercent(null);
 
   if (setToday && $('f-entry-date')) {
     $('f-entry-date').value = new Date().toISOString().slice(0, 10);
@@ -11835,6 +11844,8 @@ function populateTradeForm(id) {
   setTradeNumberInput('f-plan-stop', trade.planStop);
   setTradeNumberInput('f-plan-target', trade.planTarget);
   if ($('f-plan-thesis')) $('f-plan-thesis').value = trade.planThesis || '';
+  if(typeof renderTradePlanChecklist==='function')renderTradePlanChecklist(trade.planChecklist||[]);
+  if(typeof updateInvestedCapitalPercent==='function')updateInvestedCapitalPercent((trade.entry&&trade.count)?(trade.entry*trade.count+Number(trade.buyFees||0)):null);
   formIdeaTags = new Set(normalizeTagIds(trade.ideaTags));
   formResultTags = new Set(normalizeTagIds(trade.resultTags));
   setPlanAdherence(trade.planAdherence || '');
@@ -12062,6 +12073,8 @@ function saveTrade() {
 
   const isDerivativeAsset = formAssetType === 'os' || formAssetType === 'ko';
   const hasDirection = isDerivativeAsset || formAssetType === 'faktor';
+  const planChecklist = typeof collectTradePlanChecklist === 'function' ? collectTradePlanChecklist() : [];
+  const uncheckedPlanItems = planChecklist.filter(item => !item.checked).length;
   loadTrades();
   const existingEditTrade = editId ? trades.find(item => item.id === editId) : null;
 
@@ -12096,6 +12109,8 @@ function saveTrade() {
     planStop: numberOrNull($('f-plan-stop') ? $('f-plan-stop').value : ''),
     planTarget: numberOrNull($('f-plan-target') ? $('f-plan-target').value : ''),
     planThesis: $('f-plan-thesis') ? $('f-plan-thesis').value.trim() : '',
+    planChecklist,
+    tradingPlanVersion: typeof getActiveTradingPlan==='function'?Math.max(0,Number(getActiveTradingPlan().version)||0):0,
     ideaTags: [...formIdeaTags],
     resultTags: formOutcome === 'open' ? [] : [...formResultTags],
     planAdherence: formOutcome === 'open' ? '' : formPlanAdherence,
@@ -12137,6 +12152,10 @@ function saveTrade() {
     ? pendingPortfolioReturnState
     : (returnPage === 'tagebuch' ? pendingJournalReturnState : null);
   setTimeout(function(){ navTo(returnPage, { historyMode:'replace', resetTradeForm:false, restoreState }); }, 50);
+  if (uncheckedPlanItems > 0) {
+    const label = uncheckedPlanItems === 1 ? 'Checklistenpunkt ist' : 'Checklistenpunkte sind';
+    showSmallToast(`Trade gespeichert – ${uncheckedPlanItems} ${label} noch offen.`);
+  }
 }
 
 function setFilter(filter) {
@@ -14029,6 +14048,9 @@ if('serviceWorker' in navigator){
       <div class="field"><label>Kaufgebühren €</label><input class="inp" type="text" inputmode="decimal" id="f-buy-fees" placeholder="0,00" enterkeyhint="done" oninput="calcPnl()"></div>
       <div class="field"><label>Investition €</label><input class="inp is-empty" type="text" id="f-invested" placeholder="automat." readonly></div>
     </div>
+    <div class="g1">
+      <div class="field"><label>Vom Depot eingesetzt</label><input class="inp is-empty" type="text" id="f-invested-percent" placeholder="Depotwert in Einstellungen hinterlegen" readonly><div class="hint" id="f-invested-plan-hint" style="display:none;margin-top:4px"></div></div>
+    </div>
     <div id="nt-product-details">
       <div class="divider"></div>
       <div class="g2 nt-product-row">
@@ -14059,6 +14081,10 @@ if('serviceWorker' in navigator){
           <option>Sonstiges</option>
         </select>
       </div>
+    </div>
+    <div class="nt-plan-checklist hidden" id="nt-plan-checklist">
+      <div class="nt-plan-checklist-head"><strong>Deine Setup-Checkliste</strong><span id="nt-plan-checklist-progress">0/0</span></div>
+      <div class="nt-plan-checklist-items" id="nt-plan-checklist-items"></div>
     </div>
     <div class="g2 trade-plan-prices">
       <div class="field" id="field-plan-stop"><label>Stop-Loss</label><input class="inp" type="text" inputmode="decimal" id="f-plan-stop" placeholder="z. B. 1,82" enterkeyhint="done"></div>
@@ -22327,18 +22353,65 @@ body.journal-list-view #trade-list .tc-actions{
   let tradingPlanEditing=true;
   let tradingPlanMode='guided';
   let savedTimer=0;
+  const HORIZONS={day:[['intraday','Intraday']],swing:[['days','Mehrere Tage'],['weeks','Mehrere Wochen']],position:[['weeks','Mehrere Wochen'],['months','Mehrere Monate']],mixed:[['intraday','Intraday'],['days','Mehrere Tage'],['weeks','Mehrere Wochen'],['months','Mehrere Monate']]};
   function planFields(){return Array.from(document.querySelectorAll('#page-tradingplan [data-tp-field]'));}
   function readPlan(){
     try{return JSON.parse(localStorage.getItem(TRADING_PLAN_KEY)||'{}')||{};}catch(error){return {};}
   }
+  window.getActiveTradingPlan=function(){return readPlan();};
+  function checklistLines(data){return String((data||readPlan())['tp-setup-checklist']||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean).slice(0,20);}
+  window.updateTradePlanChecklistProgress=function(){
+    const boxes=Array.from(document.querySelectorAll('#nt-plan-checklist-items input[type="checkbox"]'));
+    const checked=boxes.filter(box=>box.checked).length;
+    const progress=document.getElementById('nt-plan-checklist-progress');
+    if(progress)progress.textContent=checked+'/'+boxes.length;
+  };
+  window.renderTradePlanChecklist=function(savedItems){
+    const host=document.getElementById('nt-plan-checklist'),items=document.getElementById('nt-plan-checklist-items');
+    if(!host||!items)return;
+    const plan=readPlan();
+    const lines=checklistLines(plan);
+    const strategy=document.getElementById('f-strategy');
+    if(strategy){
+      strategy.querySelectorAll('[data-plan-setup]').forEach(option=>option.remove());
+      const setupName=String(plan['tp-setups']||'').trim();
+      if(setupName){const option=document.createElement('option');option.value=setupName;option.textContent=setupName;option.dataset.planSetup='1';strategy.insertBefore(option,strategy.options[1]||null);if(!strategy.value)strategy.value=setupName;strategy.classList.remove('is-empty');}
+    }
+    const saved=new Map((Array.isArray(savedItems)?savedItems:[]).map(item=>[String(item.label||''),!!item.checked]));
+    items.innerHTML='';
+    lines.forEach(label=>{
+      const row=document.createElement('label');row.className='nt-plan-check-item';
+      const box=document.createElement('input');box.type='checkbox';box.checked=saved.get(label)||false;box.addEventListener('change',updateTradePlanChecklistProgress);
+      const text=document.createElement('span');text.textContent=label;row.append(box,text);items.appendChild(row);
+    });
+    host.classList.toggle('hidden',!lines.length);
+    updateTradePlanChecklistProgress();
+  };
+  window.collectTradePlanChecklist=function(){return Array.from(document.querySelectorAll('#nt-plan-checklist-items .nt-plan-check-item')).map(row=>({label:row.querySelector('span')?.textContent||'',checked:!!row.querySelector('input')?.checked})).filter(item=>item.label);};
+  window.updateInvestedCapitalPercent=function(invested){
+    const field=document.getElementById('f-invested-percent'),hint=document.getElementById('f-invested-plan-hint');
+    if(!field)return;
+    const depot=typeof getDepotCapital==='function'?Number(getDepotCapital()):0;
+    const value=Number(invested);
+    const percent=depot>0&&Number.isFinite(value)?value/depot*100:null;
+    field.value=percent===null?'':percent.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' %';
+    field.classList.toggle('is-empty',percent===null);
+    const limit=Number(readPlan()['tp-capital-use']);
+    field.classList.remove('invested-plan-ok','invested-plan-warn');
+    if(hint){hint.style.display='none';hint.textContent='';hint.className='hint';}
+    if(percent!==null&&limit>0){
+      const ok=percent<=limit;field.classList.add(ok?'invested-plan-ok':'invested-plan-warn');
+      if(hint){hint.style.display='block';hint.textContent=ok?`Innerhalb deines Plans (max. ${limit.toLocaleString('de-DE')} %).`:`Planlimit überschritten: maximal ${limit.toLocaleString('de-DE')} %. `;hint.classList.add(ok?'invested-plan-ok':'invested-plan-warn');}
+    }
+  };
   function collectPlan(previous){
     const data={...(previous||{}),updatedAt:new Date().toISOString(),mode:tradingPlanMode,status:'active'};
     planFields().forEach(field=>{data[field.id]=field.type==='checkbox'?field.checked:String(field.value||'').trim();});
     return data;
   }
   function progressValue(){
-    const core=['tp-style','tp-goal','tp-markets','tp-risk-trade','tp-risk-day','tp-stop-policy','tp-setups','tp-exit-rules','tp-emergency'];
-    const advanced=['tp-capital','tp-position-size','tp-portfolio-heat','tp-min-crv','tp-pause-duration','tp-restart-rule'];
+    const core=['tp-style','tp-horizon','tp-goal','tp-markets','tp-risk-trade','tp-capital-use','tp-risk-day','tp-stop-policy','tp-setups','tp-setup-checklist','tp-exit-rules','tp-emergency'];
+    const advanced=['tp-capital','tp-total-allocation','tp-portfolio-heat','tp-min-crv','tp-pause-duration','tp-restart-rule'];
     const relevant=tradingPlanMode==='advanced'?core.concat(advanced):core;
     const filled=relevant.reduce((sum,id)=>sum+(String(document.getElementById(id)?.value||'').trim()?1:0),0);
     const mindset=['tp-rule-losses','tp-rule-fomo','tp-rule-revenge','tp-rule-stop'].some(id=>document.getElementById(id)?.checked)?1:0;
@@ -22355,10 +22428,12 @@ body.journal-list-view #trade-list .tc-actions{
   function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
   function summaryRow(label,value){return `<div class="tp-summary-row"><span>${esc(label)}</span><span>${esc(value||'—')}</span></div>`;}
   function stopLabel(value){return {real:'Echter Stop',mental:'Mentaler Stop mit Kurs',choice:'Je Setup echt oder mental',exception:'Begründete Ausnahmen'}[value]||'—';}
+  function styleLabel(value){return {day:'Daytrading',swing:'Swing-Trading',position:'Positionstrading',mixed:'Gemischt'}[value]||value||'—';}
+  function horizonLabel(value){return {intraday:'Intraday',days:'Mehrere Tage',weeks:'Mehrere Wochen',months:'Mehrere Monate'}[value]||value||'—';}
   function renderSummary(data){
     const profile=document.getElementById('tp-summary-profile'),risk=document.getElementById('tp-summary-risk'),rules=document.getElementById('tp-summary-rules');
-    if(profile)profile.innerHTML=summaryRow('Tradingstil',data['tp-style'])+summaryRow('Zeithorizont',data['tp-horizon'])+summaryRow('Märkte',data['tp-markets'])+summaryRow('Ziel',data['tp-goal']);
-    if(risk)risk.innerHTML=summaryRow('Risiko / Trade',data['tp-risk-trade']?data['tp-risk-trade']+' %':'')+summaryRow('Tageslimit',data['tp-risk-day']?data['tp-risk-day']+' %':'')+summaryRow('Wochenlimit',data['tp-risk-week']?data['tp-risk-week']+' %':'')+summaryRow('Stop',stopLabel(data['tp-stop-policy']))+(data.mode==='advanced'?summaryRow('Portfolio-Heat',data['tp-portfolio-heat']?data['tp-portfolio-heat']+' %':''): '');
+    if(profile)profile.innerHTML=summaryRow('Tradingstil',styleLabel(data['tp-style']))+summaryRow('Zeithorizont',horizonLabel(data['tp-horizon']))+summaryRow('Märkte',data['tp-markets'])+summaryRow('Ziel',data['tp-goal']);
+    if(risk)risk.innerHTML=summaryRow('Risiko / Trade',data['tp-risk-trade']?data['tp-risk-trade']+' %':'')+summaryRow('Kapital / Trade',data['tp-capital-use']?data['tp-capital-use']+' %':'')+summaryRow('Tageslimit',data['tp-risk-day']?data['tp-risk-day']+' %':'')+summaryRow('Wochenlimit',data['tp-risk-week']?data['tp-risk-week']+' %':'')+summaryRow('Stop',stopLabel(data['tp-stop-policy']))+(data.mode==='advanced'?summaryRow('Portfolio-Heat',data['tp-portfolio-heat']?data['tp-portfolio-heat']+' %':''): '');
     const selected=[];
     if(data['tp-rule-losses'])selected.push('Regelkonforme Verluste werden akzeptiert.');
     if(data['tp-rule-fomo'])selected.push('Kein Einstieg aus FOMO.');
@@ -22384,6 +22459,16 @@ body.journal-list-view #trade-list .tc-actions{
     document.body.classList.toggle('tp-guided',tradingPlanMode==='guided');
     document.getElementById('tp-mode-guided')?.classList.toggle('on',tradingPlanMode==='guided');
     document.getElementById('tp-mode-advanced')?.classList.toggle('on',tradingPlanMode==='advanced');
+    updateTradingPlanProgress();
+  };
+  window.updateTradingPlanHorizon=function(){
+    const style=document.getElementById('tp-style')?.value||'';
+    const select=document.getElementById('tp-horizon');
+    if(!select)return;
+    const previous=select.value;
+    const options=HORIZONS[style]||[];
+    select.innerHTML=`<option value="">${style?'Bitte wählen':'Bitte zuerst Tradingstil wählen'}</option>`+options.map(([value,label])=>`<option value="${value}">${label}</option>`).join('');
+    select.value=options.some(([value])=>value===previous)?previous:'';
     updateTradingPlanProgress();
   };
   window.setTradingPlanEditing=function(editing,reload){
@@ -22415,9 +22500,17 @@ body.journal-list-view #trade-list .tc-actions{
   };
   window.renderTradingPlan=function(keepEditing){
     const data=readPlan();
+    const legacyStyles={'Daytrading':'day','Swing-Trading':'swing','Positionstrading':'position','Gemischt':'mixed'};
+    const legacyHorizons={'Intraday':'intraday','Mehrere Tage':'days','Mehrere Wochen':'weeks','Mehrere Monate':'months'};
+    if(legacyStyles[data['tp-style']])data['tp-style']=legacyStyles[data['tp-style']];
+    if(legacyHorizons[data['tp-horizon']])data['tp-horizon']=legacyHorizons[data['tp-horizon']];
     tradingPlanMode=data.mode==='advanced'?'advanced':'guided';
     setTradingPlanMode(tradingPlanMode);
+    const styleField=document.getElementById('tp-style');
+    if(styleField)styleField.value=data['tp-style']||'';
+    updateTradingPlanHorizon();
     planFields().forEach(field=>{
+      if(field.id==='tp-style')return;
       if(!Object.prototype.hasOwnProperty.call(data,field.id))return;
       if(field.type==='checkbox')field.checked=!!data[field.id];
       else field.value=data[field.id]??'';
