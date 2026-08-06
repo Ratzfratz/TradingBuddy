@@ -9996,15 +9996,11 @@ function tradeDedupeSignatures(trade){
   const dateTimeKey=tradeDedupeDateTimeSignature(trade);
   const storedImportKey=tradeDedupeStoredImportSignature(trade);
   const exactCopyKey=tradeDedupeExactCopySignature(trade);
-  const closedOpenLegKey=tradeIsFinalized(trade)?tradeOpenLegSignature(trade):'';
-  const closedOpenLegLooseKey=tradeIsFinalized(trade)?tradeOpenLegLooseSignature(trade):'';
   if(importKey)keys.push('import|'+importKey);
   if(dateTimeKey)keys.push('datetime|'+dateTimeKey);
   if(coreKey)keys.push('core|'+coreKey);
   if(storedImportKey)keys.push('stored-import|'+storedImportKey);
   if(exactCopyKey)keys.push('exact-copy|'+exactCopyKey);
-  if(closedOpenLegKey)keys.push('closed-open-leg|'+closedOpenLegKey);
-  if(closedOpenLegLooseKey)keys.push('closed-open-leg-loose|'+closedOpenLegLooseKey);
   return keys;
 }
 function dedupeTradesList(list){
@@ -11093,6 +11089,62 @@ function zeroImportReconcileOpenLots(pending){
     updated
   };
 }
+function zeroImportIsManagedTrade(trade){
+  const importKey=tradeDedupeImportKey(trade&&trade.importKey);
+  const id=String((trade&&trade.id)||'').trim().toLowerCase();
+  return importKey.indexOf('ZERO|')===0||id.indexOf('zero-')===0;
+}
+function zeroImportPreserveUserFields(incoming,existing){
+  if(!existing)return incoming;
+  const next=Object.assign({},incoming);
+  [
+    'strategy','notes','attachments','ideaTags','resultTags','planAdherence','expectationMet',
+    'planStop','planTarget','planThesis','planChecklist','tradingPlanVersion',
+    'underlyingName','underlyingSymbol','updatedAt'
+  ].forEach(field=>{
+    const value=existing[field];
+    const hasValue=Array.isArray(value)?value.length>0:(value!==null&&value!==undefined&&value!=='');
+    if(hasValue)next[field]=value;
+  });
+  if(existing.ticker)next.ticker=existing.ticker;
+  return next;
+}
+function zeroImportApplySnapshot(pending){
+  const incoming=(Array.isArray(pending)?pending:[]).map((trade,index)=>normalizeTrade(trade,index));
+  const managed=trades.filter(zeroImportIsManagedTrade);
+  const unmanaged=trades.filter(trade=>!zeroImportIsManagedTrade(trade));
+  const exactByImportKey=new Map();
+  const byEntryLot=new Map();
+  managed.forEach(trade=>{
+    const importKey=tradeDedupeImportKey(trade.importKey);
+    if(importKey&&!exactByImportKey.has(importKey))exactByImportKey.set(importKey,trade);
+    const identity=zeroImportEntryLotIdentity(trade);
+    if(identity){
+      if(!byEntryLot.has(identity))byEntryLot.set(identity,[]);
+      byEntryLot.get(identity).push(trade);
+    }
+  });
+  const usedExistingIds=new Set();
+  const snapshot=incoming.map((trade,index)=>{
+    const importKey=tradeDedupeImportKey(trade.importKey);
+    let existing=importKey?exactByImportKey.get(importKey):null;
+    if(existing&&usedExistingIds.has(existing.id))existing=null;
+    if(!existing){
+      const candidates=byEntryLot.get(zeroImportEntryLotIdentity(trade))||[];
+      existing=candidates.find(item=>!usedExistingIds.has(item.id)&&
+        tradeDedupeNumber(item.count)===tradeDedupeNumber(trade.count)&&
+        tradeDedupeDate(item.exitDate)===tradeDedupeDate(trade.exitDate)&&
+        tradeDedupeTime(item.exitTime)===tradeDedupeTime(trade.exitTime)
+      )||candidates.find(item=>!usedExistingIds.has(item.id))||null;
+    }
+    if(existing)usedExistingIds.add(existing.id);
+    const next=zeroImportPreserveUserFields(trade,existing);
+    if(existing)next.id=existing.id;
+    return normalizeTrade(next,unmanaged.length+index);
+  });
+  trades=unmanaged.concat(snapshot);
+  return {imported:snapshot.length,replaced:managed.length,preserved:usedExistingIds.size,snapshot};
+}
 function zeroImportFinishReview(importPossible=false){
   const review=window._zeroImportReview;
   const resultBox=document.getElementById('zero-import-result');
@@ -11174,27 +11226,13 @@ function confirmZeroImport(){
   if(!pending||!pending.length)return;
   invalidateTradesCache();
   loadTrades();
-  const reconciled=zeroImportReconcileOpenLots(pending);
-  const review=zeroImportAnalyzePending(reconciled.pending);
-  const autoUpdated=zeroImportApplyAutoUpdates(review);
-  review.autoUpdated=autoUpdated+reconciled.updated;
-  if(review.autoUpdated)saveTrades();
-  window._zeroImportReview=review;
-  if(review.possible.length){
-    if(resultBox)resultBox.innerHTML=
-      '<div class="tax-note warn" style="margin-top:0">'+
-      '<b>'+review.safe.length+' sichere Trades</b> · '+(review.autoUpdated?review.autoUpdated+' offene Trades automatisch geschlossen · ':'')+review.possible.length+' mögliche Duplikate · '+review.hardDupeCount+' sichere Duplikate übersprungen.<br>'+
-      '<button onclick="zeroImportFinishReview(false)" style="margin-top:8px;background:var(--green);color:var(--bg);border:none;border-radius:7px;padding:8px 12px;font-weight:700;font-size:.76rem;cursor:pointer">Sichere importieren</button> '+
-      '<button onclick="renderZeroImportReview(0)" style="margin-top:8px;background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-weight:700;font-size:.76rem;cursor:pointer">Duplikate prüfen</button> '+
-      '<button onclick="document.getElementById(\'zero-import-result\').innerHTML=\'\';window._zeroImportReview=null" style="margin-top:8px;background:var(--s3);color:var(--text);border:1px solid var(--bd);border-radius:7px;padding:8px 12px;font-weight:650;font-size:.76rem;cursor:pointer">Abbrechen</button>'+
-      '</div>';
-    return;
-  }
-  if(autoUpdated){
-    saveTrades();
-    refreshTradeViews({resetLimit:true});
-  }
-  zeroImportFinishReview(false);
+  const applied=zeroImportApplySnapshot(pending);
+  saveTrades();
+  window._zeroPendingImport=null;
+  window._zeroImportReview=null;
+  if(resultBox)resultBox.innerHTML='<div class="tax-note info" style="margin-top:0">✓ '+applied.imported+' ZERO-Trades vollständig abgeglichen'+(applied.preserved?', Angaben bei '+applied.preserved+' bestehenden Trades erhalten':'')+'. Verkaufsorders und offene Bestände wurden aus der CSV aktualisiert.</div>';
+  refreshTradeViews({resetLimit:true});
+  startZeroImportWknCheck(applied.snapshot);
 }
 
 // ??????????????????????????????????????????????????????????????
