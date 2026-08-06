@@ -2038,15 +2038,25 @@ body.page-tagebuch:root.light-theme .journal-filter-panel,
   caret-color:var(--blue);
 }
 #f-notes:placeholder-shown{caret-color:transparent}
-#f-plan-thesis{height:72px;min-height:72px;padding-top:10px;padding-bottom:10px;line-height:1.4;resize:none}
+#f-plan-thesis{height:54px;min-height:54px;padding-top:8px;padding-bottom:8px;line-height:1.35;resize:none}
 #f-product-name{height:58px;min-height:58px;line-height:1.35;resize:none;color:var(--text)!important;opacity:1!important}
 .trade-plan-sec{
   border-color:rgba(91,138,245,.32) !important;
   background:linear-gradient(180deg,rgba(91,138,245,.07),rgba(91,138,245,.025)) !important;
 }
 .trade-plan-sec .sec-title{color:var(--blue)}
+.trade-plan-sec{padding-top:12px!important;padding-bottom:12px!important}
+.trade-plan-sec .sec-title{margin-bottom:8px}
+.trade-plan-fields{display:grid;grid-template-columns:minmax(0,1.35fr) repeat(2,minmax(0,1fr));gap:8px;align-items:end}
+.trade-plan-fields .field{min-width:0;margin-bottom:0}
 .trade-plan-prices{margin-bottom:0}
-.trade-plan-thesis{margin-top:10px}
+.trade-plan-thesis{margin-top:8px}
+.trade-plan-sec .journal-tag-head{margin-top:8px;margin-bottom:5px}
+.trade-plan-sec .journal-tag{min-height:29px;padding:5px 8px}
+@media (max-width:620px){
+  .trade-plan-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .trade-plan-fields #field-strategy{grid-column:1/-1}
+}
 .tc-plan{
   display:flex;
   align-items:flex-start;
@@ -14066,8 +14076,8 @@ if('serviceWorker' in navigator){
   </div>
 
   <div class="sec trade-plan-sec" id="nt-plan-card">
-    <div class="sec-title">Trade-Plan</div>
-    <div class="g1">
+    <div class="sec-title">Kompakter Trade-Plan</div>
+    <div class="trade-plan-fields">
       <div class="field" id="field-strategy"><label>Setup</label>
         <select class="inp is-empty" id="f-strategy" onchange="this.classList.toggle('is-empty',!this.value)">
           <option value="">Setup wählen</option>
@@ -14087,8 +14097,6 @@ if('serviceWorker' in navigator){
     <div class="nt-plan-checklist hidden" id="nt-plan-checklist">
       <div class="nt-plan-checklist-head"><strong>Deine Setup-Checkliste</strong><span id="nt-plan-checklist-progress">0/0</span></div>
       <div class="nt-plan-checklist-items" id="nt-plan-checklist-items"></div>
-    </div>
-    <div class="g2 trade-plan-prices">
       <div class="field" id="field-plan-stop"><label>Stop-Loss</label><input class="inp" type="text" inputmode="decimal" id="f-plan-stop" placeholder="z. B. 1,82" enterkeyhint="done"></div>
       <div class="field" id="field-plan-target"><label>Kursziel</label><input class="inp" type="text" inputmode="decimal" id="f-plan-target" placeholder="z. B. 2,45" enterkeyhint="done"></div>
     </div>
