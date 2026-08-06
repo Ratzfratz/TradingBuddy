@@ -11027,6 +11027,72 @@ function zeroImportAnalyzePending(pending){
   });
   return {safe,possible,hardDupeCount};
 }
+function zeroImportEntryLotIdentity(trade){
+  if(!trade)return '';
+  const keyId=tradeDedupeInstrumentKey(trade);
+  const date=tradeDedupeDate(trade.entryDate);
+  const time=tradeDedupeTime(trade.entryTime);
+  if(!keyId||!date||!time)return '';
+  return [
+    keyId,
+    date,
+    time,
+    tradeDedupeNumber(trade.entry)
+  ].join('|');
+}
+function zeroImportReconcileOpenLots(pending){
+  const incoming=Array.isArray(pending)?pending:[];
+  const existingHard=new Set();
+  trades.forEach(trade=>tradeDedupeSignatures(trade).forEach(key=>existingHard.add(key)));
+  const groups=new Map();
+  incoming.forEach((trade,index)=>{
+    if(!tradeIsFinalized(trade))return;
+    const keys=tradeDedupeSignatures(trade);
+    if(keys.some(key=>existingHard.has(key)))return;
+    const identity=zeroImportEntryLotIdentity(trade);
+    if(!identity)return;
+    if(!groups.has(identity))groups.set(identity,[]);
+    groups.get(identity).push({trade,index});
+  });
+  const consumed=new Set();
+  let updated=0;
+  groups.forEach((items,identity)=>{
+    const openIndex=trades.findIndex(trade=>
+      trade.outcome==='open'&&zeroImportEntryLotIdentity(trade)===identity
+    );
+    if(openIndex<0)return;
+    const openTrade=trades[openIndex];
+    const openQty=Number(openTrade.count)||0;
+    const closedQty=items.reduce((sum,item)=>sum+(Number(item.trade.count)||0),0);
+    if(openQty<=0||closedQty<=0||closedQty>openQty+1e-8)return;
+    const replacements=items.map((item,itemIndex)=>{
+      const next=Object.assign({},item.trade);
+      if(itemIndex===0){
+        next.id=openTrade.id;
+        if((!next.attachments||!next.attachments.length)&&openTrade.attachments)next.attachments=openTrade.attachments;
+      }
+      consumed.add(item.index);
+      return normalizeTrade(next,trades.length+itemIndex);
+    });
+    const remaining=Math.max(0,openQty-closedQty);
+    if(remaining>1e-8){
+      const remainder=Object.assign({},openTrade,{
+        id:'zero-'+uid(),
+        count:remaining,
+        buyFees:zeroRoundMoney((Number(openTrade.buyFees)||0)*(remaining/openQty)),
+        capital:Number.isFinite(Number(openTrade.capital))?Number(openTrade.capital)*(remaining/openQty):openTrade.capital,
+        importKey:zeroImportKey(['zero',openTrade.isin||'',openTrade.wkn||'',openTrade.entryDate||'',openTrade.entryTime||'','open',openTrade.entry,remaining])
+      });
+      replacements.push(normalizeTrade(remainder,trades.length+replacements.length));
+    }
+    trades.splice(openIndex,1,...replacements);
+    updated++;
+  });
+  return {
+    pending:incoming.filter((trade,index)=>!consumed.has(index)),
+    updated
+  };
+}
 function zeroImportFinishReview(importPossible=false){
   const review=window._zeroImportReview;
   const resultBox=document.getElementById('zero-import-result');
@@ -11108,15 +11174,16 @@ function confirmZeroImport(){
   if(!pending||!pending.length)return;
   invalidateTradesCache();
   loadTrades();
-  const review=zeroImportAnalyzePending(pending);
+  const reconciled=zeroImportReconcileOpenLots(pending);
+  const review=zeroImportAnalyzePending(reconciled.pending);
   const autoUpdated=zeroImportApplyAutoUpdates(review);
-  review.autoUpdated=autoUpdated;
-  if(autoUpdated)saveTrades();
+  review.autoUpdated=autoUpdated+reconciled.updated;
+  if(review.autoUpdated)saveTrades();
   window._zeroImportReview=review;
   if(review.possible.length){
     if(resultBox)resultBox.innerHTML=
       '<div class="tax-note warn" style="margin-top:0">'+
-      '<b>'+review.safe.length+' sichere Trades</b> · '+(autoUpdated?autoUpdated+' offene Trades automatisch geschlossen · ':'')+review.possible.length+' mögliche Duplikate · '+review.hardDupeCount+' sichere Duplikate übersprungen.<br>'+
+      '<b>'+review.safe.length+' sichere Trades</b> · '+(review.autoUpdated?review.autoUpdated+' offene Trades automatisch geschlossen · ':'')+review.possible.length+' mögliche Duplikate · '+review.hardDupeCount+' sichere Duplikate übersprungen.<br>'+
       '<button onclick="zeroImportFinishReview(false)" style="margin-top:8px;background:var(--green);color:var(--bg);border:none;border-radius:7px;padding:8px 12px;font-weight:700;font-size:.76rem;cursor:pointer">Sichere importieren</button> '+
       '<button onclick="renderZeroImportReview(0)" style="margin-top:8px;background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-weight:700;font-size:.76rem;cursor:pointer">Duplikate prüfen</button> '+
       '<button onclick="document.getElementById(\'zero-import-result\').innerHTML=\'\';window._zeroImportReview=null" style="margin-top:8px;background:var(--s3);color:var(--text);border:1px solid var(--bd);border-radius:7px;padding:8px 12px;font-weight:650;font-size:.76rem;cursor:pointer">Abbrechen</button>'+
