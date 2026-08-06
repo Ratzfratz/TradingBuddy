@@ -6696,7 +6696,7 @@ body.tb-compact-small{
 .tp-progress{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--green) var(--tp-progress,0%),var(--s3) 0);position:relative}
 .tp-progress::before{content:'';position:absolute;inset:8px;border-radius:50%;background:var(--s1)}
 .tp-progress-value{position:relative;text-align:center;font-size:1.15rem;font-weight:800;color:var(--text)}
-.tp-progress-value small{display:block;margin-top:2px;font-size:.48rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+.tp-progress-value small{display:block;max-width:64px;margin:2px auto 0;font-size:.42rem;font-weight:700;line-height:1.05;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
 .tp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 #tp-editor>.tp-card:nth-child(1){order:1}#tp-editor>.tp-card:nth-child(2){order:3}#tp-editor>.tp-card:nth-child(3){order:2}#tp-editor>.tp-card:nth-child(4){order:4}#tp-editor>.tp-card:nth-child(5){order:5}#tp-editor>.tp-card:nth-child(6){order:6}
 .tp-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tp-summary-card{padding:14px;border:1px solid var(--bd);border-radius:11px;background:var(--s1);box-shadow:var(--shadow);min-width:0}.tp-summary-card strong{display:block;margin-bottom:8px;font-size:.7rem;color:var(--text)}.tp-summary-list{display:grid;gap:6px}.tp-summary-row{display:flex;justify-content:space-between;gap:10px;font-size:.61rem;line-height:1.35}.tp-summary-row span:first-child{color:var(--muted)}.tp-summary-row span:last-child{color:var(--text);font-weight:700;text-align:right;overflow-wrap:anywhere}.tp-summary-rules{margin:0;padding-left:17px;color:var(--text);font-size:.62rem;line-height:1.55}.tp-mode-switch{display:flex;gap:6px;margin-left:auto}.tp-mode-btn{height:32px;padding:0 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);color:var(--muted);font:700 .58rem var(--f);cursor:pointer}.tp-mode-btn.on{border-color:var(--blue);background:rgba(91,138,245,.11);color:var(--blue)}
@@ -6978,11 +6978,11 @@ body.tp-guided [data-tp-advanced]{display:none!important}
   <div class="tp-shell">
     <section class="tp-hero">
       <div>
-        <div class="tp-hero-meta"><div class="tp-eyebrow">Mein Regelwerk</div><span class="tp-status" id="tp-status">Entwurf</span><div class="tp-mode-switch"><button class="tp-mode-btn on" id="tp-mode-guided" type="button" onclick="setTradingPlanMode('guided')">Kompakt</button><button class="tp-mode-btn" id="tp-mode-advanced" type="button" onclick="setTradingPlanMode('advanced')">Erweitert</button></div></div>
+        <div class="tp-hero-meta"><div class="tp-eyebrow">Mein Regelwerk</div><span class="tp-status" id="tp-status">Entwurf</span></div>
         <h1>Mein Tradingplan</h1>
         <p>Lege nur die Regeln fest, die dir vor und während eines Trades wirklich helfen.</p>
       </div>
-      <div class="tp-progress" id="tp-progress"><div class="tp-progress-value"><span id="tp-progress-value">0%</span><small>Planstatus</small></div></div>
+      <div class="tp-progress" id="tp-progress"><div class="tp-progress-value"><span id="tp-progress-value">0%</span><small>Status</small></div></div>
     </section>
 
     <div class="tp-summary hidden" id="tp-summary">
@@ -22536,8 +22536,8 @@ body.journal-list-view #trade-list .tc-actions{
     const legacyHorizons={'Intraday':'intraday','Mehrere Tage':'days','Mehrere Wochen':'weeks','Mehrere Monate':'months'};
     if(legacyStyles[data['tp-style']])data['tp-style']=legacyStyles[data['tp-style']];
     if(legacyHorizons[data['tp-horizon']])data['tp-horizon']=legacyHorizons[data['tp-horizon']];
-    tradingPlanMode=data.mode==='advanced'?'advanced':'guided';
-    setTradingPlanMode(tradingPlanMode);
+    tradingPlanMode='guided';
+    setTradingPlanMode('guided');
     const styleField=document.getElementById('tp-style');
     if(styleField)styleField.value=data['tp-style']||'';
     updateTradingPlanHorizon();
@@ -22600,6 +22600,11 @@ body.journal-list-view #trade-list .tc-actions{
     grid-column-end:-1!important;
   }
   #view-stats>[data-stats-module="calendar"]{overflow:hidden!important}
+  #view-stats>[data-stats-module="charts"]{
+    height:456px!important;
+    min-height:456px!important;
+    grid-row:span 4!important;
+  }
 
   /* Lesbar in halbbreiten Diagrammkarten, ohne übergroße Achsenbeschriftung. */
   .stats-chart-label{font-size:11px!important}
@@ -22609,6 +22614,8 @@ body.journal-list-view #trade-list .tc-actions{
 }
 
 @media (min-width:600px) and (max-width:899px){
+  .stats-chart-section{height:430px!important;min-height:430px!important}
+  .stats-chart-panel,.stats-chart-host{min-height:0!important}
   .stats-chart-label{font-size:11px!important}
   .stats-chart-date{font-size:12px!important}
   .stats-chart-value{font-size:12px!important}
