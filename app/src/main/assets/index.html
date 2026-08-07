@@ -22729,5 +22729,92 @@ body.journal-list-view #trade-list .tc-actions{
 }
 </style>
 
+<style id="static-statistics-grid">
+/* Ab Tablet: feste, lückenlose Statistik-Raster. Jede Zeile ist vollständig
+   belegt; unterschiedlich hohe Module werden innerhalb ihrer Zeile gestreckt. */
+@media (min-width:720px){
+  #view-stats{
+    display:grid!important;
+    grid-auto-flow:row!important;
+    grid-auto-rows:auto!important;
+    gap:16px!important;
+    align-items:stretch!important;
+  }
+  #view-stats>[data-stats-module]{
+    height:100%!important;
+    min-height:0!important;
+    margin:0!important;
+    grid-row:auto!important;
+  }
+  #view-stats>[data-stats-module="hero"]{grid-area:hero!important}
+  #view-stats>[data-stats-module="overview"]{grid-area:overview!important}
+  #view-stats>[data-stats-module="charts"]{grid-area:charts!important}
+  #view-stats>[data-stats-module="calendar"]{grid-area:calendar!important}
+  #view-stats>[data-stats-module="insights"]{grid-area:insights!important}
+  #view-stats>[data-stats-module="top"]{grid-area:top!important}
+  #view-stats>[data-stats-module="worst"]{grid-area:worst!important}
+  #view-stats>[data-stats-module="history"]{grid-area:history!important}
+  #view-stats>[data-stats-module="tax"]{grid-area:tax!important}
+}
+
+/* Tablet: große Analyseflächen bleiben breit; kompakte Auswertungen teilen
+   sich die Zeile. So bleibt alles lesbar, ohne eine lange Einspalten-Liste. */
+@media (min-width:720px) and (max-width:899.98px){
+  #view-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-areas:
+      "hero hero"
+      "overview overview"
+      "charts charts"
+      "calendar calendar"
+      "insights insights"
+      "top worst"
+      "history tax"!important;
+  }
+}
+
+/* Kompakter Desktop: die beiden wichtigsten Analyseblöcke stehen direkt
+   nebeneinander; darunter folgen vollständig gefüllte Zweierspalten. */
+@media (min-width:900px) and (max-width:1199.98px){
+  #view-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-areas:
+      "hero hero"
+      "overview charts"
+      "calendar calendar"
+      "insights insights"
+      "top worst"
+      "history tax"!important;
+  }
+}
+
+/* Desktop: sechs Rastereinheiten erlauben breite Hauptmodule und paarweise
+   kompakte Abschlusskarten, ohne unnötig hohe Kleinmodule. */
+@media (min-width:1200px) and (max-width:1599.98px){
+  #view-stats{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-template-areas:
+      "hero hero hero hero hero hero"
+      "overview overview overview charts charts charts"
+      "calendar calendar calendar insights insights insights"
+      "top top top worst worst worst"
+      "history history history tax tax tax"!important;
+  }
+}
+
+/* Große Displays: feinere Sechstel erlauben eine dichte Gewichtung nach
+   Informationsmenge, weiterhin ohne unbelegte Rasterbereiche. */
+@media (min-width:1600px){
+  #view-stats{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-template-areas:
+      "hero hero hero hero hero hero"
+      "overview overview charts charts charts charts"
+      "calendar calendar calendar insights insights insights"
+      "top worst history history tax tax"!important;
+  }
+}
+</style>
+
 </body>
 </html>
