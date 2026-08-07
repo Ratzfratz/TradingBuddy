@@ -21050,7 +21050,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   .stats-card-resize-handle,.stats-card-height-handle,.stats-card-size-badge{display:none!important}
 }
 @media (min-width:720px) and (max-width:899px){
-  body.stats-page-active .stats-layout-toolbar{display:flex;justify-content:flex-end;gap:8px;margin:0 0 12px}
+  body.stats-page-active .stats-layout-toolbar{display:none!important}
   .stats-layout-edit-toggle{min-height:40px;padding:0 15px;border:1px solid var(--bd);border-radius:10px;background:color-mix(in srgb,var(--s1) 78%,transparent);color:var(--muted);font:700 .7rem var(--f);cursor:pointer;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
   .stats-layout-edit-toggle:hover,.stats-layout-edit-toggle.on{color:var(--blue);border-color:rgba(91,138,245,.45);background:rgba(91,138,245,.1)}
   body.stats-layout-editing #view-stats>[data-stats-module]{position:relative;cursor:grab;outline:1px dashed rgba(91,138,245,.5);outline-offset:3px;user-select:none}
@@ -21064,7 +21064,7 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
 @media (min-width:900px){
   #view-stats>.stats-calendar-section>.stats-calendar-body{display:block!important}
   #view-stats>.stats-calendar-section>summary{pointer-events:none}
-  body.stats-page-active .stats-layout-toolbar{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin:0 0 12px}
+  body.stats-page-active .stats-layout-toolbar{display:none!important}
   .stats-layout-edit-toggle{min-height:40px;padding:0 15px;border:1px solid var(--bd);border-radius:10px;background:color-mix(in srgb,var(--s1) 78%,transparent);color:var(--muted);font:700 .7rem var(--f);cursor:pointer;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
   .stats-layout-edit-toggle:hover,.stats-layout-edit-toggle.on{color:var(--blue);border-color:rgba(91,138,245,.45);background:rgba(91,138,245,.1)}
   .stats-layout-toolbar-panel{display:none;width:100%;margin-top:8px;padding:12px;border:1px solid var(--bd);border-radius:12px;background:color-mix(in srgb,var(--s1) 88%,transparent);box-shadow:var(--shadow);backdrop-filter:blur(12px)}
@@ -22188,13 +22188,10 @@ body.journal-list-view #trade-list .tc-actions{
     const bucket=storageBucket();
     activeStorageBucket=bucket;
     if(!bucket){state=defaults();return;}
-    const store=readLayoutStore();
-    let saved=store.layouts[bucket];
-    if(!saved){
-      try{saved=JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY)||'null');}catch(e){saved=null;}
-    }
-    state=normalize(saved);
-    save();
+    /* Ab Tablet ist das Dashboard bewusst statisch. Die feste Reihenfolge und
+       Kartengrößen skalieren responsiv mit dem vorhandenen Grid; gespeicherte
+       Drag-/Resize-Zustände werden hier nicht mehr angewandt. */
+    state=window.matchMedia('(min-width:1600px)').matches?largeDisplayDefaults():defaults();
   }
   function save(){
     const bucket=storageBucket();
@@ -22407,7 +22404,11 @@ body.journal-list-view #trade-list .tc-actions{
       row.addEventListener('drop',e=>{e.preventDefault();if(!draggedKey||draggedKey===row.dataset.layoutKey)return;const from=state.order.indexOf(draggedKey),to=state.order.indexOf(row.dataset.layoutKey);state.order.splice(to,0,state.order.splice(from,1)[0]);save();apply();renderStatsLayoutEditor();});
     });
   };
-  window.toggleStatsLayoutEditing=function(){if(typeof tbRequireFeature==='function'&&!tbRequireFeature('customStatsLayout'))return;if(!window.matchMedia('(min-width:720px)').matches)return;const on=document.body.classList.toggle('stats-layout-editing'),btn=document.getElementById('stats-layout-edit-toggle');if(btn){btn.classList.toggle('on',on);btn.querySelector('span').textContent=on?'Layout fertig':'Layout anpassen';}apply();renderStatsLayoutEditor();};
+  window.toggleStatsLayoutEditing=function(){
+    document.body.classList.remove('stats-layout-editing');
+    const btn=document.getElementById('stats-layout-edit-toggle');
+    if(btn){btn.classList.remove('on');btn.querySelector('span').textContent='Layout anpassen';}
+  };
   window.updateStatsLayoutOption=function(key,value){if(key==='columns')state.columns=value;save();apply();};
   window.setStatsModuleSpan=function(key,value){if(state.modules[key]){const min=(MIN_SIZES[key]||[1,.5])[0],max=MAX_SPANS[key]||3,normalized=Math.round((Number(value)||min)*2)/2;state.modules[key].span=Math.min(max,Math.max(min,normalized));}save();apply();};
   window.setStatsModuleVisible=function(key,value){if(state.modules[key])state.modules[key].visible=!!value;save();apply();};
