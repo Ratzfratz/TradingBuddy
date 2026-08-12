@@ -14316,7 +14316,7 @@ if('serviceWorker' in navigator){
     <div class="overlay-title" id="form-title">Neuer Trade</div>
     <button class="overlay-head-btn overlay-head-right" onclick="cancelTradeForm()">&#x2715;</button>
   </div>
-  <div class="nt-choice-stack">
+  <div class="nt-choice-stack" id="nt-choice-stack">
   <div class="sec" id="nt-asset-card">
     <div class="asset-sel nt-asset-sel" id="nt-asset-sel">
       <button class="asset-btn active" id="fa-stock" onclick="setAssetType('stock')">Aktie</button>
@@ -15209,6 +15209,7 @@ function normNum(v){ return v===undefined||v===null?'':String(v).trim().replace(
     var ov=document.getElementById('nt-ov'),sh=document.getElementById('nt-sh'),bd=document.getElementById('nt-bd');
     var body=document.getElementById('nt-body');
     if(!ov)return;
+    try{if(typeof window.arrangeTradeEditorColumns==='function')window.arrangeTradeEditorColumns();}catch(e){}
     if(body){body.scrollTop=0;try{body.scrollTo(0,0);}catch(e){}}
     lockBody();
     ov.style.display='block';
@@ -15920,6 +15921,65 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   border-color:#dc4967;background:rgba(220,73,103,.12);color:#c73554;
 }
 </style>
+<style id="trade-editor-flowing-desktop-columns">
+/* Auf breiten Displays fließt jede Spalte unabhängig. So erzeugt die hohe
+   Einstiegskarte keine leeren Rasterzeilen unter den kürzeren Karten. */
+@media (min-width:1400px) and (min-height:720px){
+  #nt-body{display:block!important;padding-left:18px!important;padding-right:18px!important}
+  #nt-body>.overlay-sticky-head{width:100%;height:52px!important;min-height:52px!important;margin-bottom:14px}
+  #nt-desktop-columns{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:16px;
+    align-items:start;
+  }
+  .nt-desktop-column{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .nt-desktop-column>.sec,
+  .nt-desktop-column>.nt-choice-stack,
+  .nt-desktop-column>.nt-choice-stack>.sec{
+    width:100%;height:auto!important;min-height:0;margin:0!important;align-self:auto!important;
+  }
+  .nt-desktop-column>.nt-choice-stack{display:flex;flex-direction:column;gap:14px}
+  #nt-review-card{border-color:var(--bd)}
+}
+</style>
+<script id="trade-editor-flowing-columns-script">
+(function(){
+  const orderedIds=['nt-choice-stack','nt-entry-card','nt-plan-card','nt-exit-card','nt-result-card','nt-review-card','nt-notes-card','nt-clear-area'];
+
+  window.arrangeTradeEditorColumns=function(){
+    const body=document.getElementById('nt-body');
+    const header=document.getElementById('nt-header');
+    if(!body||!header)return;
+    const wide=window.matchMedia&&window.matchMedia('(min-width:1400px) and (min-height:720px)').matches;
+    let columns=document.getElementById('nt-desktop-columns');
+
+    if(!wide){
+      if(!columns)return;
+      orderedIds.forEach(id=>{const el=document.getElementById(id);if(el)body.appendChild(el);});
+      columns.remove();
+      return;
+    }
+
+    if(!columns){
+      columns=document.createElement('div');
+      columns.id='nt-desktop-columns';
+      columns.innerHTML='<div class="nt-desktop-column" data-column="left"></div><div class="nt-desktop-column" data-column="middle"></div><div class="nt-desktop-column" data-column="right"></div>';
+      header.insertAdjacentElement('afterend',columns);
+    }
+    const left=columns.querySelector('[data-column="left"]');
+    const middle=columns.querySelector('[data-column="middle"]');
+    const right=columns.querySelector('[data-column="right"]');
+    ['nt-choice-stack','nt-exit-card'].forEach(id=>{const el=document.getElementById(id);if(el)left.appendChild(el);});
+    ['nt-entry-card','nt-result-card','nt-review-card'].forEach(id=>{const el=document.getElementById(id);if(el)middle.appendChild(el);});
+    ['nt-plan-card','nt-notes-card'].forEach(id=>{const el=document.getElementById(id);if(el)right.appendChild(el);});
+  };
+
+  window.addEventListener('resize',()=>window.arrangeTradeEditorColumns());
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',window.arrangeTradeEditorColumns);
+  else window.arrangeTradeEditorColumns();
+})();
+</script>
 <style id="legal-core-styles">
 .settings-info-actions{display:grid;grid-template-columns:1fr 1fr;min-width:0}
 .settings-info-actions .settings-info-row{justify-content:center;gap:7px;position:relative}
