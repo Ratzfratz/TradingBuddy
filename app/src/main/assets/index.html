@@ -21530,6 +21530,89 @@ body[data-journal-card-edge="none"] #page-tagebuch .trade-card::before{display:n
 @media (max-width:420px){
   .settings-journal-view,.settings-journal-edge{grid-template-columns:1fr}
 }
+
+/* Portfolio cards use the same visual rhythm as the journal cards. */
+#page-portfolio .ops-class{
+  font-family:var(--f);
+  border-radius:12px!important;
+}
+#page-portfolio .ops-class::before{
+  width:3px;
+  background:var(--blue);
+}
+#page-portfolio .ops-class-head{
+  min-height:48px;
+  padding:12px 13px!important;
+  border-bottom:1px solid var(--bd);
+}
+#page-portfolio .ops-class-title .tc-type{
+  font-family:var(--f);
+  font-size:.6rem!important;
+  font-weight:600!important;
+  padding:2px 7px!important;
+}
+#page-portfolio .ops-class-total strong{
+  font-family:var(--f);
+  font-size:.98rem!important;
+  font-weight:700!important;
+  line-height:1.15;
+}
+#page-portfolio .ops-class-body{
+  padding:0 13px 5px!important;
+}
+#page-portfolio .ops-position + .ops-position{
+  border-top:1px solid var(--bd);
+}
+#page-portfolio .ops-position summary{
+  padding:11px 0!important;
+  gap:10px!important;
+}
+#page-portfolio .ops-name{
+  font-family:var(--f);
+  font-size:.96rem!important;
+  font-weight:700!important;
+  line-height:1.2;
+}
+#page-portfolio .ops-meta{
+  margin-top:3px;
+  font-family:var(--f)!important;
+  font-size:.6rem!important;
+  font-weight:600!important;
+  line-height:1.35!important;
+}
+#page-portfolio .ops-value{
+  font-family:var(--f);
+  font-size:.7rem!important;
+  font-weight:600!important;
+}
+#page-portfolio .ops-detail{
+  gap:0;
+  padding:0 0 8px;
+  border-top:1px solid var(--bd);
+}
+#page-portfolio .ops-trade{
+  padding:9px 0!important;
+  gap:10px!important;
+}
+#page-portfolio .ops-trade + .ops-trade{
+  border-top:1px solid var(--bd);
+}
+#page-portfolio .ops-trade-meta{
+  font-family:var(--f);
+  font-size:.64rem!important;
+  font-weight:500;
+  line-height:1.35;
+}
+#page-portfolio .ops-trade-value{
+  font-family:var(--f);
+  font-size:.7rem!important;
+  font-weight:600!important;
+}
+@media (max-width:460px){
+  #page-portfolio .ops-class-head{padding:11px!important}
+  #page-portfolio .ops-class-body{padding:0 11px 4px!important}
+  #page-portfolio .ops-position summary{padding:10px 0!important}
+}
 @media (min-width:1100px){
   .bottom-stack::before{
     display:block!important;
