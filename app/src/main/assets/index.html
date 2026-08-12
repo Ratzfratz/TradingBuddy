@@ -10792,93 +10792,142 @@ function parseZeroCsv(text){
   // chronologisch sortieren (FIFO braucht Reihenfolge)
   events.sort((a,b)=>(a.date+' '+a.time).localeCompare(b.date+' '+b.time));
 
-  const lots={};
+  // Eine Position läuft vom ersten Kauf bis der Bestand wieder vollständig
+  // geschlossen ist. Teilkäufe und Teilverkäufe gehören zu demselben Trade.
+  const positions={};
   const out=[];
+  const eventValue=(event,fallback)=>event.value!==null&&Number.isFinite(Number(event.value))
+    ? Number(event.value)
+    : fallback;
+  const startPosition=(key,event,cls)=>({
+    key,
+    isin:event.isin,
+    wkn:event.wkn,
+    name:event.name,
+    cls,
+    firstBuy:event,
+    lastSell:null,
+    remaining:0,
+    realizedBuyQty:0,
+    realizedBuyCourse:0,
+    realizedBuyValue:0,
+    realizedBuyFees:0,
+    totalSellQty:0,
+    totalSellCourse:0,
+    totalSellValue:0,
+    totalSellFees:0,
+    lots:[]
+  });
+  const positionImportKey=(position,kind)=>zeroImportKey([
+    'zero','position',position.isin||'',position.wkn||'',
+    position.firstBuy.date,position.firstBuy.time,
+    kind
+  ]);
+  const finishPosition=(position,kind)=>{
+    const open=kind==='open';
+    const productName=position.name||position.firstBuy.name;
+    const remainingLots=position.lots.filter(lot=>lot.remaining>1e-9);
+    const remainingCourse=remainingLots.reduce((sum,lot)=>sum+(lot.kurs*lot.remaining),0);
+    const remainingFees=remainingLots.reduce((sum,lot)=>sum+(lot.fee*(lot.remaining/lot.qty)),0);
+    const count=open?position.remaining:position.realizedBuyQty;
+    const entry=open
+      ? remainingCourse/position.remaining
+      : position.realizedBuyCourse/position.realizedBuyQty;
+    const exit=open?null:(position.totalSellQty>1e-9?position.totalSellCourse/position.totalSellQty:null);
+    const buyFees=open?remainingFees:position.realizedBuyFees;
+    const sellFees=open?0:position.totalSellFees;
+    const pnl=open?null:
+      position.realizedBuyValue+position.totalSellValue-position.realizedBuyFees-position.totalSellFees;
+    out.push({
+      id:'zero-'+uid(),
+      importKey:positionImportKey(position,kind),
+      assetType:position.cls,
+      type:zeroDirection(productName),
+      ticker:zeroExtractTicker(productName,position.cls),
+      productName,
+      wkn:position.wkn,
+      count,
+      entry,
+      exit,
+      entryDate:position.firstBuy.date,
+      entryTime:position.firstBuy.time,
+      exitDate:open?'':position.lastSell.date,
+      exitTime:open?'':position.lastSell.time,
+      buyFees:zeroRoundMoney(buyFees),
+      sellFees:zeroRoundMoney(sellFees),
+      pnl:open?null:zeroRoundMoney(pnl),
+      outcome:open?'open':(pnl>=0?'win':'loss'),
+      strategy:'',
+      strike:zeroExtractStrike(productName,position.cls),
+      expiry:zeroExtractExpiry(productName),
+      notes:zeroImportCurrencyNote(position.firstBuy,open?null:position.lastSell)
+    });
+  };
   events.forEach(e=>{
     const cls=zeroClassify(e.name);
     const key=zeroEventKey(e);
     if(!key){skipped++;return;}
     if(e.dir==='Kauf'){
-      (lots[key]=lots[key]||[]).push(Object.assign({}, e, {cls:cls, remaining:e.qty}));
+      let position=positions[key];
+      if(!position){
+        position=startPosition(key,e,cls);
+        positions[key]=position;
+      }
+      position.remaining+=e.qty;
+      position.lots.push(Object.assign({},e,{
+        remaining:e.qty,
+        importValue:eventValue(e,-(e.kurs*e.qty))
+      }));
     }else if(e.dir==='Verkauf'){
       let rem=e.qty;
-      const q=lots[key]||[];
+      const position=positions[key];
+      if(!position){skipped++;return;}
+      const q=position.lots;
       while(rem>1e-9&&q.length){
         const lot=q[0];
-        const tradeCls=lot.cls||cls;
         const used=Math.min(rem,lot.remaining);
-        const buyFee=lot.fee*(used/lot.qty);
-        const sellFee=e.fee*(used/e.qty);
-        const buyValue=Number.isFinite(Number(lot.value))?Number(lot.value):-(lot.kurs*lot.qty);
-        const sellValue=Number.isFinite(Number(e.value))?Number(e.value):(e.kurs*e.qty);
-        const pnl=(buyValue*(used/lot.qty))+(sellValue*(used/e.qty))-buyFee-sellFee;
-        const productName=lot.name||e.name;
-        out.push({
-          id:'zero-'+uid(),
-          importKey:zeroImportKey(['zero',lot.isin||e.isin||'',lot.wkn||e.wkn||'',lot.date,lot.time,e.date,e.time,lot.kurs,e.kurs,used]),
-          assetType:tradeCls,
-          type:zeroDirection(productName),
-          ticker:zeroExtractTicker(productName,tradeCls),
-          productName,
-          wkn:lot.wkn||e.wkn,
-          count:used,
-          entry:lot.kurs,
-          exit:e.kurs,
-          entryDate:lot.date,
-          entryTime:lot.time,
-          exitDate:e.date,
-          exitTime:e.time,
-          buyFees:zeroRoundMoney(buyFee),
-          sellFees:zeroRoundMoney(sellFee),
-          pnl:zeroRoundMoney(pnl),
-          outcome:pnl>=0?'win':'loss',
-          strategy:'',
-          strike:zeroExtractStrike(productName,tradeCls),
-          expiry:zeroExtractExpiry(productName),
-          notes:zeroImportCurrencyNote(lot,e)
-        });
+        position.realizedBuyQty+=used;
+        position.realizedBuyCourse+=lot.kurs*used;
+        position.realizedBuyValue+=lot.importValue*(used/lot.qty);
+        position.realizedBuyFees+=lot.fee*(used/lot.qty);
+        position.totalSellQty+=used;
+        position.totalSellCourse+=e.kurs*used;
+        position.totalSellValue+=eventValue(e,e.kurs*e.qty)*(used/e.qty);
+        position.totalSellFees+=e.fee*(used/e.qty);
+        position.remaining-=used;
+        position.lastSell=e;
         lot.remaining-=used;
         rem-=used;
         if(lot.remaining<=1e-9)q.shift();
       }
+      if(position.remaining<=1e-9){
+        position.remaining=0;
+        finishPosition(position,'realized');
+        delete positions[key];
+      }
+      if(rem>1e-9)skipped++;
     }
   });
 
-  // offene Käufe als open-Trades
-  let openCount=0;
-  Object.values(lots).forEach(q=>q.forEach(lot=>{
-    if(lot.remaining>1e-9){
-      openCount++;
-      out.push({
-        id:'zero-'+uid(),
-        importKey:zeroImportKey(['zero',lot.isin||'',lot.wkn||'',lot.date,lot.time,'open',lot.kurs,lot.remaining]),
-        assetType:lot.cls,
-        type:zeroDirection(lot.name),
-        ticker:zeroExtractTicker(lot.name,lot.cls),
-        productName:lot.name,
-        wkn:lot.wkn,
-        count:lot.remaining,
-        entry:lot.kurs,
-        exit:null,
-        entryDate:lot.date,
-        entryTime:lot.time,
-        exitDate:'',
-        exitTime:'',
-        buyFees:zeroRoundMoney(lot.fee*(lot.remaining/lot.qty)),
-        sellFees:0,
-        pnl:null,
-        outcome:'open',
-        strategy:'',
-        strike:zeroExtractStrike(lot.name,lot.cls),
-        expiry:zeroExtractExpiry(lot.name),
-        notes:zeroImportCurrencyNote(lot)
-      });
-    }
-  }));
+  // Pro Instrument bleibt höchstens eine offene Position übrig.
+  Object.values(positions).forEach(position=>{
+    // Bereits realisierte Teilverkäufe bleiben als ein zusammengefasster
+    // Ergebnistrade sichtbar; der Restbestand wird separat offen geführt.
+    if(position.totalSellQty>1e-9)finishPosition(position,'realized');
+    if(position.remaining>1e-9)finishPosition(position,'open');
+  });
 
-  const dedupedOut=dedupeTradesList(out).map((trade,index)=>normalizeTrade(trade,index));
+  // Im frisch aufgebauten Snapshot ist der deterministische Import-Schlüssel
+  // maßgeblich. Der globale Filter kann legitime ZERO-Positionen verwerfen.
+  const seenImportKeys=new Set();
+  const dedupedOut=out.filter(trade=>{
+    const key=tradeDedupeImportKey(trade.importKey);
+    if(!key||seenImportKeys.has(key))return false;
+    seenImportKeys.add(key);
+    return true;
+  }).map((trade,index)=>normalizeTrade(trade,index));
   skipped+=out.length-dedupedOut.length;
-  openCount=dedupedOut.filter(trade=>trade.outcome==='open').length;
+  const openCount=dedupedOut.filter(trade=>trade.outcome==='open').length;
 
   return {
     trades:dedupedOut,
@@ -10920,7 +10969,7 @@ function handleZeroCsv(event){
     const closed=parsed.trades.filter(t=>t.outcome!=='open').length;
     const sumPnl=parsed.trades.reduce((s,t)=>s+(Number(t.pnl)||0),0);
     const zeroInfo=parsed.zeroExecutions
-      ? '<br><span style="color:var(--muted)">Zero: '+parsed.zeroExecutions+' Ausführungen ('+parsed.zeroBuyExecutions+' Käufe / '+parsed.zeroSellExecutions+' Verkäufe) → '+parsed.trades.length+' Position-Trades.</span>'
+      ? '<br><span style="color:var(--muted)">Zero: '+parsed.zeroExecutions+' Ausführungen ('+parsed.zeroBuyExecutions+' Käufe / '+parsed.zeroSellExecutions+' Verkäufe) → '+parsed.trades.length+' vollständige Positionen.</span>'
       : '';
     if(resultBox){
       resultBox.innerHTML=
@@ -11030,8 +11079,7 @@ function zeroImportEntryLotIdentity(trade){
   return [
     keyId,
     date,
-    time,
-    tradeDedupeNumber(trade.entry)
+    time
   ].join('|');
 }
 function zeroImportReconcileOpenLots(pending){
