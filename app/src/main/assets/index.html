@@ -15714,7 +15714,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
     align-items:stretch;
     align-content:start!important;
-    grid-template-rows:52px 500px 210px auto!important;
+    grid-template-rows:52px auto auto auto!important;
   }
   #nt-body>.overlay-sticky-head{
     grid-column:1/-1;
@@ -15738,11 +15738,11 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     margin:0!important;
   }
   #nt-asset-card,#nt-direction-box{grid-column:auto;grid-row:auto}
-  #nt-entry-card{grid-column:2;grid-row:2;height:100%!important}
-  #nt-plan-card{grid-column:3;grid-row:2;height:100%!important}
-  #nt-exit-card{grid-column:1;grid-row:3;height:100%!important}
-  #nt-result-card{grid-column:2;grid-row:3;height:100%!important}
-  #nt-notes-card{grid-column:3;grid-row:3;height:100%!important}
+  #nt-entry-card{grid-column:2;grid-row:2;height:auto!important}
+  #nt-plan-card{grid-column:3;grid-row:2;height:auto!important}
+  #nt-exit-card{grid-column:1;grid-row:3;height:auto!important}
+  #nt-result-card{grid-column:2;grid-row:3;height:auto!important}
+  #nt-notes-card{grid-column:3;grid-row:3;height:auto!important}
   #nt-review-card{grid-column:1/-1;grid-row:4}
   #settings-sh{
     height:92vh!important;
