@@ -1330,10 +1330,7 @@ input[type="date"].inp:not(.is-empty)::-webkit-datetime-edit-year-field{color:va
 .tax-setting-toggle:checked{background:var(--blue)}
 .tax-setting-toggle:checked::after{transform:translateX(20px)}
 .tax-settings-more{border:1px solid var(--bd);border-radius:8px;background:var(--s2);margin-top:10px;overflow:hidden}
-.tax-settings-more summary{list-style:none;cursor:pointer;padding:10px 11px;font-size:.72rem;font-weight:700;color:var(--text);display:flex;justify-content:space-between;align-items:center}
-.tax-settings-more summary::-webkit-details-marker{display:none}
-.tax-settings-more summary::after{content:'›';font-size:1rem;color:var(--muted);transform:rotate(90deg)}
-.tax-settings-more[open] summary::after{transform:rotate(-90deg)}
+.tax-settings-more-title{padding:10px 11px;font-size:.72rem;font-weight:700;color:var(--text)}
 .tax-settings-more-body{padding:0 11px 11px}
 .stats-calendar-section{margin-bottom:14px}
 .stats-calendar-section>summary{display:flex;align-items:center;gap:8px;min-height:30px;cursor:pointer;list-style:none;color:var(--muted);font-size:.65rem;font-weight:650}
@@ -1953,7 +1950,7 @@ body.page-tagebuch:root.light-theme .journal-filter-panel,
 :root.light-theme{
   --overlay-backdrop:rgba(24,34,52,.35);
 }
-#settings-bd,#rm-bd,#bm-bd{
+#settings-bd,#rm-bd,#bm-bd,#legal-bd{
   background:var(--overlay-backdrop) !important;
   backdrop-filter:blur(5px) saturate(.92) !important;
   -webkit-backdrop-filter:blur(5px) saturate(.92) !important;
@@ -1967,7 +1964,7 @@ body.page-tagebuch:root.light-theme .journal-filter-panel,
   max-width:460px !important;
 }
 /* Abdunklung und Unschärfe bleiben auch beim Wechsel zwischen den drei Karten aktiv. */
-#settings-bd,#rm-bd,#bm-bd{
+#settings-bd,#rm-bd,#bm-bd,#legal-bd{
   background:rgba(0,0,0,.55) !important;
   backdrop-filter:blur(2px) !important;
   -webkit-backdrop-filter:blur(2px) !important;
@@ -2275,7 +2272,8 @@ body.keyboard-active .bottom-stack,
 /* White Theme: bei internen Kartenwechseln exakt dieselbe Abdunklung und Unschärfe. */
 :root.light-theme #settings-bd,
 :root.light-theme #rm-bd,
-:root.light-theme #bm-bd{
+:root.light-theme #bm-bd,
+:root.light-theme #legal-bd{
   background:rgba(24,34,52,.35) !important;
   backdrop-filter:blur(2px) saturate(.98) !important;
   -webkit-backdrop-filter:blur(2px) saturate(.98) !important;
@@ -2667,7 +2665,7 @@ body.journal-chrome-no-transition header,body.journal-chrome-no-transition .bott
 #settings-page-main .sec-title{font-size:.6rem}
 .tax-settings-hint,
 .s-hint{font-size:.62rem;color:var(--muted);line-height:1.55;margin-top:6px}
-.tax-settings-more summary{font-size:.78rem;font-weight:600}
+.tax-settings-more-title{font-size:.78rem;font-weight:600}
 .tax-note.warn{font-size:.68rem}
 .s-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;border:1px solid var(--bd);background:var(--s2);border-radius:8px;color:var(--text);font-size:.78rem;font-weight:600;cursor:pointer;width:100%}
 .s-btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;position:relative;z-index:2}
@@ -2941,7 +2939,7 @@ textarea.inp,
 .overlay-back-btn,
 .s-toggle-label,
 .settings-info-row,
-.tax-settings-more summary,
+.tax-settings-more-title,
 .settings-info-appname {
   font-size:var(--fs-body);
   font-family:var(--f);
@@ -5341,10 +5339,10 @@ html[data-comfort-phone="true"] body #settings-page-main #s-fsa + .tax-settings-
 }
 body.tb-comfort-phone #settings-page-main .settings-money-field label,
 body.tb-comfort-phone #settings-page-main #tax-state-setting label,
-body.tb-comfort-phone #settings-page-main #tax-settings-card details .field label,
+body.tb-comfort-phone #settings-page-main #tax-settings-card .tax-settings-more .field label,
 html[data-comfort-phone="true"] body #settings-page-main .settings-money-field label,
 html[data-comfort-phone="true"] body #settings-page-main #tax-state-setting label,
-html[data-comfort-phone="true"] body #settings-page-main #tax-settings-card details .field label{
+html[data-comfort-phone="true"] body #settings-page-main #tax-settings-card .tax-settings-more .field label{
   font-size:.66rem!important;
   letter-spacing:1px!important;
   margin-bottom:2px!important;
@@ -15585,7 +15583,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #tax-settings-card>div:has(>.s-toggle-row){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:2px 0 6px!important}
   #tax-settings-card .s-toggle-row{min-height:38px;padding:5px 0;border-bottom:0;justify-content:flex-start;gap:10px}
   #tax-settings-card>.s-hint{margin-bottom:7px!important}
-  #tax-settings-card .tax-settings-more summary{min-height:38px;padding-top:8px;padding-bottom:8px}
+  #tax-settings-card .tax-settings-more-title{min-height:38px;padding-top:8px;padding-bottom:8px}
   #tax-settings-card .tax-note{margin-top:6px!important;padding-top:7px;padding-bottom:7px}
   #cloud-sync-card .s-block+.s-block{margin-top:8px;padding-top:9px}
   #cloud-sync-card .s-block-label{margin-bottom:7px}
@@ -15822,15 +15820,15 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       </select>
     </div>
 
-    <details class="tax-settings-more">
-      <summary>Krypto-Steuersatz</summary>
+    <div class="tax-settings-more">
+      <div class="tax-settings-more-title">Krypto-Steuersatz</div>
       <div class="tax-settings-more-body">
         <div class="field">
           <label>Persönlicher Steuersatz %</label>
           <input class="inp" type="text" inputmode="decimal" id="s-personal-rate" placeholder="optional" enterkeyhint="done" oninput="syncTaxSettings()">
         </div>
       </div>
-    </details>
+    </div>
 
     <div class="tax-note warn" style="margin-top:8px">ETF: pauschal 30 % Teilfreistellung, keine Vorabpauschale.</div>
     </div>
