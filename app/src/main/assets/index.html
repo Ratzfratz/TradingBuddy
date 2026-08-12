@@ -15941,6 +15941,16 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     width:100%;height:auto!important;min-height:0;margin:0!important;align-self:auto!important;
   }
   .nt-desktop-column>.nt-choice-stack{display:flex;flex-direction:column;gap:14px}
+  /* Einstieg und Ausstieg bilden die erste Workflow-Spalte. Die Einstiegskarte
+     wird auf Desktop leicht verdichtet, damit beide Karten zusammen passen. */
+  #nt-entry-card{padding:14px!important}
+  #nt-entry-card .g1,
+  #nt-entry-card .g2{margin-bottom:6px!important;gap:8px!important}
+  #nt-entry-card .field{gap:4px!important}
+  #nt-entry-card .inp{height:42px!important;min-height:42px!important;line-height:42px!important}
+  #nt-entry-card #trade-product-name-field{margin-bottom:6px!important}
+  #nt-entry-card #f-product-name{height:48px!important;min-height:48px!important;line-height:1.35!important;padding-top:8px!important;padding-bottom:8px!important}
+  #nt-entry-card .divider{margin:8px 0!important}
 }
 </style>
 <script id="trade-editor-flowing-columns-script">
@@ -15970,11 +15980,11 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     const left=columns.querySelector('[data-column="left"]');
     const middle=columns.querySelector('[data-column="middle"]');
     const right=columns.querySelector('[data-column="right"]');
-    // Nach realer Kartenhöhe balanciert: alle drei Spalten bleiben bei einem
-    // typischen Desktopfenster nahezu gleich hoch und ohne Scrollen sichtbar.
-    ['nt-choice-stack','nt-exit-card','nt-notes-card'].forEach(id=>{const el=document.getElementById(id);if(el)left.appendChild(el);});
-    ['nt-entry-card'].forEach(id=>{const el=document.getElementById(id);if(el)middle.appendChild(el);});
-    ['nt-plan-card','nt-result-card'].forEach(id=>{const el=document.getElementById(id);if(el)right.appendChild(el);});
+    // Fachliche Reihenfolge: Einstieg ist die erste Karte, der Ausstieg folgt
+    // direkt darunter. Bedienoptionen stehen in der Mitte, das Resultat rechts.
+    ['nt-entry-card','nt-exit-card'].forEach(id=>{const el=document.getElementById(id);if(el)left.appendChild(el);});
+    ['nt-choice-stack','nt-plan-card','nt-notes-card'].forEach(id=>{const el=document.getElementById(id);if(el)middle.appendChild(el);});
+    ['nt-result-card'].forEach(id=>{const el=document.getElementById(id);if(el)right.appendChild(el);});
   };
 
   window.addEventListener('resize',()=>window.arrangeTradeEditorColumns());
