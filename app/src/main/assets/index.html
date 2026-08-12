@@ -8133,8 +8133,10 @@ function applyDerivativeDetailsToTrade(details){
     if(clearStaleDirectAssetEntry())applied=true;
   }
 
-  // Produktkurs → f-entry nur bei Derivaten. Bei Aktie/ETF ist das Feld der echte Einstiegskurs.
-  if(!isDirectAsset&&productPrice&&productCurrency==='EUR'){
+  // Beim Bearbeiten ist f-entry der historische Ausführungskurs. Ein aktueller
+  // Produktkurs darf ihn niemals ersetzen; automatische Befüllung nur bei neuen Trades.
+  const preserveStoredEntry=!!editId;
+  if(!preserveStoredEntry&&!isDirectAsset&&productPrice&&productCurrency==='EUR'){
     applied=setTradeFieldFromApi('f-entry',productPrice,4,identifier)||applied;
   }
 
@@ -8160,7 +8162,8 @@ function applyDerivativeDetailsToTrade(details){
   }
   _forceDerivativeApply=false;
   const usdNote=underlyingCurrency==='USD'?(directionalTypes.includes(formAssetType)?' (Strike/Basiswert in USD erkannt)':' (Kurs in USD erkannt - Einstieg nicht automatisch gesetzt)'):'';
-  if(applied)setDerivativeFetchStatus('trade','Produktdaten eingetragen.'+usdNote,'ok');
+  const entryNote=preserveStoredEntry?' (gespeicherter Einstiegskurs beibehalten)':'';
+  if(applied)setDerivativeFetchStatus('trade','Produktdaten eingetragen.'+entryNote+usdNote,'ok');
   else setDerivativeFetchStatus('trade','Produktdaten gefunden, Felder waren bereits gefüllt.','ok');
 }
 
@@ -10282,6 +10285,67 @@ function buildTradeSignatureMap(list){
   return map;
 }
 
+function buildTradeMergeIdentityMap(list){
+  const map=buildTradeSignatureMap(list);
+  (Array.isArray(list)?list:[]).forEach(trade=>{
+    const id=String((trade&&trade.id)||'').trim();
+    if(id&&!map.has('id|'+id))map.set('id|'+id,trade);
+  });
+  return map;
+}
+
+function findTradeMergeMatch(trade,map){
+  if(!trade||!map)return null;
+  const id=String(trade.id||'').trim();
+  if(id&&map.has('id|'+id))return map.get('id|'+id);
+  return tradeDedupeSignatures(trade).map(key=>map.get(key)).find(Boolean)||null;
+}
+
+function shouldPreferLocalTradeVersion(remoteTrade,localTrade,localSnapshotMs=0,cloudSnapshotMs=0){
+  if(!localTrade)return false;
+  const remoteUpdated=Number(remoteTrade&&remoteTrade.updatedAt)||0;
+  const localUpdated=Number(localTrade&&localTrade.updatedAt)||0;
+  if(localUpdated!==remoteUpdated)return localUpdated>remoteUpdated;
+  return localSnapshotMs>cloudSnapshotMs+1000;
+}
+
+function mergeCloudAndLocalTrades(remoteTrades,localTrades,localSnapshotMs=0,cloudSnapshotMs=0){
+  const localList=Array.isArray(localTrades)?localTrades:[];
+  const localByIdentity=buildTradeMergeIdentityMap(localList);
+  const matchedLocalTrades=new Set();
+  const merged=[];
+  let preservedLocalTradeCount=0;
+  let preferredLocalTradeCount=0;
+  let rescuedLocalAttachments=false;
+
+  (Array.isArray(remoteTrades)?remoteTrades:[]).forEach(remoteTrade=>{
+    const localMatch=findTradeMergeMatch(remoteTrade,localByIdentity);
+    if(localMatch)matchedLocalTrades.add(localMatch);
+    const preferLocal=shouldPreferLocalTradeVersion(remoteTrade,localMatch,localSnapshotMs,cloudSnapshotMs);
+    if(preferLocal)preferredLocalTradeCount++;
+    const primaryTrade=preferLocal?localMatch:remoteTrade;
+    const secondaryTrade=preferLocal?remoteTrade:localMatch;
+    const remoteAttachmentCount=normalizeTradeAttachments(remoteTrade).length;
+    const attachments=localMatch
+      ? mergeTradeAttachments(primaryTrade,secondaryTrade)
+      : normalizeTradeAttachments(primaryTrade);
+    if(localMatch&&normalizeTradeAttachments(localMatch).some(att=>att.dataUrl)&&attachments.length>remoteAttachmentCount){
+      rescuedLocalAttachments=true;
+    }
+    merged.push(Object.assign({},primaryTrade,{attachments}));
+  });
+
+  // Cloud-Snapshots haben keine Tombstones. Ein fehlender Trade kann daher
+  // noch nicht hochgeladen sein und darf beim Pull nicht lokal verschwinden.
+  localList.forEach(localTrade=>{
+    if(matchedLocalTrades.has(localTrade))return;
+    merged.push(localTrade);
+    preservedLocalTradeCount++;
+  });
+
+  return{merged,preservedLocalTradeCount,preferredLocalTradeCount,rescuedLocalAttachments};
+}
+
 // ??????????????????????????????????????????????????????????????
 //  finanzen.net Zero – CSV Import (Order-Export)
 // ??????????????????????????????????????????????????????????????
@@ -11931,8 +11995,10 @@ function setOutcome(outcome) {
   formOutcome = ['open', 'win', 'loss'].includes(outcome) ? outcome : 'open';
 
   ['open', 'win', 'loss'].forEach(value => {
-    $('fo-' + value).className =
+    const button=$('fo-' + value);
+    button.className =
       'out-btn' + (value === formOutcome ? ' active ' + value : '');
+    button.setAttribute('aria-pressed',value === formOutcome ? 'true' : 'false');
   });
   updateTradeSaveLabel();
   updateTradeReviewVisibility();
@@ -12078,6 +12144,9 @@ function populateTradeForm(id) {
   $('f-notes').value = trade.notes || '';
   formAttachments = normalizeTradeAttachments(trade);
   renderFormAttachment();
+  // Alte/importierte Trades können noch kein gespeichertes Ergebnis besitzen.
+  // Aus den sichtbaren Ein-/Ausstiegsdaten immer neu und konsistent berechnen.
+  calcPnl();
   markTransferredFields([...tradeFieldIds,'f-invested']);
 
   updateFormBaseline();
@@ -14356,9 +14425,9 @@ if('serviceWorker' in navigator){
   <div class="sec" id="nt-result-card">
     <div class="sec-title">Ergebnis</div>
     <div class="outcome-sel">
-      <button class="out-btn active open" id="fo-open" onclick="setOutcome('open')">? Offen</button>
-      <button class="out-btn win" id="fo-win" onclick="setOutcome('win')">✓ Gewinn</button>
-      <button class="out-btn loss" id="fo-loss" onclick="setOutcome('loss')">✗ Verlust</button>
+      <button type="button" class="out-btn active open" id="fo-open" aria-pressed="true" onclick="setOutcome('open')">? Offen</button>
+      <button type="button" class="out-btn win" id="fo-win" aria-pressed="false" onclick="setOutcome('win')">✓ Gewinn</button>
+      <button type="button" class="out-btn loss" id="fo-loss" aria-pressed="false" onclick="setOutcome('loss')">✗ Verlust</button>
     </div>
     <div class="nt-result-grid">
       <div class="field" id="field-pnl"><label>Gewinn / Verlust €</label><input class="inp is-empty" type="text" inputmode="decimal" id="f-pnl" placeholder="automat." readonly enterkeyhint="done"></div>
@@ -15762,7 +15831,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   }
   #nt-body{
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
-    align-items:stretch;
+    align-items:start;
     align-content:start!important;
     grid-template-rows:52px max-content max-content auto!important;
   }
@@ -15799,7 +15868,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #nt-exit-card{grid-column:1;grid-row:3;height:auto!important}
   #nt-result-card{grid-column:2;grid-row:3;height:auto!important}
   #nt-notes-card{grid-column:3;grid-row:3;height:auto!important}
-  #nt-review-card{grid-column:1/-1;grid-row:4}
+  #nt-review-card{grid-column:2;grid-row:4;align-self:start}
   #settings-sh{
     height:92vh!important;
     max-height:1040px!important;
@@ -15837,6 +15906,18 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
 :root.light-theme #nt-body .inp.is-empty{
   color:#59667d!important;
   opacity:1;
+}
+
+/* Die generische Light-Theme-Buttonregel darf den gewählten Ausgang nicht
+   optisch neutralisieren. */
+:root.light-theme #nt-body .out-btn.active.open{
+  border-color:#4678e8;background:rgba(70,120,232,.12);color:#2f66dc;
+}
+:root.light-theme #nt-body .out-btn.active.win{
+  border-color:#16a978;background:rgba(22,169,120,.12);color:#0b8b62;
+}
+:root.light-theme #nt-body .out-btn.active.loss{
+  border-color:#dc4967;background:rgba(220,73,103,.12);color:#c73554;
 }
 </style>
 <style id="legal-core-styles">
@@ -20265,7 +20346,6 @@ async function _awPull(force=false,options={}){
       // Lokale Screenshots nach fileId indexieren
       loadTrades();
       const localTradesBeforePull=trades.map((trade,index)=>normalizeTrade(trade,index));
-      const localTradeBySignature=buildTradeSignatureMap(localTradesBeforePull);
       const localImgByFid={};
       for(const t of localTradesBeforePull){
         for(const att of(t.attachments||[])){
@@ -20274,8 +20354,7 @@ async function _awPull(force=false,options={}){
       }
 
       // Trades zusammenführen, fehlende Screenshots nachladen
-      const merged=[];
-      let rescuedLocalAttachments=false;
+      const remoteTradesWithAttachments=[];
       let failedScreenshotDownloads=0;
       let removedMissingScreenshotRefs=0;
       let remoteAttachmentRefs=0;
@@ -20317,15 +20396,11 @@ async function _awPull(force=false,options={}){
           atts.push(dataUrl?Object.assign({}, normalizedAtt, {dataUrl:dataUrl}):normalizedAtt);
         }
         const remoteWithAttachments=Object.assign({}, t, {attachments:atts});
-        const localMatch=tradeDedupeSignatures(remoteWithAttachments)
-          .map(key=>localTradeBySignature.get(key))
-          .find(Boolean);
-        const attachments=shouldRescueLocalAttachments(remoteWithAttachments,localMatch)
-          ? mergeTradeAttachments(remoteWithAttachments,localMatch)
-          : normalizeTradeAttachments(remoteWithAttachments);
-        if(localMatch&&normalizeTradeAttachments(localMatch).some(att=>att.dataUrl)&&attachments.length>atts.length)rescuedLocalAttachments=true;
-        merged.push(Object.assign({}, remoteWithAttachments, {attachments}));
+        remoteTradesWithAttachments.push(remoteWithAttachments);
       }
+
+      const mergeResult=mergeCloudAndLocalTrades(remoteTradesWithAttachments,localTradesBeforePull,localTradeTs,cloudMs);
+      const {merged,preservedLocalTradeCount,preferredLocalTradeCount,rescuedLocalAttachments}=mergeResult;
 
       _awApplying=true;
       trades=dedupeTradesList(merged).map((r,i)=>normalizeTrade(r,i));
@@ -20343,11 +20418,14 @@ async function _awPull(force=false,options={}){
       const screenshotStatus=remoteAttachmentRefs>0
         ? ` · Screenshots: ${loadedScreenshotCount}/${remoteAttachmentRefs}${removedMissingScreenshotRefs?` (${removedMissingScreenshotRefs} entfernt)`:''}${failedScreenshotDownloads?` (${failedScreenshotDownloads} nicht lesbar)`:''}`
         : ' · Cloud enthält keine Screenshot-Zuordnung';
-      _awStatus(trades.length+' Trades geladen'+screenshotStatus,(failedScreenshotDownloads||removedMissingScreenshotRefs)?'warn':'ok');
+      const mergeStatus=(preservedLocalTradeCount||preferredLocalTradeCount)
+        ? ` · ${preservedLocalTradeCount+preferredLocalTradeCount} lokale neuere Trades erhalten`
+        : '';
+      _awStatus(trades.length+' Trades geladen'+mergeStatus+screenshotStatus,(failedScreenshotDownloads||removedMissingScreenshotRefs)?'warn':'ok');
       if(typeof invalidateTradesCache==='function')invalidateTradesCache();
       if(typeof renderList==='function')renderList(true);
       if(typeof updateJournalFilterUi==='function')updateJournalFilterUi();
-      if(rescuedLocalAttachments||removedMissingScreenshotRefs){
+      if(preservedLocalTradeCount||preferredLocalTradeCount||rescuedLocalAttachments||removedMissingScreenshotRefs){
         localStorage.setItem('tb_local_saved_at',String(Date.now()));
         _awPushRequested=true;
         setTimeout(()=>_awSchedulePush(),0);
