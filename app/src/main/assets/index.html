@@ -2094,11 +2094,13 @@ body.page-tagebuch:root.light-theme .journal-filter-panel,
 .plan-adherence button.on.yes{border-color:rgba(34,211,160,.5);background:rgba(34,211,160,.12);color:var(--green)}
 .plan-adherence button.on.partial{border-color:rgba(245,197,66,.5);background:rgba(245,197,66,.11);color:var(--gold)}
 .plan-adherence button.on.no{border-color:rgba(240,92,122,.5);background:rgba(240,92,122,.11);color:var(--red)}
-.trade-review-sec{
-  border-color:rgba(245,197,66,.3)!important;
-  background:linear-gradient(180deg,rgba(245,197,66,.065),rgba(245,197,66,.022))!important;
+.trade-review-subsection{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid var(--bd);
+  background:transparent;
 }
-.trade-review-sec .sec-title{color:var(--gold)}
+.trade-review-subsection .sec-title{color:var(--muted);margin-bottom:10px}
 .tc-tags-details{margin-top:6px;border-top:1px solid var(--bd)}
 .tc-tags-details summary{display:flex;align-items:center;gap:6px;padding:7px 0 2px;color:var(--muted);font-size:.61rem;font-weight:650;cursor:pointer;list-style:none}
 .tc-tags-details summary::-webkit-details-marker{display:none}
@@ -14441,10 +14443,9 @@ if('serviceWorker' in navigator){
         <button type="button" class="no" data-value="no" onclick="setExpectationMet('no')">Nein</button>
       </div>
     </div>
-  </div>
 
-  <div class="sec trade-review-sec" id="nt-review-card" style="display:none">
-    <div class="sec-title">Endgültige Bewertung</div>
+  <div class="trade-review-subsection" id="nt-review-card" style="display:none">
+    <div class="sec-title">Bewertung</div>
     <div class="field">
       <label>Plan eingehalten?</label>
       <div class="plan-adherence" id="f-plan-adherence">
@@ -14458,6 +14459,7 @@ if('serviceWorker' in navigator){
       <button class="journal-tag-edit" type="button" onclick="openTagEditor('result')">Tags anpassen</button>
     </div>
     <div class="journal-tags" id="f-result-tags"></div>
+  </div>
   </div>
 
   <div class="sec" id="nt-notes-card">
@@ -15869,7 +15871,6 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #nt-exit-card{grid-column:1;grid-row:3;height:auto!important}
   #nt-result-card{grid-column:2;grid-row:3;height:auto!important}
   #nt-notes-card{grid-column:3;grid-row:3;height:auto!important}
-  #nt-review-card{grid-column:2;grid-row:4;align-self:start}
   #settings-sh{
     height:92vh!important;
     max-height:1040px!important;
@@ -15940,12 +15941,11 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     width:100%;height:auto!important;min-height:0;margin:0!important;align-self:auto!important;
   }
   .nt-desktop-column>.nt-choice-stack{display:flex;flex-direction:column;gap:14px}
-  #nt-review-card{border-color:var(--bd)}
 }
 </style>
 <script id="trade-editor-flowing-columns-script">
 (function(){
-  const orderedIds=['nt-choice-stack','nt-entry-card','nt-plan-card','nt-exit-card','nt-result-card','nt-review-card','nt-notes-card','nt-clear-area'];
+  const orderedIds=['nt-choice-stack','nt-entry-card','nt-plan-card','nt-exit-card','nt-result-card','nt-notes-card','nt-clear-area'];
 
   window.arrangeTradeEditorColumns=function(){
     const body=document.getElementById('nt-body');
@@ -15971,7 +15971,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     const middle=columns.querySelector('[data-column="middle"]');
     const right=columns.querySelector('[data-column="right"]');
     ['nt-choice-stack','nt-exit-card'].forEach(id=>{const el=document.getElementById(id);if(el)left.appendChild(el);});
-    ['nt-entry-card','nt-result-card','nt-review-card'].forEach(id=>{const el=document.getElementById(id);if(el)middle.appendChild(el);});
+    ['nt-entry-card','nt-result-card'].forEach(id=>{const el=document.getElementById(id);if(el)middle.appendChild(el);});
     ['nt-plan-card','nt-notes-card'].forEach(id=>{const el=document.getElementById(id);if(el)right.appendChild(el);});
   };
 
