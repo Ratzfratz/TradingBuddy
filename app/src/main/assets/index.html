@@ -10978,7 +10978,7 @@ function handleZeroCsv(event){
         'Summe P&amp;L: '+(sumPnl>=0?'+':'')+sumPnl.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+'\u202f€.'+
         zeroInfo+
         '<br>'+
-        '<button onclick="confirmZeroImport()" style="margin-top:8px;background:var(--green);color:var(--bg);border:none;border-radius:7px;padding:8px 14px;font-weight:700;font-size:.78rem;cursor:pointer">'+parsed.trades.length+' Trades hinzufügen</button> '+
+        '<button onclick="confirmZeroImport()" style="margin-top:8px;background:var(--green);color:var(--bg);border:none;border-radius:7px;padding:8px 14px;font-weight:700;font-size:.78rem;cursor:pointer">CSV abgleichen</button> '+
         '<button onclick="document.getElementById(\'zero-import-result\').innerHTML=\'\'" style="margin-top:8px;background:var(--s3);color:var(--text);border:1px solid var(--bd);border-radius:7px;padding:8px 14px;font-weight:600;font-size:.78rem;cursor:pointer">Abbrechen</button>'+
         '</div>';
     }
@@ -11157,8 +11157,8 @@ function zeroImportPreserveUserFields(incoming,existing){
 }
 function zeroImportApplySnapshot(pending){
   const incoming=(Array.isArray(pending)?pending:[]).map((trade,index)=>normalizeTrade(trade,index));
-  const managed=trades.filter(zeroImportIsManagedTrade);
-  const unmanaged=trades.filter(trade=>!zeroImportIsManagedTrade(trade));
+  const currentTrades=trades.map((trade,index)=>normalizeTrade(trade,index));
+  const managed=currentTrades.filter(zeroImportIsManagedTrade);
   const exactByImportKey=new Map();
   const byEntryLot=new Map();
   managed.forEach(trade=>{
@@ -11170,26 +11170,61 @@ function zeroImportApplySnapshot(pending){
       byEntryLot.get(identity).push(trade);
     }
   });
-  const usedExistingIds=new Set();
-  const snapshot=incoming.map((trade,index)=>{
+  const indexById=new Map(currentTrades.map((trade,index)=>[trade.id,index]));
+  const merged=currentTrades.slice();
+  const imported=[];
+  const updated=[];
+  let unchanged=0;
+  let legacyCovered=0;
+  incoming.forEach((trade,index)=>{
     const importKey=tradeDedupeImportKey(trade.importKey);
-    let existing=importKey?exactByImportKey.get(importKey):null;
-    if(existing&&usedExistingIds.has(existing.id))existing=null;
-    if(!existing){
+    let existingTrade=importKey?exactByImportKey.get(importKey):null;
+    if(!existingTrade){
       const candidates=byEntryLot.get(zeroImportEntryLotIdentity(trade))||[];
-      existing=candidates.find(item=>!usedExistingIds.has(item.id)&&
-        tradeDedupeNumber(item.count)===tradeDedupeNumber(trade.count)&&
-        tradeDedupeDate(item.exitDate)===tradeDedupeDate(trade.exitDate)&&
-        tradeDedupeTime(item.exitTime)===tradeDedupeTime(trade.exitTime)
-      )||candidates.find(item=>!usedExistingIds.has(item.id))||null;
+      const legacyMatch=candidates.find(item=>{
+        const candidateKey=tradeDedupeImportKey(item.importKey);
+        return candidateKey.indexOf('ZERO|POSITION|')!==0;
+      });
+      // Alte FIFO-Imports bleiben vollständig erhalten. Ein neuer
+      // Positionsdatensatz für denselben Einstieg würde sie nur verdoppeln.
+      if(legacyMatch){
+        unchanged++;
+        legacyCovered++;
+        return;
+      }
     }
-    if(existing)usedExistingIds.add(existing.id);
-    const next=zeroImportPreserveUserFields(trade,existing);
-    if(existing)next.id=existing.id;
-    return normalizeTrade(next,unmanaged.length+index);
+    if(existingTrade){
+      const next=normalizeTrade(
+        Object.assign(zeroImportPreserveUserFields(trade,existingTrade),{id:existingTrade.id}),
+        indexById.get(existingTrade.id)??index
+      );
+      const existingIndex=indexById.get(existingTrade.id);
+      if(existingIndex===undefined){
+        unchanged++;
+        return;
+      }
+      if(JSON.stringify(existingTrade)===JSON.stringify(next)){
+        unchanged++;
+      }else{
+        merged[existingIndex]=next;
+        updated.push(next);
+      }
+      return;
+    }
+    const next=normalizeTrade(trade,merged.length);
+    merged.push(next);
+    imported.push(next);
+    if(importKey)exactByImportKey.set(importKey,next);
   });
-  trades=unmanaged.concat(snapshot);
-  return {imported:snapshot.length,replaced:managed.length,preserved:usedExistingIds.size,snapshot};
+  trades=merged;
+  return {
+    imported:imported.length,
+    updated:updated.length,
+    unchanged,
+    legacyCovered,
+    preserved:managed.length,
+    snapshot:imported.concat(updated)
+  };
 }
 function zeroImportFinishReview(importPossible=false){
   const review=window._zeroImportReview;
@@ -11276,7 +11311,7 @@ function confirmZeroImport(){
   saveTrades();
   window._zeroPendingImport=null;
   window._zeroImportReview=null;
-  if(resultBox)resultBox.innerHTML='<div class="tax-note info" style="margin-top:0">✓ '+applied.imported+' ZERO-Trades vollständig abgeglichen'+(applied.preserved?', Angaben bei '+applied.preserved+' bestehenden Trades erhalten':'')+'. Verkaufsorders und offene Bestände wurden aus der CSV aktualisiert.</div>';
+  if(resultBox)resultBox.innerHTML='<div class="tax-note info" style="margin-top:0">✓ '+applied.imported+' neue ZERO-Trades importiert'+(applied.updated?', '+applied.updated+' vorhandene aktualisiert':'')+(applied.unchanged?', '+applied.unchanged+' unverändert':'')+'. Bestehende Trades, Screenshots und persönliche Eintragungen bleiben erhalten.</div>';
   refreshTradeViews({resetLimit:true});
   startZeroImportWknCheck(applied.snapshot);
 }
