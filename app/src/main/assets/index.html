@@ -5778,9 +5778,9 @@ html[data-small-viewport="true"] body #settings-page-main,
 html[data-small-layout-viewport="460"] body #settings-page-main{
   padding-top:0!important;
 }
-body.tb-small-viewport #settings-page-main > .sec:first-of-type,
-html[data-small-viewport="true"] body #settings-page-main > .sec:first-of-type,
-html[data-small-layout-viewport="460"] body #settings-page-main > .sec:first-of-type{
+body.tb-small-viewport #settings-page-main > .settings-column-left > .sec:first-of-type,
+html[data-small-viewport="true"] body #settings-page-main > .settings-column-left > .sec:first-of-type,
+html[data-small-layout-viewport="460"] body #settings-page-main > .settings-column-left > .sec:first-of-type{
   margin-top:-44px!important;
 }
 body.tb-small-viewport #settings-page-main .sec,
@@ -15509,17 +15509,19 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #settings-bar{visibility:visible;margin:10px auto 4px!important}
   #settings-page-main{
     display:grid;
-    grid-template-columns:repeat(6,minmax(0,1fr));
+    grid-template-columns:repeat(2,minmax(0,1fr));
     grid-template-areas:
-      "header header header header header header"
-      "appearance appearance appearance info info info"
-      "data data data depot depot depot";
+      "header header"
+      "left right";
     gap:12px;
     align-content:start;
     padding:8px 20px 18px!important;
   }
   #settings-header{grid-area:header;margin-bottom:0!important}
-  #settings-page-main>.settings-card{margin:0!important;align-self:start;min-width:0;padding:14px!important}
+  #settings-page-main .settings-card{margin:0!important;align-self:stretch;min-width:0;width:100%;padding:14px!important}
+  .settings-column{display:flex;flex-direction:column;gap:12px;min-width:0;align-self:start}
+  .settings-column-left{grid-area:left}
+  .settings-column-right{grid-area:right}
   .settings-card-appearance{grid-area:appearance}
   .settings-card-depot{grid-area:depot}
   .settings-card-tax{grid-area:tax}
@@ -15528,7 +15530,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-depot.settings-card-tax{grid-area:depot}
   .settings-card-data.settings-card-account{grid-area:data}
   .settings-card-info{grid-area:info}
-  .settings-card-appearance,.settings-card-info{align-self:stretch!important;height:100%}
+  .settings-card-appearance,.settings-card-info{align-self:stretch!important;height:auto!important}
   .settings-card-info .settings-info-card{
     display:grid;
     grid-template-columns:minmax(220px,1fr) 180px minmax(260px,1fr);
@@ -15559,7 +15561,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   .settings-card-info .settings-info-row>span{min-width:0}
   .settings-card-info .settings-info-row>svg{right:8px}
   .settings-card-info .settings-info-disclaimer{grid-column:1/-1;min-height:24px;border-left:0;border-top:0;padding:4px 9px;font-size:.53rem}
-  .settings-card-info .settings-info-card{height:calc(100% - 22px)}
+  .settings-card-info .settings-info-card{height:auto}
 #settings-page-main .settings-group-label{margin-bottom:6px}
 #settings-page-main #zero-import-result:not(:empty){display:block;margin:8px 0 14px!important;clear:both}
 #settings-page-main #zero-import-result .tax-note{position:static!important;margin:0!important}
@@ -15611,10 +15613,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     grid-template-columns:minmax(0,1fr);
     grid-template-areas:
       "header"
-      "appearance"
-      "info"
-      "data"
-      "depot";
+      "left"
+      "right";
   }
   .settings-card-appearance,.settings-card-info{height:auto}
   .settings-card-info .settings-info-card{height:auto}
@@ -15718,6 +15718,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     <div class="overlay-title">Einstellungen</div>
     <button class="overlay-head-btn overlay-head-right" onclick="closeSettings()">&#x2715;</button>
   </div>
+   <div class="settings-column settings-column-left">
   <div class="sec settings-card settings-card-appearance" style="margin-bottom:12px">
     <div class="sec-title">Darstellung</div>
     <div class="settings-group-label">Theme</div>
@@ -15835,6 +15836,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     </div>
   </div>
 
+  </div>
+  <div class="settings-column settings-column-right">
   <div class="sec settings-card settings-card-data settings-card-account" style="margin-bottom:12px" id="cloud-sync-card">
     <div class="sec-title">Daten, Konto &amp; Backup</div>
     <div class="settings-group-label">Datenverwaltung</div>
@@ -15878,9 +15881,8 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
             </button>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
           <button type="button" id="aw-login-btn" class="s-btn">Anmelden</button>
-          <button type="button" id="aw-register-btn" class="s-btn s-btn-accent">Beta-Zugang anfragen</button>
         </div>
       </div>
 
@@ -16064,6 +16066,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
       </div>
       <div class="settings-info-disclaimer">Keine Anlage-, Finanz- oder Steuerberatung. Berechnungen sind unverbindliche Schätzungen.</div>
     </div>
+  </div>
   </div>
 
   </div><!-- end settings-page-main -->
@@ -17902,40 +17905,8 @@ async function awLogin(){
   finally{_awAuthBusy=false;}
 }
 
-async function awRegister(){
-  if(window.TB_RELEASE&&TB_RELEASE.phase==='beta'){
-    _awStatus('Die geschlossene Beta ist auf 10 eingeladene Personen begrenzt. Zugang bitte über contact.tradingbuddy@gmail.com anfragen.','warn');
-    try{window.location.href='mailto:contact.tradingbuddy@gmail.com?subject=Trading%20Buddy%20Beta-Zugang';}catch(e){}
-    return;
-  }
-  if(_awAuthBusy)return;
-  if(!_awInit()){_awStatus('SDK nicht geladen.','error');return;}
-  if(!_awCryptoReady()){_awStatus('Verschlüsselung wird von dieser WebView nicht unterstützt. Bitte Android System WebView aktualisieren.','error');return;}
-  const email=(document.getElementById('aw-email')||{value:''}).value.trim();
-  const pw=(document.getElementById('aw-pw')||{value:''}).value;
-  if(!email||!pw){_awStatus('E-Mail und Passwort eingeben.','warn');return;}
-  if(pw.length<8){_awStatus('Passwort mind. 8 Zeichen.','warn');return;}
-  _awStatus('Konto erstellen …','muted');
-  _awAuthBusy=true;
-  try{
-    await _awCreateAccount(email,pw);
-    const session=await _awCreateEmailPasswordSession(email,pw);
-    _awApplySession(session);
-    _awUser=await _awAccount.get();_awDocId=_awUser.$id;
-    _awEncKey=await _awDeriveKey(pw,_awDocId);
-    if(!await _awRequireValidCloudKey({allowMismatch:true}))return;
-    await _awSaveKeyToDevice(_awEncKey);
-    _awRememberLoginEmail(email);
-    _awUpdateUI();
-    await _awPush();
-    _awStatus('Konto erstellt ✓','ok');
-    _awUpdateSyncStatus();
-  }catch(e){_awStatus(_awErr(e,'register'),'error');}
-  finally{_awAuthBusy=false;}
-}
-
 let _awAuthTapLock=0;
-function _awRunAuthAction(kind,event){
+function _awRunAuthAction(event){
   if(event){
     event.preventDefault();
     event.stopPropagation();
@@ -17943,16 +17914,14 @@ function _awRunAuthAction(kind,event){
   const now=Date.now();
   if(now-_awAuthTapLock<700)return;
   _awAuthTapLock=now;
-  if(kind==='login')awLogin();
-  else if(kind==='register')awRegister();
+  awLogin();
 }
 
 function installAwAuthButtons(){
-  const map={ 'aw-login-btn':'login', 'aw-register-btn':'register' };
   const handler=function(event){
-    const target=event.target&&event.target.closest&&event.target.closest('#aw-login-btn,#aw-register-btn');
+    const target=event.target&&event.target.closest&&event.target.closest('#aw-login-btn');
     if(!target)return;
-    _awRunAuthAction(map[target.id],event);
+    _awRunAuthAction(event);
   };
   ['pointerup','touchend','click'].forEach(type=>{
     document.addEventListener(type,handler,true);
