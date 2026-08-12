@@ -15714,7 +15714,7 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
     align-items:stretch;
     align-content:start!important;
-    grid-template-rows:52px auto auto auto!important;
+    grid-template-rows:52px max-content max-content auto!important;
   }
   #nt-body>.overlay-sticky-head{
     grid-column:1/-1;
@@ -15738,7 +15738,13 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     margin:0!important;
   }
   #nt-asset-card,#nt-direction-box{grid-column:auto;grid-row:auto}
-  #nt-entry-card{grid-column:2;grid-row:2;height:auto!important}
+  #nt-entry-card{
+    grid-column:2;
+    grid-row:2;
+    height:max-content!important;
+    min-height:max-content!important;
+    overflow:visible!important;
+  }
   #nt-plan-card{grid-column:3;grid-row:2;height:auto!important}
   #nt-exit-card{grid-column:1;grid-row:3;height:auto!important}
   #nt-result-card{grid-column:2;grid-row:3;height:auto!important}
@@ -15756,6 +15762,31 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
   #page-rechner .calc-workspace{
     grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   }
+}
+</style>
+
+<style id="trade-editor-legibility-fix">
+/* Derivative fields must determine the entry card height instead of overflowing
+   into the following grid row on wide desktop layouts. */
+#nt-entry-card,
+#nt-entry-card #nt-product-details{
+  min-height:max-content;
+}
+
+/* Small muted micro-labels became too light at common Windows display scales. */
+:root.light-theme #nt-body .sec-title,
+:root.light-theme #nt-body .field label{
+  color:#3d4a61;
+  font-weight:700;
+}
+:root.light-theme #nt-body .field label{
+  font-size:.64rem;
+}
+:root.light-theme #nt-body .inp::placeholder,
+:root.light-theme #nt-body .cs-trigger.is-empty,
+:root.light-theme #nt-body .inp.is-empty{
+  color:#59667d!important;
+  opacity:1;
 }
 </style>
 <style id="legal-core-styles">
@@ -15843,6 +15874,26 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r=".8" fill="currentColor" stroke="none"/></svg>
           <span><strong>Liste</strong><small>Kompakte responsive Übersicht</small></span>
         </button>
+      </div>
+      <div class="settings-edge-setting">
+        <div>
+          <div class="settings-group-label">Linker Kartenrand</div>
+          <div class="s-hint">Farblogik der Trade-Karten</div>
+        </div>
+        <div class="settings-journal-edge" role="group" aria-label="Farbe des linken Kartenrands">
+          <button type="button" class="settings-view-choice settings-edge-choice" id="journal-edge-outcome" onclick="setJournalCardEdge('outcome')">
+            <span class="settings-edge-preview outcome" aria-hidden="true"></span>
+            <span><strong>Gewinn / Verlust / Offen</strong></span>
+          </button>
+          <button type="button" class="settings-view-choice settings-edge-choice" id="journal-edge-asset" onclick="setJournalCardEdge('asset')">
+            <span class="settings-edge-preview asset" aria-hidden="true"></span>
+            <span><strong>Farbe Klasse</strong></span>
+          </button>
+          <button type="button" class="settings-view-choice settings-edge-choice" id="journal-edge-none" onclick="setJournalCardEdge('none')">
+            <span class="settings-edge-preview none" aria-hidden="true"></span>
+            <span><strong>Keine</strong></span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -21440,8 +21491,44 @@ body.stats-layout-editing.stats-page-active .stats-layout-reset-direct{display:i
   color:var(--blue);
   box-shadow:inset 0 0 0 1px rgba(70,120,255,.08);
 }
+.settings-edge-setting{
+  margin-top:2px;
+  padding-top:12px;
+  border-top:1px solid var(--bd);
+  display:grid;
+  gap:10px;
+}
+.settings-journal-edge{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.settings-edge-choice{
+  grid-template-columns:18px minmax(0,1fr);
+  min-height:50px;
+  padding:8px 10px;
+}
+.settings-edge-choice strong{font-size:11px}
+.settings-edge-preview{
+  display:block;
+  width:4px;
+  height:28px;
+  justify-self:center;
+  border-radius:4px;
+  background:var(--muted);
+}
+.settings-edge-preview.outcome{background:linear-gradient(to bottom,var(--green) 0 33%,var(--red) 33% 66%,var(--blue) 66%)}
+.settings-edge-preview.asset{background:linear-gradient(to bottom,var(--stock) 0 17%,#00c9b1 17% 34%,var(--orange) 34% 51%,var(--purple) 51% 68%,#ec4899 68% 84%,var(--gold) 84%)}
+.settings-edge-preview.none{width:14px;height:2px;border-radius:2px;background:var(--muted)}
+body[data-journal-card-edge="asset"] #page-tagebuch .trade-card.asset-stock::before{background:var(--stock)}
+body[data-journal-card-edge="asset"] #page-tagebuch .trade-card.asset-etf::before{background:#00c9b1}
+body[data-journal-card-edge="asset"] #page-tagebuch .trade-card.asset-ko::before{background:var(--orange)}
+body[data-journal-card-edge="asset"] #page-tagebuch .trade-card.asset-os::before{background:var(--purple)}
+body[data-journal-card-edge="asset"] #page-tagebuch .trade-card.asset-faktor::before{background:#ec4899}
+body[data-journal-card-edge="asset"] #page-tagebuch .trade-card.asset-crypto::before{background:var(--gold)}
+body[data-journal-card-edge="none"] #page-tagebuch .trade-card::before{display:none}
 @media (max-width:420px){
-  .settings-journal-view{grid-template-columns:1fr}
+  .settings-journal-view,.settings-journal-edge{grid-template-columns:1fr}
 }
 @media (min-width:1100px){
   .bottom-stack::before{
@@ -22503,6 +22590,37 @@ body.journal-list-view #trade-list .tc-actions{
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyJournalView);
   else applyJournalView();
   window.addEventListener('resize',applyJournalView,{passive:true});
+})();
+</script>
+<script>
+(function(){
+  'use strict';
+  const JOURNAL_CARD_EDGE_KEY='tb_journal_card_edge_v1';
+  const allowed=new Set(['outcome','asset','none']);
+  function savedCardEdge(){
+    try{
+      const value=localStorage.getItem(JOURNAL_CARD_EDGE_KEY);
+      return allowed.has(value)?value:'outcome';
+    }catch(error){return 'outcome';}
+  }
+  function applyJournalCardEdge(){
+    const mode=savedCardEdge();
+    document.body.dataset.journalCardEdge=mode;
+    ['outcome','asset','none'].forEach(value=>{
+      const button=document.getElementById('journal-edge-'+value);
+      if(!button)return;
+      const active=value===mode;
+      button.classList.toggle('on',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
+  }
+  window.setJournalCardEdge=function(mode){
+    const next=allowed.has(mode)?mode:'outcome';
+    try{localStorage.setItem(JOURNAL_CARD_EDGE_KEY,next);}catch(error){}
+    applyJournalCardEdge();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyJournalCardEdge);
+  else applyJournalCardEdge();
 })();
 </script>
 
