@@ -15970,9 +15970,11 @@ const _origPersistSave = typeof persistSave === 'function' ? persistSave : null;
     const left=columns.querySelector('[data-column="left"]');
     const middle=columns.querySelector('[data-column="middle"]');
     const right=columns.querySelector('[data-column="right"]');
-    ['nt-choice-stack','nt-exit-card'].forEach(id=>{const el=document.getElementById(id);if(el)left.appendChild(el);});
-    ['nt-entry-card','nt-result-card'].forEach(id=>{const el=document.getElementById(id);if(el)middle.appendChild(el);});
-    ['nt-plan-card','nt-notes-card'].forEach(id=>{const el=document.getElementById(id);if(el)right.appendChild(el);});
+    // Nach realer Kartenhöhe balanciert: alle drei Spalten bleiben bei einem
+    // typischen Desktopfenster nahezu gleich hoch und ohne Scrollen sichtbar.
+    ['nt-choice-stack','nt-exit-card','nt-notes-card'].forEach(id=>{const el=document.getElementById(id);if(el)left.appendChild(el);});
+    ['nt-entry-card'].forEach(id=>{const el=document.getElementById(id);if(el)middle.appendChild(el);});
+    ['nt-plan-card','nt-result-card'].forEach(id=>{const el=document.getElementById(id);if(el)right.appendChild(el);});
   };
 
   window.addEventListener('resize',()=>window.arrangeTradeEditorColumns());
