@@ -12613,10 +12613,22 @@ function renderOpenPositionSummary() {
   const classGroups = new Map();
   openTrades.forEach(trade => {
     const assetType = normalizedAssetType(trade);
-    const bucket = classGroups.get(assetType) || {assetType, count:0, capital:0, trades:[]};
+    const ticker = tradeDisplayUnderlyingName(trade) || 'Ohne Basiswert';
+    const displayName = isDerivativeTrade(trade) ? tradeDerivativeDisplayName(trade) : tradeDisplayUnderlyingName(trade);
+    const key = tradePortfolioGroupKey(trade);
+    const instrumentCode = String(trade.wkn || trade.isin || '').trim().toUpperCase();
+    const instrumentLabel = trade.wkn ? 'WKN' : (trade.isin ? 'ISIN' : '');
+    const bucket = classGroups.get(assetType) || {assetType, count:0, capital:0, positions:new Map()};
+    const position = bucket.positions.get(key) || {ticker, displayName, instrumentCode, instrumentLabel, count:0, capital:0, assetType, trades:[]};
+    if ((!position.displayName || position.displayName === position.ticker) && displayName) position.displayName = displayName;
+    if (!position.instrumentCode && instrumentCode) position.instrumentCode = instrumentCode;
+    if (!position.instrumentLabel && instrumentLabel) position.instrumentLabel = instrumentLabel;
+    position.count += 1;
+    position.capital += Number(trade.capital || 0);
+    position.trades.push(trade);
     bucket.count += 1;
     bucket.capital += Number(trade.capital || 0);
-    bucket.trades.push(trade);
+    bucket.positions.set(key, position);
     classGroups.set(assetType, bucket);
   });
 
@@ -12635,35 +12647,47 @@ function renderOpenPositionSummary() {
       ${classes.map(group => {
         const label = assetLabels[group.assetType] || group.assetType.toUpperCase();
         const badge = assetBadgeClass[group.assetType] || 'asset';
-        const groupTrades = group.trades
-          .slice()
-          .sort((a,b) => String(b.entryDate || '').localeCompare(String(a.entryDate || '')));
+        const positions = Array.from(group.positions.values()).sort((a,b) => b.capital - a.capital);
         return `<section class="ops-class">
           <div class="ops-class-head">
             <div class="ops-class-title"><span class="tc-type ${badge}">${mergeEscapeHtml(label)}</span></div>
             <div class="ops-class-total"><strong>${fmtCapitalEur(group.capital)}</strong><span>${group.count} Trade${group.count===1?'':'s'}</span></div>
           </div>
           <div class="ops-class-body">
-            ${groupTrades.map(trade => {
-              const displayName = isDerivativeTrade(trade)
-                ? tradeDerivativeDisplayName(trade)
-                : tradeDisplayUnderlyingName(trade);
-              const instrumentCode = String(trade.wkn || trade.isin || '').trim().toUpperCase();
-              const instrumentLabel = trade.wkn ? 'WKN' : (trade.isin ? 'ISIN' : '');
-              const date = formatGermanDate(trade.entryDate) || '—';
-              const count = trade.count !== null && trade.count !== undefined ? fmtCount(trade.count) + ' Stk.' : '';
-              const entry = trade.entry !== null && trade.entry !== undefined ? 'Kaufkurs ' + fmt(trade.entry) + '\u202f€' : 'Kaufkurs —';
-              const instrument = instrumentCode ? (instrumentLabel || 'WKN') + ' ' + instrumentCode : '';
-              const meta = [instrument, date, entry, count].filter(Boolean).join(' · ');
-              return `<div class="ops-position ops-trade ops-position-single" data-trade-id="${mergeEscapeHtml(trade.id)}" role="button" tabindex="0" onclick="openTradeForm('${mergeEscapeHtml(trade.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTradeForm('${mergeEscapeHtml(trade.id)}')}">
-                <div class="ops-row">
-                  <div>
-                    <div class="ops-name">${mergeEscapeHtml(displayName || 'Ohne Basiswert')}</div>
-                    <div class="ops-meta">${mergeEscapeHtml(meta)}</div>
+            ${positions.map(position => {
+              const detailRows = position.trades
+                .slice()
+                .sort((a,b) => String(b.entryDate || '').localeCompare(String(a.entryDate || '')))
+                .map((trade,index) => {
+                  const date = formatGermanDate(trade.entryDate) || '—';
+                  const count = trade.count !== null && trade.count !== undefined ? fmtCount(trade.count) + ' Stk.' : '';
+                  const entry = trade.entry !== null && trade.entry !== undefined ? 'Kaufkurs ' + fmt(trade.entry) + '\u202f€' : 'Kaufkurs —';
+                  const meta = [date, entry, count].filter(Boolean).join(' · ');
+                  return `<div class="ops-trade" data-trade-id="${mergeEscapeHtml(trade.id)}" role="button" tabindex="0" onclick="openTradeForm('${mergeEscapeHtml(trade.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTradeForm('${mergeEscapeHtml(trade.id)}')}">
+                    <div>
+                      <div class="ops-trade-title">Trade ${index + 1}</div>
+                      <div class="ops-trade-meta">${mergeEscapeHtml(meta)}</div>
+                    </div>
+                    <div class="ops-trade-value">${fmtCapitalEur(Number(trade.capital || 0))}</div>
+                  </div>`;
+                }).join('');
+              const countText = position.count + ' Trade' + (position.count===1?'':'s');
+              const isDerivativePosition = ['os','ko','faktor'].includes(position.assetType);
+              const metaText = isDerivativePosition && position.instrumentCode
+                ? (position.instrumentLabel || 'WKN') + ' ' + position.instrumentCode + ' · ' + countText
+                : countText;
+              return `<details class="ops-position">
+                <summary>
+                  <div class="ops-row">
+                    <div>
+                      <div class="ops-name">${mergeEscapeHtml(position.displayName || position.ticker)}</div>
+                      <div class="ops-meta">${mergeEscapeHtml(metaText)}</div>
+                    </div>
                   </div>
-                </div>
-                <div class="ops-value">${fmtCapitalEur(Number(trade.capital || 0))}</div>
-              </div>`;
+                  <div class="ops-value">${fmtCapitalEur(position.capital)}</div>
+                </summary>
+                <div class="ops-detail">${detailRows}</div>
+              </details>`;
             }).join('')}
           </div>
         </section>`;
@@ -21553,26 +21577,6 @@ body[data-journal-card-edge="none"] #page-tagebuch .trade-card::before{display:n
   padding:11px 0!important;
   gap:10px!important;
 }
-#page-portfolio .ops-position-single{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto 18px;
-  align-items:center;
-  gap:10px;
-  padding:11px 0;
-  cursor:pointer;
-}
-#page-portfolio .ops-position-single::after{
-  content:'›';
-  justify-self:end;
-  color:var(--muted);
-  font-size:1rem;
-  line-height:1;
-}
-#page-portfolio .ops-position-single:focus-visible{
-  outline:2px solid var(--blue);
-  outline-offset:2px;
-  border-radius:6px;
-}
 #page-portfolio .ops-name{
   font-family:var(--f);
   font-size:.96rem!important;
@@ -21609,6 +21613,14 @@ body[data-journal-card-edge="none"] #page-tagebuch .trade-card::before{display:n
   font-weight:500;
   line-height:1.35;
 }
+#page-portfolio .ops-trade-title{
+  display:block;
+  margin-bottom:2px;
+  font-family:var(--f);
+  font-size:.68rem;
+  font-weight:700;
+  color:var(--text);
+}
 #page-portfolio .ops-trade-value{
   font-family:var(--f);
   font-size:.7rem!important;
@@ -21619,7 +21631,6 @@ body[data-journal-card-edge="none"] #page-tagebuch .trade-card::before{display:n
   #page-portfolio .ops-class-head::after{left:11px;right:11px}
   #page-portfolio .ops-class-body{padding:0 11px 4px!important}
   #page-portfolio .ops-position summary{padding:10px 0!important}
-  #page-portfolio .ops-position-single{padding:10px 0}
 }
 @media (min-width:1100px){
   .bottom-stack::before{
