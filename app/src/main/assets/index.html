@@ -12669,7 +12669,11 @@ function renderOpenPositionSummary() {
   host.innerHTML = `
     <div class="ops-head">
       <div class="ops-title">Offene Positionen</div>
-      <div class="ops-total"><strong>${fmtCapitalEur(totalCapital)}</strong><span>${totalCount} Trade${totalCount===1?'':'s'} offen</span></div>
+      <div class="ops-total">
+        <span class="ops-total-label">Gesamtdepot</span>
+        <strong>${fmtCapitalEur(totalCapital)}</strong>
+        <span class="ops-total-count">${totalCount} Trade${totalCount===1?'':'s'} offen</span>
+      </div>
     </div>
     <div class="ops-list">
       ${classes.map(group => {
@@ -21578,6 +21582,48 @@ body[data-journal-card-edge="none"] #page-tagebuch .trade-card::before{display:n
 }
 
 /* Portfolio cards use the same visual rhythm as the journal cards. */
+#page-portfolio .ops-head{
+  min-height:88px;
+  margin:0 0 14px!important;
+  padding:14px 16px!important;
+  align-items:center;
+  border:1px solid var(--bd);
+  border-radius:12px;
+  background:var(--s1);
+  box-shadow:0 2px 8px rgba(15,23,42,.06);
+}
+#page-portfolio .ops-title{
+  font-size:.66rem!important;
+  font-weight:700;
+  letter-spacing:1.25px;
+}
+#page-portfolio .ops-total{
+  display:grid;
+  grid-template-columns:auto;
+  justify-items:end;
+  gap:2px;
+}
+#page-portfolio .ops-total-label{
+  display:block;
+  margin:0;
+  color:var(--muted);
+  font-size:.58rem;
+  font-weight:700;
+  line-height:1.2;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+#page-portfolio .ops-total strong{
+  font-size:1.42rem!important;
+  font-weight:800!important;
+  line-height:1.1;
+  letter-spacing:-.02em;
+}
+#page-portfolio .ops-total-count{
+  margin-top:2px!important;
+  font-size:.62rem!important;
+  line-height:1.2;
+}
 #page-portfolio .ops-class{
   font-family:var(--f);
   border-radius:12px!important;
@@ -21672,6 +21718,11 @@ body[data-journal-card-edge="none"] #page-tagebuch .trade-card::before{display:n
   font-weight:600!important;
 }
 @media (max-width:460px){
+  #page-portfolio .ops-head{
+    min-height:78px;
+    padding:12px!important;
+  }
+  #page-portfolio .ops-total strong{font-size:1.2rem!important}
   #page-portfolio .ops-class-head{padding:11px!important}
   #page-portfolio .ops-class-head::after{left:11px;right:11px}
   #page-portfolio .ops-class-body{padding:0 11px 4px!important}
