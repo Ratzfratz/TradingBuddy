@@ -9688,6 +9688,20 @@ function normalizeTrade(raw, index = 0) {
     entryTime: String((raw && raw.entryTime) || '').trim().slice(0,8),
     entry,
     count,
+    entryLots: Array.isArray(raw && raw.entryLots) ? raw.entryLots.map(lot=>{
+      const lotEntry=numberOrNull(lot && lot.entry);
+      const lotCount=numberOrNull(lot && lot.count);
+      const lotFees=Math.max(0,numberOrNull(lot && lot.buyFees)||0);
+      const lotCapital=numberOrNull(lot && lot.capital);
+      return {
+        date:String((lot && lot.date)||''),
+        time:String((lot && lot.time)||'').trim().slice(0,8),
+        entry:lotEntry,
+        count:lotCount,
+        buyFees:lotFees,
+        capital:lotCapital!==null?lotCapital:(lotEntry!==null&&lotCount!==null?lotEntry*lotCount+lotFees:0)
+      };
+    }).filter(lot=>lot.entry!==null&&lot.count!==null&&lot.count>0) : [],
     buyFees: Math.max(0, numberOrNull(raw && raw.buyFees) || 0),
     strike: numberOrNull(raw && raw.strike),
     strikeCurrency: normalizeCalcCurrency(raw && raw.strikeCurrency),
@@ -10851,6 +10865,18 @@ function parseZeroCsv(text){
       exit,
       entryDate:position.firstBuy.date,
       entryTime:position.firstBuy.time,
+      entryLots:open?remainingLots.map(lot=>{
+        const remaining=Number(lot.remaining)||0;
+        const feeShare=lot.qty>0?lot.fee*(remaining/lot.qty):0;
+        return {
+          date:lot.date,
+          time:lot.time,
+          entry:lot.kurs,
+          count:remaining,
+          buyFees:zeroRoundMoney(feeShare),
+          capital:lot.kurs*remaining+feeShare
+        };
+      }):[],
       exitDate:open?'':position.lastSell.date,
       exitTime:open?'':position.lastSell.time,
       buyFees:zeroRoundMoney(buyFees),
@@ -12292,6 +12318,7 @@ function saveTrade() {
     entryTime: existingEditTrade ? existingEditTrade.entryTime : '',
     entry,
     count,
+    entryLots: existingEditTrade && Array.isArray(existingEditTrade.entryLots) ? existingEditTrade.entryLots : [],
     buyFees: Math.max(0, numberOrNull($('f-buy-fees') ? $('f-buy-fees').value : '') || 0),
     strike: isDerivativeAsset ? numberOrNull($('f-strike').value) : null,
     strikeCurrency: isDerivativeAsset ? (formStrikeCcy||'EUR') : null,
@@ -12620,13 +12647,14 @@ function renderOpenPositionSummary() {
     const instrumentLabel = trade.wkn ? 'WKN' : (trade.isin ? 'ISIN' : '');
     const bucket = classGroups.get(assetType) || {assetType, count:0, capital:0, positions:new Map()};
     const position = bucket.positions.get(key) || {ticker, displayName, instrumentCode, instrumentLabel, count:0, capital:0, assetType, trades:[]};
+    const purchaseCount=Array.isArray(trade.entryLots)&&trade.entryLots.length?trade.entryLots.length:1;
     if ((!position.displayName || position.displayName === position.ticker) && displayName) position.displayName = displayName;
     if (!position.instrumentCode && instrumentCode) position.instrumentCode = instrumentCode;
     if (!position.instrumentLabel && instrumentLabel) position.instrumentLabel = instrumentLabel;
-    position.count += 1;
+    position.count += purchaseCount;
     position.capital += Number(trade.capital || 0);
     position.trades.push(trade);
-    bucket.count += 1;
+    bucket.count += purchaseCount;
     bucket.capital += Number(trade.capital || 0);
     bucket.positions.set(key, position);
     classGroups.set(assetType, bucket);
@@ -12634,7 +12662,7 @@ function renderOpenPositionSummary() {
 
   const classes = Array.from(classGroups.values()).sort((a,b) => b.capital - a.capital);
   const totalCapital = classes.reduce((sum,item) => sum + item.capital, 0);
-  const totalCount = openTrades.length;
+  const totalCount = classes.reduce((sum,item)=>sum+item.count,0);
   const assetLabels = {os:'OS',ko:'KO',faktor:'Faktor',stock:'Aktie',crypto:'Krypto',etf:'ETF'};
   const assetBadgeClass = {os:'asset-os',ko:'asset-ko',faktor:'asset-faktor',stock:'asset-stock',crypto:'asset-crypto',etf:'asset-etf'};
 
@@ -12655,20 +12683,37 @@ function renderOpenPositionSummary() {
           </div>
           <div class="ops-class-body">
             ${positions.map(position => {
-              const detailRows = position.trades
-                .slice()
-                .sort((a,b) => String(b.entryDate || '').localeCompare(String(a.entryDate || '')))
-                .map((trade,index) => {
-                  const date = formatGermanDate(trade.entryDate) || '—';
-                  const count = trade.count !== null && trade.count !== undefined ? fmtCount(trade.count) + ' Stk.' : '';
-                  const entry = trade.entry !== null && trade.entry !== undefined ? 'Kaufkurs ' + fmt(trade.entry) + '\u202f€' : 'Kaufkurs —';
+              const purchaseRows=position.trades.flatMap(trade=>{
+                const lots=Array.isArray(trade.entryLots)&&trade.entryLots.length?trade.entryLots:null;
+                return lots
+                  ? lots.map(lot=>({trade,lot}))
+                  : [{trade,lot:null}];
+              }).sort((a,b)=>{
+                const aDate=(a.lot&&a.lot.date)||a.trade.entryDate||'';
+                const aTime=(a.lot&&a.lot.time)||a.trade.entryTime||'';
+                const bDate=(b.lot&&b.lot.date)||b.trade.entryDate||'';
+                const bTime=(b.lot&&b.lot.time)||b.trade.entryTime||'';
+                return (bDate+' '+bTime).localeCompare(aDate+' '+aTime);
+              });
+              const detailRows = purchaseRows.map((item,index) => {
+                  const trade=item.trade;
+                  const lot=item.lot;
+                  const lotDate=lot?lot.date:trade.entryDate;
+                  const lotTime=lot?lot.time:trade.entryTime;
+                  const lotCount=lot?lot.count:trade.count;
+                  const lotEntry=lot?lot.entry:trade.entry;
+                  const lotCapital=lot?lot.capital:trade.capital;
+                  const date = formatGermanDate(lotDate) || '—';
+                  const time = String(lotTime||'').slice(0,5);
+                  const count = lotCount !== null && lotCount !== undefined ? fmtCount(lotCount) + ' Stk.' : '';
+                  const entry = lotEntry !== null && lotEntry !== undefined ? 'Kaufkurs ' + fmt(lotEntry) + '\u202f€' : 'Kaufkurs —';
                   const meta = [date, entry, count].filter(Boolean).join(' · ');
                   return `<div class="ops-trade" data-trade-id="${mergeEscapeHtml(trade.id)}" role="button" tabindex="0" onclick="openTradeForm('${mergeEscapeHtml(trade.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTradeForm('${mergeEscapeHtml(trade.id)}')}">
                     <div>
-                      <div class="ops-trade-title">Trade ${index + 1}</div>
-                      <div class="ops-trade-meta">${mergeEscapeHtml(meta)}</div>
+                      <div class="ops-trade-title">Kauf ${index + 1}</div>
+                      <div class="ops-trade-meta">${mergeEscapeHtml([time,meta].filter(Boolean).join(' · '))}</div>
                     </div>
-                    <div class="ops-trade-value">${fmtCapitalEur(Number(trade.capital || 0))}</div>
+                    <div class="ops-trade-value">${fmtCapitalEur(Number(lotCapital || 0))}</div>
                   </div>`;
                 }).join('');
               const countText = position.count + ' Trade' + (position.count===1?'':'s');
