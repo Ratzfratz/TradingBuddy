@@ -6782,7 +6782,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
     <div class="field" id="rc-field-warprice"><label id="lbl-price">OS-Kurs €</label><input class="inp" type="text" inputmode="decimal" id="warprice" placeholder="2,03" enterkeyhint="done" oninput="liveCalc()"></div>
     <div class="field" id="rc-field-ratio"><label>Bezugsverhältnis</label><input class="inp" type="text" inputmode="decimal" id="ratio" placeholder="0,1" enterkeyhint="done" oninput="liveCalc()"></div>
     <div class="field" id="rc-field-strike"><label id="lbl-strike">Strike €</label><input class="inp" type="text" inputmode="decimal" id="strike" placeholder="170,00" enterkeyhint="done" oninput="liveCalc()"></div>
-    <div class="field" id="rc-field-capital"><label>Kapital €</label><input class="inp" type="text" inputmode="decimal" id="capital" placeholder="500" enterkeyhint="done" oninput="liveCalc()"></div>
+    <div class="field" id="rc-field-capital"><label>Einstandswert / Kapital €</label><input class="inp" type="text" inputmode="decimal" id="capital" placeholder="500" enterkeyhint="done" oninput="liveCalc()"></div>
     <div class="field" id="expiry-field"><label>Fälligkeit</label><input class="inp" type="date" id="expiry" onchange="onExpiry()" oninput="this.classList.remove('inp-error')"></div>
     <div class="field" id="rc-field-quantity"><label style="display:flex;justify-content:space-between"><span>Anzahl</span><span style="color:var(--muted);font-weight:400;font-size:.7em">optional</span></label><input class="inp" type="text" inputmode="numeric" id="quantity" placeholder="z. B. 300" enterkeyhint="done" oninput="liveCalc()"></div>
     <div class="field" id="rc-field-ko-barrier" style="display:none"><label id="lbl-ko-barrier">KO-Schwelle €</label><input class="inp" type="text" inputmode="decimal" id="ko-barrier" placeholder="145,00" enterkeyhint="done" oninput="liveCalc()"></div>
@@ -6865,8 +6865,10 @@ body.tp-guided [data-tp-advanced]{display:none!important}
     <div class="sim-g">
       <div class="sim-i"><div class="sim-l">Aktienkurs</div><div class="sim-v" id="r-ns">—</div></div>
       <div class="sim-i"><div class="sim-l" id="lbl-nw">OS-Kurs</div><div class="sim-v" id="r-nw">—</div></div>
-      <div class="sim-i"><div class="sim-l">Gewinn/Verlust</div><div class="sim-v" id="r-pnl">—</div></div>
-      <div class="sim-i"><div class="sim-l">Rendite</div><div class="sim-v" id="r-ret">—</div></div>
+      <div class="sim-i"><div class="sim-l">Veränderung ab heute</div><div class="sim-v" id="r-pnl">—</div></div>
+      <div class="sim-i"><div class="sim-l">Rendite ab heute</div><div class="sim-v" id="r-ret">—</div></div>
+      <div class="sim-i"><div class="sim-l">Zielwert Position</div><div class="sim-v" id="r-position-value">—</div></div>
+      <div class="sim-i"><div class="sim-l">Gesamtperformance seit Kauf</div><div class="sim-v" id="r-total-performance">—</div></div>
     </div>
   </div>
 
@@ -8364,6 +8366,27 @@ function calcPositionCount(w0,capital){
   return w0>0&&capital>0?Math.floor(capital/w0):0;
 }
 
+function renderCalcPositionPerformance(targetPrice,count,costBasis,productCcy){
+  const valueEl=$('r-position-value');
+  const performanceEl=$('r-total-performance');
+  const targetValue=Math.max(0,targetPrice)*Math.max(0,count);
+  if(valueEl)valueEl.textContent=fmt(targetValue)+' '+productCcy;
+
+  const quantityField=$('quantity');
+  const hasActualQuantity=quantityField&&parseFloat(normNum(quantityField.value))>0;
+  if(!performanceEl)return;
+  if(!hasActualQuantity||!(costBasis>0)){
+    performanceEl.textContent='Anzahl + Einstandswert nötig';
+    performanceEl.className='sim-v';
+    return;
+  }
+
+  const totalPnl=targetValue-costBasis;
+  const totalRet=totalPnl/costBasis*100;
+  performanceEl.textContent=(totalPnl>=0?'+':'')+fmt(totalPnl)+' '+productCcy+' ('+(totalRet>=0?'+':'')+fmt(totalRet,1)+'%)';
+  performanceEl.className='sim-v '+(totalPnl>=0?'c-green':'c-red');
+}
+
 // ── Main ──────────────────────────────────────────────────────
 function calc(){
   ['spot','warprice','ratio','capital','expiry','ko-barrier','strike','tgt-date'].forEach(id=>{
@@ -8468,6 +8491,7 @@ function calc(){
   pe.className='sim-v '+(pnl>=0?'c-green':'c-red');
   re.textContent=(ret>=0?'+':'')+fmt(ret,1)+'%';
   re.className='sim-v '+(ret>=0?'c-green':'c-red');
+  renderCalcPositionPerformance(nW,cnt,cap,productCcy);
 
 
   // ── Szenarien ──
@@ -8552,6 +8576,7 @@ function calcKO(S,w0,ratio,cap,barrier){
   pe.className='sim-v '+(pnl>=0?'c-green':'c-red');
   re.textContent=(ret>=0?'+':'')+fmt(ret,1)+'%';
   re.className='sim-v '+(ret>=0?'c-green':'c-red');
+  renderCalcPositionPerformance(nW,cnt,cap,productCcy);
 
   const SCEN=[-20,-10,-5,0,5,10,20,30];
   $('sc-body').innerHTML=SCEN.map(p=>{
@@ -14799,6 +14824,7 @@ function calcGoalSection(w0,K,totD,r,sig,ratio,wt,zw,S,now,exDate,capital,q){
     e=document.getElementById('r-nw');if(e)e.textContent=fmt(nwv)+' '+productCcy;
     e=document.getElementById('r-pnl');if(e){e.textContent=(pnl>=0?'+':'')+fmt(pnl)+' '+productCcy;e.className='sim-v '+(pnl>=0?'c-green':'c-red');}
     e=document.getElementById('r-ret');if(e){e.textContent=(ret>=0?'+':'')+fmt(ret,1)+'%';e.className='sim-v '+(ret>=0?'c-green':'c-red');}
+    renderCalcPositionPerformance(nwv,cnt,capital,productCcy);
   } else {
     if(info)info.textContent='';
   }
