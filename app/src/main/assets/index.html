@@ -23458,17 +23458,7 @@ body.journal-list-view #trade-list .tc-actions{
 .stats-result-depot:has(#st-depot-ret:empty){display:none}
 
 @media (min-width:900px){
-  /* Die Ergebnisleiste nutzt die gesamte Breite; Diagramme und Übersicht folgen darunter. */
-  #view-stats>[data-stats-module="hero"]{
-    grid-column-start:1!important;
-    grid-column-end:-1!important;
-  }
   #view-stats>[data-stats-module="calendar"]{overflow:hidden!important}
-  #view-stats>[data-stats-module="charts"]{
-    height:456px!important;
-    min-height:456px!important;
-    grid-row:span 4!important;
-  }
 
   /* Lesbar in halbbreiten Diagrammkarten, ohne übergroße Achsenbeschriftung. */
   .stats-chart-label{font-size:11px!important}
@@ -23546,9 +23536,9 @@ body.journal-list-view #trade-list .tc-actions{
   }
 }
 
-/* Desktop: sechs Rastereinheiten erlauben breite Hauptmodule und paarweise
-   kompakte Abschlusskarten, ohne unnötig hohe Kleinmodule. */
-@media (min-width:1200px) and (max-width:1599.98px){
+/* Desktop und Vollbild verwenden dasselbe Raster. So bleibt die zentrale
+   Flucht beim Maximieren erhalten und es gibt keinen Layoutsprung bei 1600 px. */
+@media (min-width:1200px){
   #view-stats{
     grid-template-columns:repeat(6,minmax(0,1fr))!important;
     grid-template-areas:
@@ -23557,19 +23547,6 @@ body.journal-list-view #trade-list .tc-actions{
       "calendar calendar calendar insights insights insights"
       "top top top worst worst worst"
       "history history history tax tax tax"!important;
-  }
-}
-
-/* Große Displays: feinere Sechstel erlauben eine dichte Gewichtung nach
-   Informationsmenge, weiterhin ohne unbelegte Rasterbereiche. */
-@media (min-width:1600px){
-  #view-stats{
-    grid-template-columns:repeat(6,minmax(0,1fr))!important;
-    grid-template-areas:
-      "hero hero charts charts charts charts"
-      "overview overview charts charts charts charts"
-      "calendar calendar calendar insights insights insights"
-      "top worst history history tax tax"!important;
   }
 }
 </style>
