@@ -6789,7 +6789,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
       <div class="field" id="rc-field-rate"><label>Zinssatz %</label><input class="inp is-empty" type="text" inputmode="decimal" id="rate" placeholder="1,93" enterkeyhint="done" oninput="liveCalc()"></div>
     </div>
     <div class="hint" style="display:flex;flex-direction:column;gap:2px">
-      <span>Mit Volatilität → Black-Scholes Modell</span>
+      <span>Mit Volatilität → Black-Scholes, am aktuellen OS-Kurs kalibriert</span>
       <span>Ohne Volatilität → vereinfachte Formel</span>
     </div>
   </div>
@@ -6821,8 +6821,8 @@ body.tp-guided [data-tp-advanced]{display:none!important}
   <div class="sec-title">Kursziel &amp; Gewinnziel</div>
   <div class="g2" id="target-row">
     <div>
-      <div class="field" id="rc-field-tgt-spot"><label id="lbl-tgt-spot">Zielkurs Basiswert €</label>
-        <input class="inp" type="text" inputmode="decimal" id="tgt-spot" placeholder="z.B. 180" enterkeyhint="done" oninput="this.classList.remove('inp-error');updateSpotInfo();if(document.getElementById('results').classList.contains('show'))calc()">
+      <div class="field" id="rc-field-tgt-spot"><div style="display:flex;align-items:center;justify-content:space-between"><label id="lbl-tgt-spot" for="tgt-spot">Zielkurs Basiswert €</label><span class="ccy-toggle" id="tgt-spot-ccy"><button type="button" class="ccy-btn active" id="tgt-spot-ccy-eur" aria-label="Zielkurs in Euro" onclick="setCalcTargetCurrency('EUR',true)">€</button><button type="button" class="ccy-btn" id="tgt-spot-ccy-usd" aria-label="Zielkurs in US-Dollar" onclick="setCalcTargetCurrency('USD',true)">$</button></span></div>
+        <input class="inp" type="text" inputmode="decimal" id="tgt-spot" placeholder="z.B. 180" enterkeyhint="done" oninput="this.classList.remove('inp-error');updateSpotInfo();if(!document.getElementById('results').classList.contains('hidden'))calc()">
       </div>
       <div class="info" id="tgt-spot-info"></div>
     </div>
@@ -7612,6 +7612,7 @@ let wt='call';
 let mode='os'; // 'os' or 'ko'
 let calcSpotCurrency='EUR';
 let calcProductCurrency='EUR';
+let calcTargetCurrency='EUR';
 
 function normalizeCalcCurrency(currency){
   const c=String(currency||'EUR').trim().toUpperCase();
@@ -7624,6 +7625,43 @@ function currencySuffix(currency){
 }
 function calcSpotSuffix(){return currencySuffix(calcSpotCurrency);}
 function calcProductSuffix(){return currencySuffix(calcProductCurrency);}
+function calcTargetSuffix(){return currencySuffix(calcTargetCurrency);}
+function calcEurUsdRate(){
+  return (typeof _awGetEurUsd==='function'&&_awGetEurUsd()>0)?_awGetEurUsd():1.08;
+}
+function convertCalcCurrency(amount,fromCurrency,toCurrency){
+  const from=normalizeCalcCurrency(fromCurrency),to=normalizeCalcCurrency(toCurrency);
+  if(from===to)return amount;
+  const eurUsd=calcEurUsdRate();
+  if(from==='EUR'&&to==='USD')return amount*eurUsd;
+  if(from==='USD'&&to==='EUR')return amount/eurUsd;
+  return amount;
+}
+function calcTargetToSpot(amount){return convertCalcCurrency(amount,calcTargetCurrency,calcSpotCurrency);}
+function calcSpotToProduct(amount){
+  return convertCalcCurrency(amount,calcSpotCurrency,calcProductCurrency);
+}
+function calcProductToSpot(amount){
+  return convertCalcCurrency(amount,calcProductCurrency,calcSpotCurrency);
+}
+function setCalcTargetCurrency(currency,convertValue){
+  const next=normalizeCalcCurrency(currency);
+  if(next!=='EUR'&&next!=='USD')return;
+  const previous=calcTargetCurrency;
+  const el=$('tgt-spot');
+  if(convertValue&&el&&el.value.trim()&&previous!==next){
+    const value=parseFloat(normNum(el.value));
+    if(!isNaN(value))el.value=fmt(convertCalcCurrency(value,previous,next));
+  }
+  calcTargetCurrency=next;
+  const eurBtn=$('tgt-spot-ccy-eur'),usdBtn=$('tgt-spot-ccy-usd');
+  if(eurBtn)eurBtn.classList.toggle('active',next==='EUR');
+  if(usdBtn)usdBtn.classList.toggle('active',next==='USD');
+  const label=$('lbl-tgt-spot');if(label)label.textContent='Zielkurs Basiswert '+calcTargetSuffix();
+  if(typeof updateSpotInfo==='function')updateSpotInfo();
+  const results=$('results');
+  if(convertValue&&results&&!results.classList.contains('hidden'))calc();
+}
 function updateCalcCurrencyLabels(){
   const isKO=mode==='ko';
   const spotCcy=calcSpotSuffix();
@@ -7632,11 +7670,14 @@ function updateCalcCurrencyLabels(){
   setText('lbl-spot',isKO?'Basiswertkurs '+spotCcy:'Kurs '+spotCcy);
   setText('lbl-strike','Strike '+spotCcy);
   setText('lbl-ko-barrier','KO-Schwelle '+spotCcy);
-  setText('lbl-tgt-spot','Zielkurs Basiswert '+spotCcy);
+  setText('lbl-tgt-spot','Zielkurs Basiswert '+calcTargetSuffix());
   setText('lbl-price',(isKO?'KO-Kurs ':'OS-Kurs ')+productCcy);
 }
 function setCalcSpotCurrency(currency){
+  const previousSpotCurrency=calcSpotCurrency;
   calcSpotCurrency=normalizeCalcCurrency(currency);
+  const targetInput=$('tgt-spot');
+  if(calcTargetCurrency===previousSpotCurrency||!targetInput||!targetInput.value.trim())setCalcTargetCurrency(calcSpotCurrency,false);
   updateCalcCurrencyLabels();
 }
 function setCalcProductCurrency(currency){
@@ -8285,9 +8326,18 @@ function bs(S,K,T,r,sig,type,q=0){
   return type==='call'?spotPv*Phi(d1)-strikePv*Phi(d2):strikePv*Phi(-d2)-spotPv*Phi(-d1);
 }
 
-// Warrant price: BS if sigma given, else linear time-decay on extrinsic
-function wp(S,K,dLeft,r,sig,ratio,type,w0,zw,totD,q=0){
-  if(sig>0)return Math.max(0,bs(S,K,dLeft/365,r,sig,type,q)*ratio);
+// Warrant price: use Black-Scholes for the relative price movement, but anchor
+// the result to the warrant's entered market price. Besides respecting the
+// issuer's current pricing, the quotient also cancels a possible USD/EUR
+// conversion factor when the underlying and the warrant use different currencies.
+function wp(S,K,dLeft,r,sig,ratio,type,w0,zw,totD,q=0,S0=null){
+  if(sig>0){
+    const scenarioModel=Math.max(0,bs(S,K,dLeft/365,r,sig,type,q)*ratio);
+    const currentSpot=S0>0?S0:S;
+    const currentModel=Math.max(0,bs(currentSpot,K,totD/365,r,sig,type,q)*ratio);
+    if(currentModel>1e-8)return Math.max(0,w0*(scenarioModel/currentModel));
+    return scenarioModel;
+  }
   const iv=type==='call'?Math.max(0,S-K):Math.max(0,K-S);
   return iv*ratio+zw*(totD>0?dLeft/totD:0);
 }
@@ -8297,7 +8347,7 @@ function spotFor(targetW,K,dLeft,r,sig,ratio,type,w0,zw,totD,S0,q=0){
   let lo=S0*.2,hi=S0*5,mid;
   for(let i=0;i<64;i++){
     mid=(lo+hi)/2;
-    const v=wp(mid,K,dLeft,r,sig,ratio,type,w0,zw,totD,q);
+    const v=wp(mid,K,dLeft,r,sig,ratio,type,w0,zw,totD,q,S0);
     type==='call'?(v<targetW?lo=mid:hi=mid):(v>targetW?lo=mid:hi=mid);
   }
   return (lo+hi)/2;
@@ -8358,12 +8408,14 @@ function calc(){
 
   // ── Core ──
   // Innerer Wert: max(0, (S−K)·r) für Call, max(0, (K−S)·r) für Put
-  const iv=wt==='call'?Math.max(0,(S-K)*ratio):Math.max(0,(K-S)*ratio);
+  const ivSpot=wt==='call'?Math.max(0,(S-K)*ratio):Math.max(0,(K-S)*ratio);
+  const iv=calcSpotToProduct(ivSpot);
   const zw=w0-iv;                              // Zeitwert
   const theta=totD>0?zw/totD:0;               // vereinfachter Theta
-  const hebel=(S*ratio)/w0;                   // Omega/Hebel
+  const hebel=calcSpotToProduct(S*ratio)/w0;  // Omega/Hebel
   // Break-even: Kurs bei dem OS am Laufzeitende kostendeckend
-  const be=wt==='call'?K+w0/ratio:K-w0/ratio;
+  const w0Spot=calcProductToSpot(w0);
+  const be=wt==='call'?K+w0Spot/ratio:K-w0Spot/ratio;
   // Aufgeld: wie weit muss Spot noch zum Break-even (in %)
   const agio=wt==='call'?((be-S)/S)*100:((S-be)/S)*100;
   const cnt=Math.floor(cap/w0);
@@ -8387,7 +8439,7 @@ function calc(){
   }
 
   // ── Slider-Simulation (immer zum heutigen Zeitwert) ──
-  const nS=S*(1+move),nW=wp(nS,K,scDL,r,sig,ratio,wt,w0,zw,totD,q);
+  const nS=S*(1+move),nW=wp(nS,K,scDL,r,sig,ratio,wt,w0,zw,totD,q,S);
   const pnl=(nW-w0)*cnt,ret=(nW-w0)/w0*100;
 
 
@@ -8410,7 +8462,7 @@ function calc(){
   // ── Szenarien ──
   const SCEN=[-20,-10,-5,0,5,10,20,30];
   $('sc-body').innerHTML=SCEN.map(p=>{
-    const sc=S*(1+p/100),sw=wp(sc,K,scDL,r,sig,ratio,wt,w0,zw,totD,q);
+    const sc=S*(1+p/100),sw=wp(sc,K,scDL,r,sig,ratio,wt,w0,zw,totD,q,S);
     const sr=(sw-w0)/w0*100,col=sr>=0?'var(--green)':'var(--red)';
     const pCol=p>0?'var(--green)':p<0?'var(--red)':'';return `<tr${p===Math.round(move*100)?' class="hl"':''}><td style="color:${pCol}">${p>=0?'+':''}${p}%</td><td>${fmt(sc)} ${spotCcy}</td><td>${fmt(sw)} ${productCcy}</td><td style="color:${col}">${sr>=0?'+':''}${fmt(sr,0)}%</td></tr>`;
   }).join('');
@@ -8432,7 +8484,8 @@ function calcKO(S,w0,ratio,cap,barrier){
   const distAbs=Math.abs(S-barrier);
   const distPct=distAbs/S*100;
   const leverage=(S*ratio)/w0;
-  const targetSpotInput=parseFloat(normNum((document.getElementById('tgt-spot')||{value:''}).value));
+  const targetSpotRaw=parseFloat(normNum((document.getElementById('tgt-spot')||{value:''}).value));
+  const targetSpotInput=(!isNaN(targetSpotRaw)&&targetSpotRaw>0)?calcTargetToSpot(targetSpotRaw):targetSpotRaw;
   const spotCcy=calcSpotSuffix();
   const productCcy=calcProductSuffix();
 
@@ -8537,6 +8590,7 @@ function persistSave(){
   d['_wt']=wt; d['_mode']=mode;
   d['_spotCurrency']=calcSpotCurrency;
   d['_productCurrency']=calcProductCurrency;
+  d['_targetCurrency']=calcTargetCurrency;
   const sliderEl=$('move-sl');
   if(sliderEl)d['_slider']=sliderEl.value;
   try{localStorage.setItem(PKEY,JSON.stringify(d));}catch(e){}
@@ -8554,7 +8608,7 @@ function persistLoad(){
   // Step 2: restore mode/type (wrapped in try-catch)
   try{if(d['_wt'])setType(d['_wt']);}catch(e){}
   try{if(d['_mode'])setMode(d['_mode']);}catch(e){}
-  try{setCalcSpotCurrency(d['_spotCurrency']||'EUR');setCalcProductCurrency(d['_productCurrency']||'EUR');}catch(e){}
+  try{setCalcSpotCurrency(d['_spotCurrency']||'EUR');setCalcProductCurrency(d['_productCurrency']||'EUR');setCalcTargetCurrency(d['_targetCurrency']||d['_spotCurrency']||'EUR',false);}catch(e){}
   try{if(d['_slider']&&$('move-sl')){$('move-sl').value=d['_slider'];onSlider(d['_slider']);}}catch(e){}
   try{const t=$('ticker').value;if(t)updateLinks(t);}catch(e){}
   try{if($('expiry').value)onExpiry();}catch(e){}
@@ -8586,6 +8640,7 @@ function clearCalcForm(){
   if(results)results.classList.add('hidden');
   setCalcSpotCurrency('EUR');
   setCalcProductCurrency('EUR');
+  setCalcTargetCurrency('EUR',false);
 
   try{localStorage.removeItem(PKEY);}catch(e){}
   if(typeof syncEmptyFieldColors==='function')syncEmptyFieldColors(document);
@@ -14711,7 +14766,8 @@ function calcGoalSection(w0,K,totD,r,sig,ratio,wt,zw,S,now,exDate,capital,q){
   var spotCcy=typeof calcSpotSuffix==='function'?calcSpotSuffix():'€';
   var productCcy=typeof calcProductSuffix==='function'?calcProductSuffix():'€';
 
-  var ts=parseFloat(normNum((document.getElementById('tgt-spot')||{value:''}).value));
+  var tsRaw=parseFloat(normNum((document.getElementById('tgt-spot')||{value:''}).value));
+  var ts=(!isNaN(tsRaw)&&tsRaw>0)?calcTargetToSpot(tsRaw):tsRaw;
   var tv=(document.getElementById('tgt-date')||{value:''}).value;
 
   // Mode 1: Zielkurs entered → update simulation outputs
@@ -14720,7 +14776,7 @@ function calcGoalSection(w0,K,totD,r,sig,ratio,wt,zw,S,now,exDate,capital,q){
     if(info)info.textContent=(pct>=0?'→ +':' → ')+fmt(Math.abs(pct),1)+'% Kursbewegung nötig';
     var targetDateValue=(document.getElementById('tgt-date')||{value:''}).value;
     var dLeft=targetDateValue?Math.max(0,daysBetween(pd(targetDateValue),exDate)):Math.max(0,daysBetween(now,exDate));
-    var nwv=wp(ts,K,dLeft,r,sig,ratio,wt,w0,zw,totD,q||0);
+    var nwv=wp(ts,K,dLeft,r,sig,ratio,wt,w0,zw,totD,q||0,S);
     var cnt=capital>0?Math.floor(capital/w0):1;
     var pnl=(nwv-w0)*cnt,ret=w0>0?(nwv-w0)/w0*100:0;
     var e;
@@ -15098,7 +15154,8 @@ function updateSpotInfo(){
   var el=document.getElementById('tgt-spot');
   var info=document.getElementById('tgt-spot-info');
   if(!el||!info)return;
-  var ts=parseFloat(normNum(el.value));
+  var tsRaw=parseFloat(normNum(el.value));
+  var ts=(!isNaN(tsRaw)&&tsRaw>0)?calcTargetToSpot(tsRaw):tsRaw;
   var S=parseFloat(normNum((document.getElementById('spot')||{value:''}).value));
   if(!isNaN(ts)&&ts>0&&!isNaN(S)&&S>0){
     var pct=(ts-S)/S*100;
