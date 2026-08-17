@@ -293,6 +293,7 @@ header::before{display:none}
 .rc-product-grid.ko-layout #rc-field-ko-barrier{order:2}
 .rc-product-grid.ko-layout #rc-field-ratio{order:3}
 .rc-product-grid.ko-layout #rc-field-capital{order:4}
+.rc-product-grid.ko-layout #rc-field-quantity{order:5}
 .g1{margin-bottom:8px}
 .g2:last-child,.g1:last-child{margin-bottom:0}
 .field{display:flex;flex-direction:column;gap:4px}
@@ -6783,6 +6784,7 @@ body.tp-guided [data-tp-advanced]{display:none!important}
     <div class="field" id="rc-field-strike"><label id="lbl-strike">Strike €</label><input class="inp" type="text" inputmode="decimal" id="strike" placeholder="170,00" enterkeyhint="done" oninput="liveCalc()"></div>
     <div class="field" id="rc-field-capital"><label>Kapital €</label><input class="inp" type="text" inputmode="decimal" id="capital" placeholder="500" enterkeyhint="done" oninput="liveCalc()"></div>
     <div class="field" id="expiry-field"><label>Fälligkeit</label><input class="inp" type="date" id="expiry" onchange="onExpiry()" oninput="this.classList.remove('inp-error')"></div>
+    <div class="field" id="rc-field-quantity"><label style="display:flex;justify-content:space-between"><span>Anzahl</span><span style="color:var(--muted);font-weight:400;font-size:.7em">optional</span></label><input class="inp" type="text" inputmode="numeric" id="quantity" placeholder="z. B. 300" enterkeyhint="done" oninput="liveCalc()"></div>
     <div class="field" id="rc-field-ko-barrier" style="display:none"><label id="lbl-ko-barrier">KO-Schwelle €</label><input class="inp" type="text" inputmode="decimal" id="ko-barrier" placeholder="145,00" enterkeyhint="done" oninput="liveCalc()"></div>
   </div>
   <div id="os-fields">
@@ -8355,6 +8357,13 @@ function spotFor(targetW,K,dLeft,r,sig,ratio,type,w0,zw,totD,S0,q=0){
   return (lo+hi)/2;
 }
 
+function calcPositionCount(w0,capital){
+  const quantityField=$('quantity');
+  const quantity=quantityField?parseFloat(normNum(quantityField.value)):NaN;
+  if(Number.isFinite(quantity)&&quantity>0)return Math.floor(quantity);
+  return w0>0&&capital>0?Math.floor(capital/w0):0;
+}
+
 // ── Main ──────────────────────────────────────────────────────
 function calc(){
   ['spot','warprice','ratio','capital','expiry','ko-barrier','strike','tgt-date'].forEach(id=>{
@@ -8420,7 +8429,7 @@ function calc(){
   const be=wt==='call'?K+w0Spot/ratio:K-w0Spot/ratio;
   // Aufgeld: wie weit muss Spot noch zum Break-even (in %)
   const agio=wt==='call'?((be-S)/S)*100:((S-be)/S)*100;
-  const cnt=Math.floor(cap/w0);
+  const cnt=calcPositionCount(w0,cap);
   const move=$('move-sl')?parseFloat(normNum($('move-sl').value))/100:0;
   const spotCcy=calcSpotSuffix();
   const productCcy=calcProductSuffix();
@@ -8479,7 +8488,7 @@ function calc(){
 }
 function calcKO(S,w0,ratio,cap,barrier){
   const move=$('move-sl')?+$('move-sl').value/100:0;
-  const cnt=Math.floor(cap/w0);
+  const cnt=calcPositionCount(w0,cap);
   const invested=cnt*w0;
   const direction=wt==='call'?1:-1;
   const knocked=wt==='call'?S<=barrier:S>=barrier;
@@ -8583,7 +8592,7 @@ setMode('os');
 // ── Persistence ──────────────────────────────────────────────
 const PKEY='tb_calc_v1';
 const PFIELDS=['ticker','spot','strike','warprice','ratio','capital','expiry',
-               'vol','rate','dividend-yield','ko-barrier','tgt-spot','tgt-date'];
+               'quantity','vol','rate','dividend-yield','ko-barrier','tgt-spot','tgt-date'];
 const PMETA=['wt','mode','move-sl'];
 
 function persistSave(){
@@ -8619,7 +8628,7 @@ function persistLoad(){
 
 function clearCalcForm(){
   clearTransferredFields($('page-rechner'));
-  const ids=['rc-wkn','ticker','spot','strike','warprice','ratio','capital','expiry','vol','rate','dividend-yield','ko-barrier','tgt-spot','tgt-date'];
+  const ids=['rc-wkn','ticker','spot','strike','warprice','ratio','capital','quantity','expiry','vol','rate','dividend-yield','ko-barrier','tgt-spot','tgt-date'];
   ids.forEach(id=>{
     const el=$(id);
     if(!el)return;
@@ -8798,6 +8807,7 @@ function loadTradeIntoCalc(tradeId){
       spot: 2,
       strike: 2,
       capital: 2,
+      quantity: 0,
       'ko-barrier': 2
     };
     const maxDecimals = decimalsByField[id];
@@ -8823,10 +8833,11 @@ function loadTradeIntoCalc(tradeId){
   setVal('spot',     trade.spotEntry);      // Basiswertkurs bei Einstieg
   setVal('strike',   trade.strike);
   setVal('capital',  trade.capital);
+  setVal('quantity', trade.count);
   const expiryEl = $('expiry');
   if(expiryEl && trade.expiry) expiryEl.value = trade.expiry;
   if(cls === 'ko') setVal('ko-barrier', trade.strike); // KO-Schwelle = Strike
-  markTransferredFields(['rc-wkn','ticker','warprice','spot','strike','capital','expiry','ko-barrier']);
+  markTransferredFields(['rc-wkn','ticker','warprice','spot','strike','capital','quantity','expiry','ko-barrier']);
 
   // Ticker-Links und Live-Calc aktualisieren
   if(trade.ticker && typeof updateLinks==='function') updateLinks(trade.ticker);
@@ -8834,7 +8845,9 @@ function loadTradeIntoCalc(tradeId){
   if(rcWkn && trade.wkn && window.TBNative && typeof window.TBNative.fetchDerivativeDetails==='function'){
     _lastAppliedDerivativeIdentifier=String(trade.wkn||'').trim().toUpperCase();
     _lastDerivativeCalcDetailsRequest='';
-    requestDerivativeDetailsForCalc(false,{skipFields:['warprice','spot']});
+    // Der Rechner simuliert ab dem aktuellen Produkt- und Basiswertkurs.
+    // Die historischen Einstiegswerte im Trade selbst bleiben unverändert.
+    requestDerivativeDetailsForCalc(true);
   }
 
   // Zum Rechner navigieren
@@ -14779,7 +14792,7 @@ function calcGoalSection(w0,K,totD,r,sig,ratio,wt,zw,S,now,exDate,capital,q){
     var targetDateValue=(document.getElementById('tgt-date')||{value:''}).value;
     var dLeft=targetDateValue?Math.max(0,daysBetween(pd(targetDateValue),exDate)):Math.max(0,daysBetween(now,exDate));
     var nwv=wp(ts,K,dLeft,r,sig,ratio,wt,w0,zw,totD,q||0,S);
-    var cnt=capital>0?Math.floor(capital/w0):1;
+    var cnt=calcPositionCount(w0,capital)||1;
     var pnl=(nwv-w0)*cnt,ret=w0>0?(nwv-w0)/w0*100:0;
     var e;
     e=document.getElementById('r-ns');if(e)e.textContent=fmt(ts)+' '+spotCcy;
