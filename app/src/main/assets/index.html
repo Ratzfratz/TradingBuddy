@@ -11504,6 +11504,41 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
     merged.push(next);
     imported.push(next);
   });
+
+  // Harte Integritaetspruefung: Fuer jede vom Export betroffene Einstiegsposition
+  // muss der fertige Datenbestand exakt denselben ZERO-Snapshot enthalten. Bei
+  // einer Abweichung wird vor der Zuweisung an `trades` abgebrochen, damit kein
+  // teilweise oder falsch abgeglichener Stand gespeichert werden kann.
+  const snapshotNumber=value=>{
+    const number=Number(value);
+    return Number.isFinite(number)?Math.round(number*100000000)/100000000:null;
+  };
+  const snapshotSignature=trade=>JSON.stringify({
+    importKey:tradeDedupeImportKey(trade.importKey),
+    wkn:String(trade.wkn||'').trim().toUpperCase(),
+    isin:String(trade.isin||'').trim().toUpperCase(),
+    outcome:String(trade.outcome||'open').trim().toLowerCase(),
+    count:snapshotNumber(trade.count),
+    entry:snapshotNumber(trade.entry),
+    exit:snapshotNumber(trade.exit),
+    entryDate:String(trade.entryDate||''),
+    entryTime:String(trade.entryTime||''),
+    exitDate:String(trade.exitDate||''),
+    exitTime:String(trade.exitTime||'')
+  });
+  affectedEntryLots.forEach(identity=>{
+    const expected=(incomingByEntryLot.get(identity)||[]).map(item=>snapshotSignature(item.trade)).sort();
+    const actual=merged
+      .filter(trade=>zeroImportIsManagedTrade(trade)&&zeroImportEntryLotIdentity(trade)===identity)
+      .map(snapshotSignature)
+      .sort();
+    const importKeys=(incomingByEntryLot.get(identity)||[])
+      .map(item=>tradeDedupeImportKey(item.trade.importKey))
+      .filter(Boolean);
+    if(importKeys.length!==new Set(importKeys).size||JSON.stringify(expected)!==JSON.stringify(actual)){
+      throw new Error('ZERO-Snapshot ist fuer '+identity+' nicht eindeutig. Es wurden keine Daten gespeichert.');
+    }
+  });
   trades=merged;
   return {
     imported:imported.length,
@@ -11597,7 +11632,13 @@ function confirmZeroImport(){
   if(!pending||!pending.length)return;
   invalidateTradesCache();
   loadTrades();
-  const applied=zeroImportApplyAuthoritativeSnapshot(pending);
+  let applied;
+  try{
+    applied=zeroImportApplyAuthoritativeSnapshot(pending);
+  }catch(error){
+    if(resultBox)resultBox.innerHTML='<div class="tax-note warn" style="margin-top:0">Abgleich abgebrochen: '+zeroImportEscape(error&&error.message?error.message:'Der ZERO-Snapshot konnte nicht eindeutig abgeglichen werden.')+' Das bestehende Tagebuch wurde nicht veraendert.</div>';
+    return;
+  }
   saveTrades();
   window._zeroPendingImport=null;
   window._zeroImportReview=null;
