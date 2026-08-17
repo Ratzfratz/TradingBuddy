@@ -6525,11 +6525,6 @@ body.tb-compact-small{
   .equity-axis-labels small{font-size:.62rem}
   .stats-chart-label{font-size:13px}
   .stats-chart-value{font-size:14px}
-  #view-stats>[data-stats-module="hero"]{padding:10px 13px!important}
-  #view-stats>[data-stats-module="hero"] .sec-title{margin-bottom:6px!important}
-  #view-stats>[data-stats-module="hero"] #st-total-pnl{font-size:clamp(1rem,1.25vw,1.4rem)!important;line-height:1.05}
-  #view-stats>[data-stats-module="hero"] #st-depot-ret{font-size:clamp(.78rem,.9vw,1rem)!important;line-height:1.05}
-  #view-stats>[data-stats-module="hero"]>div:last-child{gap:6px!important;margin-bottom:0!important}
 }
 @media (max-width:899px){
   .stats-chart-section{gap:9px;padding:14px 12px!important}
@@ -7080,17 +7075,15 @@ body.tp-guided [data-tp-advanced]{display:none!important}
 <div class="page" id="page-statistik">
 <div id="view-stats">
 
-  <!-- Hero: realisiertes Handelsergebnis und optionale Depotentwicklung -->
-  <div class="sec stats-result-hero" style="margin-bottom:14px">
-    <div class="sec-title" id="st-hero-title">Gesamtergebnis</div>
-    <div class="stats-result-values">
-      <div class="stats-result-metric"><span>Realisiertes P&amp;L</span><strong id="st-total-pnl">—</strong></div>
-      <div class="stats-result-metric stats-result-depot"><span>Depotentwicklung</span><strong id="st-depot-ret"></strong></div>
-    </div>
-  </div>
-
   <!-- Unified Übersicht -->
-  <div class="sec" style="margin-bottom:14px">
+  <div class="sec stats-overview-section" style="margin-bottom:14px">
+    <div class="stats-result-hero">
+      <div class="sec-title" id="st-hero-title">Gesamtergebnis</div>
+      <div class="stats-result-values">
+        <div class="stats-result-metric"><span>Realisiertes P&amp;L</span><strong id="st-total-pnl">—</strong></div>
+        <div class="stats-result-metric stats-result-depot"><span>Depotentwicklung</span><strong id="st-depot-ret"></strong></div>
+      </div>
+    </div>
     <div class="pnl-history-head">
       <div class="sec-title" style="margin:0">Übersicht</div>
       <div class="overview-control-row">
@@ -22795,8 +22788,7 @@ body.journal-list-view #trade-list .tc-actions{
 (function(){
   'use strict';
   const MODULES=[
-    {key:'hero',name:'Gesamt P&L',selector:'#view-stats > .sec:first-child',span:.5},
-    {key:'overview',name:'Übersicht',selector:'#view-stats > .sec:nth-child(2)',span:1},
+    {key:'overview',name:'Übersicht',selector:'#view-stats > .stats-overview-section',span:1},
     {key:'charts',name:'Performance-Diagramme',selector:'#st-chart-section',span:2},
     {key:'calendar',name:'Tagesansicht',selector:'#st-calendar-section',span:2},
     {key:'insights',name:'Idee & Ausführung',selector:'#st-journal-insights',span:3},
@@ -22805,13 +22797,13 @@ body.journal-list-view #trade-list .tc-actions{
     {key:'history',name:'P&L Verlauf',selector:'#st-monthly',parent:true,span:1},
     {key:'tax',name:'Steuerübersicht',selector:'#tax-overview',parent:true,span:2}
   ];
-  const HEIGHT_DEFAULTS={hero:.5,overview:2,charts:2,calendar:2,insights:2,top:1.5,worst:1.5,history:1.5,tax:2};
-  const MIN_SIZES={hero:[.5,.5],overview:[1,2],charts:[1,2],calendar:[1,2],insights:[.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[.5,2]};
-  const MAX_SPANS={hero:.5,charts:2,calendar:2,top:1,worst:1,history:1};
-  const MAX_HEIGHTS={hero:.5,overview:2,charts:2,calendar:2,insights:3,top:1.5,worst:1.5,history:1.5,tax:3};
+  const HEIGHT_DEFAULTS={overview:2,charts:2,calendar:2,insights:2,top:1.5,worst:1.5,history:1.5,tax:2};
+  const MIN_SIZES={overview:[1,2],charts:[1,2],calendar:[1,2],insights:[.5,2],top:[.5,1.5],worst:[.5,1.5],history:[1,1.5],tax:[.5,2]};
+  const MAX_SPANS={charts:2,calendar:2,top:1,worst:1,history:1};
+  const MAX_HEIGHTS={overview:2,charts:2,calendar:2,insights:3,top:1.5,worst:1.5,history:1.5,tax:3};
   /* Rankings grow with their content. Only genuinely fixed visual modules keep
      a hard height cap; otherwise rows can be clipped by the dashboard grid. */
-  const HARD_MAX_SIZE_KEYS=new Set(['hero','charts']);
+  const HARD_MAX_SIZE_KEYS=new Set(['charts']);
   const defaults=()=>({layoutVersion:6,columns:'auto',order:MODULES.map(m=>m.key),modules:Object.fromEntries(MODULES.map(m=>[m.key,{visible:true,span:m.span,height:HEIGHT_DEFAULTS[m.key]||2,columnStart:0}]))});
   let state=defaults();
   let draggedKey='';
@@ -23337,6 +23329,8 @@ body.journal-list-view #trade-list .tc-actions{
 }
 
 /* Ergebnis und Depotentwicklung sind zwei klar benannte Kennzahlen. */
+.stats-result-hero{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--bd)}
+.stats-result-hero>.sec-title{margin-bottom:10px}
 .stats-result-values{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;margin-bottom:2px}
 .stats-result-metric{display:flex;flex-direction:column;gap:3px;min-width:0}
 .stats-result-metric>span{color:var(--muted);font-size:.56rem;font-weight:700;letter-spacing:.55px;text-transform:uppercase}
@@ -23345,6 +23339,7 @@ body.journal-list-view #trade-list .tc-actions{
 
 @media (min-width:900px){
   #view-stats>[data-stats-module="calendar"]{overflow:hidden!important}
+  #view-stats>[data-stats-module="charts"]{height:520px!important;min-height:520px!important}
 
   /* Lesbar in halbbreiten Diagrammkarten, ohne übergroße Achsenbeschriftung. */
   .stats-chart-label{font-size:11px!important}
@@ -23375,12 +23370,11 @@ body.journal-list-view #trade-list .tc-actions{
     align-items:stretch!important;
   }
   #view-stats>[data-stats-module]{
-    height:100%!important;
+    height:auto!important;
     min-height:0!important;
     margin:0!important;
     grid-row:auto!important;
   }
-  #view-stats>[data-stats-module="hero"]{grid-area:hero!important}
   #view-stats>[data-stats-module="overview"]{grid-area:overview!important}
   #view-stats>[data-stats-module="charts"]{grid-area:charts!important}
   #view-stats>[data-stats-module="calendar"]{grid-area:calendar!important}
@@ -23397,7 +23391,6 @@ body.journal-list-view #trade-list .tc-actions{
   #view-stats{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
     grid-template-areas:
-      "hero hero"
       "overview overview"
       "charts charts"
       "calendar calendar"
@@ -23413,7 +23406,6 @@ body.journal-list-view #trade-list .tc-actions{
   #view-stats{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
     grid-template-areas:
-      "hero charts"
       "overview charts"
       "calendar calendar"
       "insights insights"
@@ -23428,7 +23420,6 @@ body.journal-list-view #trade-list .tc-actions{
   #view-stats{
     grid-template-columns:repeat(6,minmax(0,1fr))!important;
     grid-template-areas:
-      "hero hero hero charts charts charts"
       "overview overview overview charts charts charts"
       "calendar calendar calendar insights insights insights"
       "top top top worst worst worst"
