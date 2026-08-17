@@ -11413,6 +11413,109 @@ function zeroImportApplySnapshot(pending){
     snapshot:imported.concat(updated)
   };
 }
+function zeroImportApplyAuthoritativeSnapshot(pending){
+  const incoming=(Array.isArray(pending)?pending:[]).map((trade,index)=>normalizeTrade(trade,index));
+  const currentTrades=trades.map((trade,index)=>normalizeTrade(trade,index));
+  const managed=currentTrades.filter(zeroImportIsManagedTrade);
+  const incomingByEntryLot=new Map();
+  const managedByEntryLot=new Map();
+  const affectedEntryLots=new Set();
+
+  incoming.forEach((trade,index)=>{
+    const identity=zeroImportEntryLotIdentity(trade);
+    if(!identity)return;
+    affectedEntryLots.add(identity);
+    if(!incomingByEntryLot.has(identity))incomingByEntryLot.set(identity,[]);
+    incomingByEntryLot.get(identity).push({trade,index});
+  });
+  managed.forEach(trade=>{
+    const identity=zeroImportEntryLotIdentity(trade);
+    if(!identity)return;
+    if(!managedByEntryLot.has(identity))managedByEntryLot.set(identity,[]);
+    managedByEntryLot.get(identity).push(trade);
+  });
+
+  // Der ZERO-Export ist fÃ¼r jede darin enthaltene Einstiegsposition der
+  // aktuelle Snapshot. Nur diese ZERO-Gruppen werden ersetzt; manuelle Trades
+  // und nicht im Export enthaltene ZERO-Positionen bleiben unangetastet.
+  const merged=currentTrades.filter(trade=>{
+    if(!zeroImportIsManagedTrade(trade))return true;
+    const identity=zeroImportEntryLotIdentity(trade);
+    return !identity||!affectedEntryLots.has(identity);
+  });
+  const imported=[];
+  const updated=[];
+  const usedExistingIds=new Set();
+  let unchanged=0;
+  let removedOpen=0;
+
+  affectedEntryLots.forEach(identity=>{
+    const oldGroup=managedByEntryLot.get(identity)||[];
+    const newGroup=incomingByEntryLot.get(identity)||[];
+    if(!newGroup.some(item=>item.trade.outcome==='open')){
+      removedOpen+=oldGroup.filter(trade=>trade.outcome==='open').length;
+    }
+  });
+
+  incoming.forEach((trade,index)=>{
+    const identity=zeroImportEntryLotIdentity(trade);
+    const candidates=identity?(managedByEntryLot.get(identity)||[]):[];
+    const incomingGroup=identity?(incomingByEntryLot.get(identity)||[]):[];
+    const groupKeepsOpen=incomingGroup.some(item=>item.trade.outcome==='open');
+    const importKey=tradeDedupeImportKey(trade.importKey);
+    const exactTrade=importKey?candidates.find(item=>
+      !usedExistingIds.has(item.id)&&tradeDedupeImportKey(item.importKey)===importKey
+    ):null;
+    let existingTrade=exactTrade||null;
+    if(!existingTrade&&trade.outcome==='open'){
+      existingTrade=candidates.find(item=>!usedExistingIds.has(item.id)&&item.outcome==='open')||null;
+    }
+    if(!existingTrade&&trade.outcome!=='open'&&!groupKeepsOpen){
+      existingTrade=candidates.find(item=>!usedExistingIds.has(item.id)&&item.outcome==='open')||null;
+    }
+    if(!existingTrade){
+      existingTrade=candidates.find(item=>!usedExistingIds.has(item.id)&&item.outcome===trade.outcome)||null;
+    }
+
+    // Ein Ã¤lterer fehlerhafter Abgleich kann bereits einen abgeschlossenen
+    // Datensatz neben dem offenen hinterlassen haben. PersÃ¶nliche Inhalte aus
+    // beiden werden in den nun maÃŸgeblichen Datensatz Ã¼bernommen.
+    let nextSource=trade;
+    const staleOpen=candidates.find(item=>item.outcome==='open');
+    if(trade.outcome!=='open'&&!groupKeepsOpen&&staleOpen){
+      nextSource=zeroImportPreserveUserFields(nextSource,staleOpen);
+    }
+    if(exactTrade&&exactTrade!==staleOpen){
+      nextSource=zeroImportPreserveUserFields(nextSource,exactTrade);
+    }
+
+    if(existingTrade){
+      const next=normalizeTrade(
+        Object.assign(zeroImportPreserveUserFields(nextSource,existingTrade),{id:existingTrade.id}),
+        merged.length
+      );
+      usedExistingIds.add(existingTrade.id);
+      merged.push(next);
+      if(JSON.stringify(existingTrade)===JSON.stringify(next))unchanged++;
+      else updated.push(next);
+      return;
+    }
+    const next=normalizeTrade(nextSource,merged.length);
+    merged.push(next);
+    imported.push(next);
+  });
+  trades=merged;
+  return {
+    imported:imported.length,
+    updated:updated.length,
+    unchanged,
+    legacyCovered:0,
+    removedOpen,
+    preserved:managed.length,
+    snapshot:imported.concat(updated)
+  };
+}
+
 function zeroImportFinishReview(importPossible=false){
   const review=window._zeroImportReview;
   const resultBox=document.getElementById('zero-import-result');
@@ -11494,11 +11597,11 @@ function confirmZeroImport(){
   if(!pending||!pending.length)return;
   invalidateTradesCache();
   loadTrades();
-  const applied=zeroImportApplySnapshot(pending);
+  const applied=zeroImportApplyAuthoritativeSnapshot(pending);
   saveTrades();
   window._zeroPendingImport=null;
   window._zeroImportReview=null;
-  if(resultBox)resultBox.innerHTML='<div class="tax-note info" style="margin-top:0">✓ '+applied.imported+' neue ZERO-Trades importiert'+(applied.updated?', '+applied.updated+' vorhandene aktualisiert':'')+(applied.unchanged?', '+applied.unchanged+' unverändert':'')+'. Bestehende Trades, Screenshots und persönliche Eintragungen bleiben erhalten.</div>';
+  if(resultBox)resultBox.innerHTML='<div class="tax-note info" style="margin-top:0">✓ '+applied.imported+' neue ZERO-Trades importiert'+(applied.updated?', '+applied.updated+' vorhandene aktualisiert':'')+(applied.removedOpen?', '+applied.removedOpen+' veraltete offene Position(en) geschlossen':'')+(applied.unchanged?', '+applied.unchanged+' unverändert':'')+'. Bestehende manuelle Trades, Screenshots und persönliche Eintragungen bleiben erhalten.</div>';
   refreshTradeViews({resetLimit:true});
   startZeroImportWknCheck(applied.snapshot);
 }
