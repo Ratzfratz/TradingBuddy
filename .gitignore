@@ -33,3 +33,4 @@ secrets.properties
 /build.gradle.kts
 /settings.gradle.kts
 /gradle.properties
+/tests/zero-import.test.cjs
