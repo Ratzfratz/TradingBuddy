@@ -9750,6 +9750,7 @@ function normalizeTrade(raw, index = 0) {
   return {
     id: String((raw && raw.id) || ('legacy-' + index + '-' + uid())),
     importKey: String((raw && raw.importKey) || '').trim(),
+    sourceEntryKeys: Array.isArray(raw && raw.sourceEntryKeys) ? [...new Set(raw.sourceEntryKeys.map(String).filter(Boolean))] : [],
     type: raw && raw.type === 'put' ? 'put' : 'call',
     outcome,
     ticker: resolvedTicker,
@@ -10439,12 +10440,16 @@ function zeroDeNum(s,mode){
   }else if(/\d\.\d{3}(?:\.\d{3})*$/.test(s)){
     s=s.replace(/\./g,'');
   }
-  const n=parseFloat(s);
+  if(!/^[+-]?\d+(?:\.\d+)?$/.test(s))return null;
+  const n=Number(s);
   return Number.isFinite(n)?n:null;
 }
 function zeroParseDate(d){
-  const m=(d||'').match(/(\d{2})\.(\d{2})\.(\d{4})/);
-  return m?`${m[3]}-${m[2]}-${m[1]}`:'';
+  const m=String(d||'').trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if(!m)return '';
+  const iso=`${m[3]}-${m[2]}-${m[1]}`;
+  const date=new Date(iso+'T00:00:00Z');
+  return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===iso?iso:'';
 }
 function zeroCsvParseLine(line){
   const out=[];
@@ -10492,6 +10497,7 @@ function zeroCsvRows(text){
       row+=ch;
     }
   }
+  if(quoted)throw new Error('CSV enthält ein nicht geschlossenes Anführungszeichen.');
   if(row.trim())rows.push(zeroCsvParseLine(row));
   return rows;
 }
@@ -10897,12 +10903,13 @@ function parseZeroCsv(text){
   const COL={};
   header.forEach((h,i)=>COL[h.trim()]=i);
   // Pflichtspalten prüfen
-  const required=['Name','ISIN','Status','Richtung','Ausführung Datum','Ausführung Kurs'];
+  const required=['Name','ISIN','Status','Richtung','Ausführung Datum','Ausführung Zeit','Ausführung Kurs','Anzahl ausgeführt'];
   for(const r of required){
     if(COL[r]===undefined)return {trades:[],open:0,skipped:0,error:'Spalte "'+r+'" fehlt – ist das ein Zero Order-Export?'};
   }
 
   const events=[];
+  const seenRows=new Set();
   let skipped=0;
   let zeroExecutions=0;
   let zeroBuyExecutions=0;
@@ -10916,14 +10923,28 @@ function parseZeroCsv(text){
     const status=zeroNormText(cell(c,'Status'));
     const side=cell(c,'Richtung');
     const sideNorm=zeroNormText(side);
-    if(status!=='ausgeführt'){skipped++;continue;}
-    if(sideNorm!=='kauf'&&sideNorm!=='verkauf'){skipped++;continue;}
+    if(c.length!==header.length)throw new Error('CSV-Zeile '+(li+1)+': falsche Spaltenzahl.');
+    if(status!=='ausgeführt'){
+      if((zeroDeNum(cell(c,'Anzahl ausgeführt'))||0)>0)throw new Error('CSV-Zeile '+(li+1)+': Teilausführung mit Status '+status+' muss geprüft werden.');
+      skipped++;continue;
+    }
+    if(sideNorm!=='kauf'&&sideNorm!=='verkauf')throw new Error('CSV-Zeile '+(li+1)+': unbekannte Richtung.');
+    const rowKey=JSON.stringify(c.map(zeroCleanText));
+    if(seenRows.has(rowKey))throw new Error('CSV-Zeile '+(li+1)+': identische Ausführung mehrfach vorhanden; ohne Order-ID nicht eindeutig.');
+    seenRows.add(rowKey);
     zeroExecutions++;
     if(sideNorm==='kauf')zeroBuyExecutions++;
     else zeroSellExecutions++;
-    const qty=zeroDeNum(c[COL['Anzahl ausgeführt']])||zeroDeNum(c[COL['Anzahl']]);
+    const qty=zeroDeNum(cell(c,'Anzahl ausgeführt'));
     const rawKurs=zeroDeNum(c[COL['Ausführung Kurs']],'price');
-    if(!qty||!rawKurs){skipped++;continue;}
+    if(!(qty>0)||!(rawKurs>0)||!zeroParseDate(cell(c,'Ausführung Datum'))||!/^\d{2}:\d{2}:\d{2}$/.test(cell(c,'Ausführung Zeit'))||!/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(cell(c,'Ausführung Zeit')))throw new Error('CSV-Zeile '+(li+1)+': ungültige Menge, Kurs oder Ausführungszeit.');
+    if(!cell(c,'ISIN')&&!/^[A-Z0-9]{6}$/.test(cell(c,'WKN')))throw new Error('CSV-Zeile '+(li+1)+': Instrumentkennung fehlt.');
+    for(const field of ['Wert','Mindermengenzuschlag']){
+      if(cell(c,field)&&zeroDeNum(cell(c,field))===null)throw new Error('CSV-Zeile '+(li+1)+': ungültiger Betrag in '+field+'.');
+    }
+    const value=zeroDeNum(cell(c,'Wert'));
+    const fee=zeroDeNum(cell(c,'Mindermengenzuschlag'))||0;
+    if(fee<0||value!==null&&(Math.abs(Math.abs(value)-qty*rawKurs)>0.03||(sideNorm==='kauf'?value>0:value<0)))throw new Error('CSV-Zeile '+(li+1)+': Kurs, Menge und Geldbetrag widersprechen sich.');
     const name=cell(c,'Name');
     const kurs=rawKurs;
     events.push({
@@ -10965,7 +10986,8 @@ function parseZeroCsv(text){
     totalSellCourse:0,
     totalSellValue:0,
     totalSellFees:0,
-    lots:[]
+    lots:[],
+    sourceEntryKeys:[]
   });
   const positionImportKey=(position,kind)=>zeroImportKey([
     'zero','position',position.isin||'',position.wkn||'',
@@ -10995,6 +11017,8 @@ function parseZeroCsv(text){
       ticker:zeroExtractTicker(productName,position.cls),
       productName,
       wkn:position.wkn,
+      isin:position.isin,
+      sourceEntryKeys:position.sourceEntryKeys.slice(),
       count,
       entry,
       exit,
@@ -11034,6 +11058,7 @@ function parseZeroCsv(text){
         position=startPosition(key,e,cls);
         positions[key]=position;
       }
+      position.sourceEntryKeys.push(zeroImportEntryLotIdentity({isin:e.isin,wkn:e.wkn,entryDate:e.date,entryTime:e.time}));
       position.remaining+=e.qty;
       position.lots.push(Object.assign({},e,{
         remaining:e.qty,
@@ -11042,7 +11067,7 @@ function parseZeroCsv(text){
     }else if(e.dir==='Verkauf'){
       let rem=e.qty;
       const position=positions[key];
-      if(!position){skipped++;return;}
+      if(!position)throw new Error('Verkauf ohne Kaufbestand: '+e.name+' am '+e.date+'. Vollständige Historie erforderlich.');
       const q=position.lots;
       while(rem>1e-9&&q.length){
         const lot=q[0];
@@ -11066,7 +11091,7 @@ function parseZeroCsv(text){
         finishPosition(position,'realized');
         delete positions[key];
       }
-      if(rem>1e-9)skipped++;
+      if(rem>1e-9)throw new Error('Verkauf übersteigt Kaufbestand: '+e.name+' am '+e.date+'. Vollständige Historie erforderlich.');
     }
   });
 
@@ -11083,7 +11108,7 @@ function parseZeroCsv(text){
   const seenImportKeys=new Set();
   const dedupedOut=out.filter(trade=>{
     const key=tradeDedupeImportKey(trade.importKey);
-    if(!key||seenImportKeys.has(key))return false;
+    if(!key||seenImportKeys.has(key))throw new Error('Mehrdeutiger ZERO-Positionsschlüssel: '+key);
     seenImportKeys.add(key);
     return true;
   }).map((trade,index)=>normalizeTrade(trade,index));
@@ -11110,17 +11135,18 @@ function handleZeroCsv(event){
   const resultBox=document.getElementById('zero-import-result');
   event.target.value=''; // reset für erneuten Import
   if(!file){return;}
+  window._zeroPendingImport=null;
   const reader=new FileReader();
   reader.onload=function(){
     let parsed;
     try{
       parsed=parseZeroCsv(String(reader.result||''));
     }catch(err){
-      if(resultBox)resultBox.innerHTML='<div class="tax-note warn" style="margin-top:0">Fehler beim Lesen der Datei: '+(err.message||err)+'</div>';
+      if(resultBox)resultBox.innerHTML='<div class="tax-note warn" style="margin-top:0">Fehler beim Lesen der Datei: '+zeroImportEscape(err.message||err)+'</div>';
       return;
     }
     if(parsed.error){
-      if(resultBox)resultBox.innerHTML='<div class="tax-note warn" style="margin-top:0">'+parsed.error+'</div>';
+      if(resultBox)resultBox.innerHTML='<div class="tax-note warn" style="margin-top:0">'+zeroImportEscape(parsed.error)+'</div>';
       return;
     }
     if(!parsed.trades.length){
@@ -11233,15 +11259,15 @@ function zeroImportAnalyzePending(pending){
 }
 function zeroImportEntryLotIdentity(trade){
   if(!trade)return '';
-  const keyId=tradeDedupeInstrumentKey(trade);
+  // Imported identifiers are immutable even after product-name/WKN enrichment.
+  const parts=tradeDedupeImportKey(trade.importKey).split('|');
+  const sourceIsin=parts[0]==='ZERO'?parts.find(value=>/^[A-Z]{2}[A-Z0-9]{10}$/.test(value)):'';
+  const wkn=tradeDedupeText(trade.wkn);
+  const keyId=sourceIsin||tradeDedupeText(trade.isin)||(/^[A-Z0-9]{6}$/.test(wkn)?wkn:'');
   const date=tradeDedupeDate(trade.entryDate);
   const time=tradeDedupeTime(trade.entryTime);
   if(!keyId||!date||!time)return '';
-  return [
-    keyId,
-    date,
-    time
-  ].join('|');
+  return [keyId,date,time].join('|');
 }
 function zeroImportReconcileOpenLots(pending){
   const incoming=Array.isArray(pending)?pending:[];
@@ -11394,16 +11420,33 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
   const incomingByEntryLot=new Map();
   const managedByEntryLot=new Map();
   const affectedEntryLots=new Set();
+  const sourceToPosition=new Map();
+  incoming.forEach(trade=>{
+    const identity=zeroImportEntryLotIdentity(trade);
+    if(!identity)throw new Error('ZERO-Position ohne eindeutige Kennung oder Einstiegszeit.');
+    const keys=[identity,...(trade.sourceEntryKeys||[])];
+    // Legacy imports can have retained only a valid WKN.
+    const wkn=tradeDedupeText(trade.wkn);
+    if(/^[A-Z0-9]{6}$/.test(wkn))keys.slice().forEach(key=>keys.push(wkn+'|'+key.split('|').slice(1).join('|')));
+    keys.forEach(key=>{
+      if(sourceToPosition.has(key)&&sourceToPosition.get(key)!==identity)throw new Error('Kauftranchen sind nicht eindeutig zuordenbar.');
+      sourceToPosition.set(key,identity);
+    });
+  });
+  const resolveIdentity=trade=>{
+    const key=zeroImportEntryLotIdentity(trade);
+    return sourceToPosition.get(key)||key;
+  };
 
   incoming.forEach((trade,index)=>{
-    const identity=zeroImportEntryLotIdentity(trade);
+    const identity=resolveIdentity(trade);
     if(!identity)return;
     affectedEntryLots.add(identity);
     if(!incomingByEntryLot.has(identity))incomingByEntryLot.set(identity,[]);
     incomingByEntryLot.get(identity).push({trade,index});
   });
   managed.forEach(trade=>{
-    const identity=zeroImportEntryLotIdentity(trade);
+    const identity=resolveIdentity(trade);
     if(!identity)return;
     if(!managedByEntryLot.has(identity))managedByEntryLot.set(identity,[]);
     managedByEntryLot.get(identity).push(trade);
@@ -11414,7 +11457,7 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
   // und nicht im Export enthaltene ZERO-Positionen bleiben unangetastet.
   const merged=currentTrades.filter(trade=>{
     if(!zeroImportIsManagedTrade(trade))return true;
-    const identity=zeroImportEntryLotIdentity(trade);
+    const identity=resolveIdentity(trade);
     return !identity||!affectedEntryLots.has(identity);
   });
   const imported=[];
@@ -11426,13 +11469,19 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
   affectedEntryLots.forEach(identity=>{
     const oldGroup=managedByEntryLot.get(identity)||[];
     const newGroup=incomingByEntryLot.get(identity)||[];
+    const latestActivity=items=>items.flatMap(trade=>[
+      trade.entryDate+' '+trade.entryTime,
+      trade.exitDate?trade.exitDate+' '+trade.exitTime:'',
+      ...(trade.entryLots||[]).map(lot=>lot.date+' '+lot.time)
+    ]).sort().pop()||'';
+    if(latestActivity(oldGroup)>latestActivity(newGroup.map(item=>item.trade)))throw new Error('Der Export ist älter oder unvollständiger als die gespeicherte Position '+identity+'.');
     if(!newGroup.some(item=>item.trade.outcome==='open')){
       removedOpen+=oldGroup.filter(trade=>trade.outcome==='open').length;
     }
   });
 
   incoming.forEach((trade,index)=>{
-    const identity=zeroImportEntryLotIdentity(trade);
+    const identity=resolveIdentity(trade);
     const candidates=identity?(managedByEntryLot.get(identity)||[]):[];
     const incomingGroup=identity?(incomingByEntryLot.get(identity)||[]):[];
     const groupKeepsOpen=incomingGroup.some(item=>item.trade.outcome==='open');
@@ -11455,6 +11504,22 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
     // Datensatz neben dem offenen hinterlassen haben. PersÃ¶nliche Inhalte aus
     // beiden werden in den nun maÃŸgeblichen Datensatz Ã¼bernommen.
     let nextSource=trade;
+    const metadataTarget=incomingGroup.find(item=>item.trade.outcome==='open')||incomingGroup[0];
+    if(metadataTarget&&metadataTarget.trade===trade){
+      for(const field of ['strategy','planStop','planTarget','planThesis','planChecklist','tradingPlanVersion','planAdherence','expectationMet']){
+        const values=candidates.map(item=>item[field]).filter(value=>value!==null&&value!==undefined&&value!==''&&value!==0&&(!Array.isArray(value)||value.length));
+        if(new Set(values.map(value=>JSON.stringify(value))).size>1)throw new Error('Abweichende persönliche Einträge ('+field+') in mehreren Kauftranchen; bitte vor dem Zusammenfassen abgleichen.');
+      }
+      const allNotes=[...new Set(candidates.map(item=>item.notes).filter(Boolean))];
+      const notes=allNotes.filter(note=>!allNotes.some(other=>other!==note&&('\n\n'+other+'\n\n').includes('\n\n'+note+'\n\n')));
+      const attachments=[...new Map(candidates.flatMap(item=>item.attachments||[]).map(item=>[JSON.stringify(item),item])).values()];
+      if(attachments.length>MAX_TRADE_ATTACHMENTS)throw new Error('Zu viele Screenshots für eine zusammengefasste Position; bitte vorher sichern und manuell zuordnen.');
+      candidates.forEach(item=>{nextSource=zeroImportPreserveUserFields(nextSource,item);});
+      nextSource=Object.assign({},nextSource,{notes:notes.join('\n\n'),attachments,
+        ideaTags:[...new Set(candidates.flatMap(item=>item.ideaTags||[]))],
+        resultTags:[...new Set(candidates.flatMap(item=>item.resultTags||[]))]});
+    }
+    const combinedMetadata=nextSource;
     const staleOpen=candidates.find(item=>item.outcome==='open');
     if(trade.outcome!=='open'&&!groupKeepsOpen&&staleOpen){
       nextSource=zeroImportPreserveUserFields(nextSource,staleOpen);
@@ -11463,9 +11528,10 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
       nextSource=zeroImportPreserveUserFields(nextSource,exactTrade);
     }
 
+    if(metadataTarget&&metadataTarget.trade===trade)nextSource=Object.assign({},nextSource,{notes:combinedMetadata.notes,attachments:combinedMetadata.attachments,ideaTags:combinedMetadata.ideaTags,resultTags:combinedMetadata.resultTags});
     if(existingTrade){
       const next=normalizeTrade(
-        Object.assign(zeroImportPreserveUserFields(nextSource,existingTrade),{id:existingTrade.id}),
+        Object.assign(zeroImportPreserveUserFields(nextSource,existingTrade),metadataTarget&&metadataTarget.trade===trade?{notes:combinedMetadata.notes,attachments:combinedMetadata.attachments,ideaTags:combinedMetadata.ideaTags,resultTags:combinedMetadata.resultTags}:{},{id:existingTrade.id}),
         merged.length
       );
       usedExistingIds.add(existingTrade.id);
@@ -11503,7 +11569,7 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
   affectedEntryLots.forEach(identity=>{
     const expected=(incomingByEntryLot.get(identity)||[]).map(item=>snapshotSignature(item.trade)).sort();
     const actual=merged
-      .filter(trade=>zeroImportIsManagedTrade(trade)&&zeroImportEntryLotIdentity(trade)===identity)
+      .filter(trade=>zeroImportIsManagedTrade(trade)&&resolveIdentity(trade)===identity)
       .map(snapshotSignature)
       .sort();
     const importKeys=(incomingByEntryLot.get(identity)||[])
@@ -11512,6 +11578,20 @@ function zeroImportApplyAuthoritativeSnapshot(pending){
     if(importKeys.length!==new Set(importKeys).size||JSON.stringify(expected)!==JSON.stringify(actual)){
       throw new Error('ZERO-Snapshot ist fuer '+identity+' nicht eindeutig. Es wurden keine Daten gespeichert.');
     }
+  });
+  const affectedInstruments=new Set(incoming.map(trade=>zeroImportEntryLotIdentity(trade).split('|')[0]));
+  const instrumentAliases=new Map();
+  incoming.forEach(trade=>{
+    const wkn=tradeDedupeText(trade.wkn);
+    if(/^[A-Z0-9]{6}$/.test(wkn))instrumentAliases.set(wkn,zeroImportEntryLotIdentity(trade).split('|')[0]);
+  });
+  const openInstruments=new Set();
+  merged.filter(trade=>zeroImportIsManagedTrade(trade)&&trade.outcome==='open').forEach(trade=>{
+    const rawInstrument=zeroImportEntryLotIdentity(trade).split('|')[0];
+    const instrument=instrumentAliases.get(rawInstrument)||rawInstrument;
+    if(!affectedInstruments.has(instrument))return;
+    if(openInstruments.has(instrument))throw new Error('Weitere offene ZERO-Position für '+instrument+' außerhalb der zugeordneten Kauftranchen. Vollständige Historie erforderlich.');
+    openInstruments.add(instrument);
   });
   trades=merged;
   return {
