@@ -6090,7 +6090,9 @@ body.tb-compact-small{
   #nt-review-card,
   #nt-notes-card,
   #nt-clear-area{grid-column:1/-1}
-  #nt-body > .sec{height:100%;margin:0!important}
+  /* Content-sized rows prevent the exit card from covering entry fields. */
+  #nt-body{grid-auto-rows:max-content;align-content:start}
+  #nt-body > .sec{height:auto;margin:0!important}
   #nt-asset-card{grid-column:1}
   #nt-direction-box{grid-column:2}
   #nt-entry-card{grid-column:1}
@@ -7472,6 +7474,7 @@ function navTo(page, options = {}) {
   }
 
   if (page === 'portfolio') {
+    invalidateTradesCache();
     loadTrades();
     renderOpenPositionSummary();
   }
@@ -11627,7 +11630,12 @@ function zeroImportFinishReview(importPossible=false){
     }else skipped++;
   });
   toImport.forEach(t=>{trades.push(t);imported++;});
-  saveTrades();
+  if(!saveTrades()){
+    trades=beforeImport;
+    invalidateTradesCache();
+    if(resultBox)resultBox.innerHTML='<div class="tax-note warn">Import konnte nicht gespeichert werden. Bitte Speicherplatz prüfen und erneut abgleichen.</div>';
+    return;
+  }
   window._zeroPendingImport=null;
   window._zeroImportReview=null;
   if(resultBox)resultBox.innerHTML='<div class="tax-note info" style="margin-top:0">✓ '+imported+' Trades importiert'+(updated?', '+updated+' aktualisiert':'')+(skipped?', '+skipped+' übersprungen':'')+'. Prüfe sie im Tagebuch.</div>';
@@ -11686,6 +11694,7 @@ function confirmZeroImport(){
   if(!pending||!pending.length)return;
   invalidateTradesCache();
   loadTrades();
+  const beforeImport=trades;
   let applied;
   try{
     applied=zeroImportApplyAuthoritativeSnapshot(pending);
@@ -12906,6 +12915,14 @@ function updateJournalFilterUi() {
   if(window.updateJournalStickySummary) window.updateJournalStickySummary(summaryText);
 }
 
+function refreshExternalTradeStore(event) {
+  if(event&&event.type==='storage'&&event.key!==STORE_KEY&&event.key!==null)return;
+  invalidateTradesCache();
+  refreshTradeViews({resetLimit:true,portfolio:true});
+}
+window.addEventListener('storage',refreshExternalTradeStore);
+window.addEventListener('focus',refreshExternalTradeStore);
+
 function refreshTradeViews(options) {
   const opts = options || {};
   loadTrades();
@@ -13036,7 +13053,7 @@ function renderOpenPositionSummary() {
       <div class="ops-total">
         <span class="ops-total-label">Gesamtdepot</span>
         <strong>${fmtCapitalEur(totalCapital)}</strong>
-        <span class="ops-total-count">${totalCount} Trade${totalCount===1?'':'s'} offen</span>
+        <span class="ops-total-count">${openTrades.length} offene Position${openTrades.length===1?'':'en'} · ${totalCount} Kauftranche${totalCount===1?'':'n'}</span>
       </div>
     </div>
     <div class="ops-list">
@@ -13084,7 +13101,7 @@ function renderOpenPositionSummary() {
                     <div class="ops-trade-value">${fmtCapitalEur(Number(lotCapital || 0))}</div>
                   </div>`;
                 }).join('');
-              const countText = position.count + ' Trade' + (position.count===1?'':'s');
+              const countText = position.count + ' Kauftranche' + (position.count===1?'':'n');
               const isDerivativePosition = ['os','ko','faktor'].includes(position.assetType);
               const metaText = isDerivativePosition && position.instrumentCode
                 ? (position.instrumentLabel || 'WKN') + ' ' + position.instrumentCode + ' · ' + countText
@@ -14892,7 +14909,8 @@ function installSafeSheetInteraction(prefix, closeFn){
   const resetDrag=function(){
     dragArmed=false;dragging=false;dragY=0;
     sheet.style.transition='';
-    sheet.style.transform='translateY(0)';
+    sheet.style.transform=prefix==='nt'?'none':'translateY(0)';
+    if(prefix==='nt')sheet.style.willChange='auto';
     backdrop.style.opacity='1';
   };
 
@@ -15503,6 +15521,15 @@ function normNum(v){ return v===undefined||v===null?'':String(v).trim().replace(
     window.scrollTo(0,top);
   }
 
+  var tradeSheet=document.getElementById('nt-sh');
+  if(tradeSheet)tradeSheet.addEventListener('transitionend',function(event){
+    if(event.target!==tradeSheet||event.propertyName!=='transform'||!window._ntOpen)return;
+    if(tradeSheet.style.transform!=='translateY(0px)'&&tradeSheet.style.transform!=='translateY(0)')return;
+    tradeSheet.style.transition='none';
+    tradeSheet.style.transform='none';
+    tradeSheet.style.willChange='auto';
+  });
+
   window.ntOpen=function(editId){
     var ov=document.getElementById('nt-ov'),sh=document.getElementById('nt-sh'),bd=document.getElementById('nt-bd');
     var body=document.getElementById('nt-body');
@@ -15511,6 +15538,7 @@ function normNum(v){ return v===undefined||v===null?'':String(v).trim().replace(
     if(body){body.scrollTop=0;try{body.scrollTo(0,0);}catch(e){}}
     lockBody();
     ov.style.display='block';
+    sh.style.willChange='transform';
     sh.style.transition='none';sh.style.transform='translateY(100%)';sh.getBoundingClientRect();
     sh.style.transition='transform .3s cubic-bezier(.32,.72,0,1)';sh.style.transform='translateY(0)';
     if(bd)bd.style.opacity='1';
@@ -15532,6 +15560,7 @@ function normNum(v){ return v===undefined||v===null?'':String(v).trim().replace(
   window.ntClose=function(){
     var sh=document.getElementById('nt-sh'),ov=document.getElementById('nt-ov'),bd=document.getElementById('nt-bd');
     if(!sh)return;
+    sh.style.willChange='transform';
     sh.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';sh.style.transform='translateY(100%)';
     if(bd)bd.style.opacity='0';
     window._ntOpen=false;
@@ -20421,6 +20450,14 @@ function _awSchedulePush(){
   },900);
 }
 
+function _awAssertTradeStoreUnchanged(snapshot){
+  if(localStorage.getItem(STORE_KEY)===snapshot)return;
+  _awPushRequested=true;
+  // The next upload must remain newer than a concurrently completed cloud write.
+  localStorage.setItem('tb_local_saved_at',String(Date.now()+1001));
+  throw new Error('Trades wurden während der Synchronisation geändert. Der aktuelle lokale Bestand bleibt erhalten; Synchronisation wird wiederholt.');
+}
+
 async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=false,options={}){
   if(_awSyncBusy){_awLastPushError='Sync läuft bereits.';return false;}
   if(!_awUser||!_awDocId){_awLastPushError='Nicht angemeldet.';return false;}
@@ -20432,6 +20469,7 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
   _awSyncBusy=true;
   try{
     loadTrades();
+    const tradeStoreAtStart=localStorage.getItem(STORE_KEY);
     let tradeDoc=null,settingsDoc=null;
     try{tradeDoc=await _awGetEntityDoc('trades');}catch(_){}
     try{settingsDoc=await _awGetEntityDoc('settings');}catch(_){}
@@ -20562,11 +20600,13 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
       if(tradeChunkCount<=0)throw new Error('Trade-Backup konnte nicht gespeichert werden: keine Chunks erzeugt.');
     }
     if(shouldUploadTrades){
+      _awAssertTradeStoreUnchanged(tradeStoreAtStart);
       await _awUpsertEntityDoc('trades',{data:_awMainDocData('trades',tradesForUpload.length,tradeInlinePayload,tradeChunkCount,tradeChunkBase),synced_at:syncedAt,device:_awDevice()});
       await _awCleanupReplacedEntityChunks('trades',tradeDoc,tradeChunkBase,tradeChunkCount);
     }
     await _awCleanupOldUserNumberDocs();
 
+    if(shouldUploadTrades)_awAssertTradeStoreUnchanged(tradeStoreAtStart);
     _awApplying=true;
     if(shouldUploadTrades){
       trades=uploadSource.map((trade,index)=>normalizeTrade(trade,index));
@@ -20590,7 +20630,10 @@ async function _awPush(forceTrades=false,forceSettings=false,allowKeyMismatch=fa
   }catch(e){
     _awLastPushError=e&&(e.message||e.type)||'Unbekannter Fehler';
     _awSyncLabel('','error');console.warn('Appwrite push:',e);return false;
-  }finally{_awSyncBusy=false;}
+  }finally{
+    _awSyncBusy=false;
+    if(_awPushRequested&&_awAutoSync)setTimeout(()=>_awSchedulePush(),0);
+  }
 }
 
 async function _awPull(force=false,options={}){
@@ -20710,6 +20753,7 @@ async function _awPull(force=false,options={}){
 
       // Lokale Screenshots nach fileId indexieren
       loadTrades();
+      const tradeStoreBeforePull=localStorage.getItem(STORE_KEY);
       const localTradesBeforePull=trades.map((trade,index)=>normalizeTrade(trade,index));
       const localImgByFid={};
       for(const t of localTradesBeforePull){
@@ -20764,6 +20808,7 @@ async function _awPull(force=false,options={}){
         remoteTradesWithAttachments.push(remoteWithAttachments);
       }
 
+      _awAssertTradeStoreUnchanged(tradeStoreBeforePull);
       const mergeResult=mergeCloudAndLocalTrades(remoteTradesWithAttachments,localTradesBeforePull,localTradeTs,cloudMs);
       const {merged,preservedLocalTradeCount,preferredLocalTradeCount,rescuedLocalAttachments}=mergeResult;
 
@@ -23508,5 +23553,10 @@ body.journal-list-view #trade-list .tc-actions{
 }
 </style>
 
+<style id="trade-editor-crisp-text">
+/* Text is painted normally while the editor rests; animation owns its layer only temporarily. */
+#nt-sh{will-change:auto}
+#nt-header{transform:none;-webkit-transform:none;will-change:auto}
+</style>
 </body>
 </html>
